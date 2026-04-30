@@ -7,6 +7,7 @@ import {
   allSafeCellsRevealed,
   CONFIGS,
   pickAiCell,
+  isScoreUncatchable,
   type GameState,
 } from "../src/server";
 
@@ -200,6 +201,19 @@ describe("allSafeCellsRevealed", () => {
       for (let c = 0; c < cols; c++)
         if (state.grid[r][c] !== -1) state.revealed[r][c] = true;
     expect(allSafeCellsRevealed(state)).toBe(true);
+  });
+});
+
+describe("early finish (uncatchable score)", () => {
+  it("detects when the trailing player cannot catch up from remaining bombs", () => {
+    const state = createInitialState("easy");
+    state.players[0] = { id: "a", name: "Alice", score: 50, bombs: 5 };
+    state.players[1] = { id: "b", name: "Bob", score: 10, bombs: 1 };
+    // totalBombs easy = 10, found = 6, remaining = 4 => max swing = 40
+    expect(isScoreUncatchable(state)).toBe(false);
+
+    state.players[0]!.score = 60; // lead = 50, remaining max swing still 40
+    expect(isScoreUncatchable(state)).toBe(true);
   });
 });
 

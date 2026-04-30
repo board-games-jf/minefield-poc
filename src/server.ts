@@ -116,6 +116,15 @@ export function countFoundBombs(state: GameState): number {
   return (state.players[0]?.bombs ?? 0) + (state.players[1]?.bombs ?? 0);
 }
 
+export function isScoreUncatchable(state: GameState): boolean {
+  const p1 = state.players[0];
+  const p2 = state.players[1];
+  if (!p1 || !p2) return false;
+  const remainingBombs = Math.max(0, state.totalBombs - countFoundBombs(state));
+  const maxSwing = remainingBombs * 10;
+  return (p1.score > p2.score + maxSwing) || (p2.score > p1.score + maxSwing);
+}
+
 export function allSafeCellsRevealed(state: GameState): boolean {
   const { rows, cols } = CONFIGS[state.difficulty];
   for (let r = 0; r < rows; r++)
@@ -254,6 +263,9 @@ export default class GameRoom implements Party.Server {
       this.state.foundBy[row][col] = playerIndex;
       player.bombs++;
       player.score += 10;
+      if (isScoreUncatchable(this.state)) {
+        this.state.status = "finished";
+      }
       if (countFoundBombs(this.state) >= this.state.totalBombs) {
         this.state.status = "finished";
       }
@@ -328,6 +340,9 @@ export default class GameRoom implements Party.Server {
       aiPlayer.bombs++;
       aiPlayer.score += 10;
       this.aiFlags![row][col] = true;
+      if (isScoreUncatchable(this.state)) {
+        this.state.status = "finished";
+      }
       if (countFoundBombs(this.state) >= this.state.totalBombs) {
         this.state.status = "finished";
       }
