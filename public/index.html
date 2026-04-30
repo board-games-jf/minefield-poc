@@ -500,12 +500,15 @@ let myName = "";
 let myPlayerIndex = null;
 let currentState = null;
 let roomId = "";
-let intentionalClose = false;
+const intentionallyClosedSockets = new WeakSet();
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
+  if (id !== "screen-game") {
+    document.getElementById("reconnecting-bar").classList.remove("visible");
+  }
 }
 function getRoomIdFromUrl() { return location.hash.replace("#", "") || null; }
 function setRoomIdInUrl(id) { location.hash = id; }
@@ -646,12 +649,12 @@ function setupJoinScreen(id) {
 function connectToRoom(id, name, difficulty, aiLevel) {
   roomId = id;
   if (socket) {
-    intentionalClose = true;
+    intentionallyClosedSockets.add(socket);
     socket.close();
   }
-  intentionalClose = false;
   socket = new PartySocket({ host: PARTYKIT_HOST, room: id });
   let joinAccepted = false;
+  const thisSocket = socket;
 
   socket.addEventListener("open", () => {
     document.getElementById("reconnecting-bar").classList.remove("visible");
@@ -673,7 +676,7 @@ function connectToRoom(id, name, difficulty, aiLevel) {
   });
 
   socket.addEventListener("close", () => {
-    if (!intentionalClose) {
+    if (!intentionallyClosedSockets.has(thisSocket)) {
       document.getElementById("reconnecting-bar").classList.add("visible");
     }
   });
@@ -681,7 +684,7 @@ function connectToRoom(id, name, difficulty, aiLevel) {
 
 function handleServerError(message) {
   if (socket) {
-    intentionalClose = true;
+    intentionallyClosedSockets.add(socket);
     socket.close();
     socket = null;
   }
@@ -844,10 +847,7 @@ function setupCopyButton(url) {
 }
 
 function rematch() {
-  if (socket) {
-    intentionalClose = true;
-    socket.close();
-  }
+  if (socket) { intentionallyClosedSockets.add(socket); socket.close(); }
   myPlayerIndex = null;
   const prevDiff = currentState?.difficulty ?? "easy";
   currentState = null;
@@ -858,7 +858,7 @@ function rematch() {
 
 function leaveRoom() {
   if (socket) {
-    intentionalClose = true;
+    intentionallyClosedSockets.add(socket);
     socket.close();
     socket = null;
   }
@@ -873,7 +873,7 @@ function leaveRoom() {
 
 function newRoom() {
   if (socket) {
-    intentionalClose = true;
+    intentionallyClosedSockets.add(socket);
     socket.close();
   }
   socket = null;
