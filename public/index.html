@@ -45,19 +45,20 @@
       gap: 4px;
       margin-bottom: 1.25rem;
     }
-    .locale-btn {
-      padding: 4px 10px;
+    .locale-select {
+      height: 30px;
+      padding: 0 10px;
       border-radius: 20px;
       border: 0.5px solid var(--border);
-      background: transparent;
-      color: var(--text-muted);
+      background: var(--bg-secondary);
+      color: var(--text);
       font-size: 11px;
       cursor: pointer;
       font-family: inherit;
-      transition: all 0.15s;
+      outline: none;
+      appearance: none;
     }
-    .locale-btn:hover { border-color: var(--border-strong); color: var(--text); }
-    .locale-btn.active { border-color: var(--teal); color: var(--teal); background: var(--teal-light); }
+    .locale-select:focus { border-color: var(--border-strong); }
 
     /* ── Screens ── */
     .screen { display: none; flex-direction: column; gap: 1.5rem; }
@@ -209,8 +210,15 @@
 
     .status-bar { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
 
-    .board-wrap { background: var(--bg-secondary); border-radius: var(--radius-lg); padding: 14px; border: 0.5px solid var(--border); }
-    .board { display: grid; gap: 4px; }
+    .board-wrap {
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      border: 0.5px solid var(--border);
+      display: grid;
+      place-items: center;
+    }
+    .board { display: inline-grid; gap: 4px; }
 
     .cell {
       aspect-ratio: 1; border-radius: 5px;
@@ -239,7 +247,6 @@
     .result-subtitle { font-size: 13px; color: var(--text-muted); }
     .result-actions { display: flex; gap: 8px; margin-top: 4px; }
     .result-actions .btn { flex: 1; }
-
     .reconnecting-bar {
       background: rgba(239,159,39,0.15); border: 0.5px solid rgba(239,159,39,0.4);
       border-radius: var(--radius-sm); padding: 8px 14px;
@@ -253,14 +260,16 @@
 
   <!-- Locale selector -->
   <div class="locale-bar" id="locale-bar">
-    <button class="locale-btn active" data-locale="pt-BR-x-CE">Português (Ceará)</button>
-    <button class="locale-btn" data-locale="pt-PT">Português (PT)</button>
-    <button class="locale-btn" data-locale="en">English</button>
+    <select class="locale-select" id="locale-select" aria-label="Language">
+      <option value="pt-BR-x-CE"></option>
+      <option value="pt-PT"></option>
+      <option value="en"></option>
+    </select>
   </div>
 
   <!-- Screen: Create -->
   <div class="screen active" id="screen-create">
-    <div class="logo"><span class="logo-icon">💣</span> Minefield</div>
+    <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
     <div class="card">
       <div class="card-title" data-i18n="create_title"></div>
       <div class="field">
@@ -303,7 +312,7 @@
 
   <!-- Screen: Waiting -->
   <div class="screen" id="screen-waiting">
-    <div class="logo"><span class="logo-icon">💣</span> Minefield</div>
+    <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
     <div class="card">
       <div class="card-title" data-i18n="waiting_title"></div>
       <div class="waiting-dots"><span></span><span></span><span></span></div>
@@ -319,7 +328,7 @@
 
   <!-- Screen: Join -->
   <div class="screen" id="screen-join">
-    <div class="logo"><span class="logo-icon">💣</span> Minefield</div>
+    <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
     <div class="card">
       <div class="card-title" data-i18n="join_title"></div>
       <div id="join-info" style="font-size:13px; color:var(--text-muted); text-align:center;"></div>
@@ -363,7 +372,7 @@
 
   <!-- Screen: Error -->
   <div class="screen" id="screen-error">
-    <div class="logo"><span class="logo-icon">💣</span> Minefield</div>
+    <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
     <div class="card" style="text-align:center; gap:1.25rem;">
       <div style="font-size:32px;">😕</div>
       <div class="card-title" id="error-title"></div>
@@ -375,29 +384,43 @@
 </div>
 
 <script src="i18n.js" type="module"></script>
-<script src="https://cdn.jsdelivr.net/npm/partysocket@1.0.2/dist/partysocket.min.js"></script>
 <script type="module">
-import { TRANSLATIONS, LOCALE_LABELS, LOCALE_LANG } from "./i18n.js";
+import PartySocket from "https://cdn.jsdelivr.net/npm/partysocket@1.0.2/dist/index.mjs";
+import { TRANSLATIONS, LOCALE_FLAGS, LOCALE_LABELS, LOCALE_LANG } from "./i18n.js";
 
 // ── Config ─────────────────────────────────────────────────────────────────
-// IMPORTANT: replace with your PartyKit username after deploy
-const PARTYKIT_HOST = "minefield.SEU-USERNAME.partykit.dev";
+const PARTYKIT_HOST = location.hostname === "localhost" || location.hostname === "127.0.0.1"
+  ? location.host
+  : "minefield.joselitofilho.partykit.dev";
 
 // ── i18n ───────────────────────────────────────────────────────────────────
 const DEFAULT_LOCALE = "pt-BR-x-CE";
 let locale = localStorage.getItem("minefield-locale") || DEFAULT_LOCALE;
 let t = TRANSLATIONS[locale];
 
+const NAME_STORAGE_KEY = "minefield-name";
+function renderLocaleButtons() {
+  const sel = document.getElementById("locale-select");
+  sel.querySelectorAll("option").forEach(opt => {
+    const l = opt.value;
+    const label = LOCALE_LABELS[l] || l;
+    const flag = LOCALE_FLAGS[l] || "";
+    // Note: native <option> rendering varies by OS/browser; emoji is widely supported.
+    opt.textContent = `${flag} ${label}`.trim();
+  });
+  sel.value = locale;
+}
+
 function applyLocale(l) {
   locale = l;
   t = TRANSLATIONS[l];
   localStorage.setItem("minefield-locale", l);
   document.documentElement.lang = LOCALE_LANG[l];
-
-  // Update locale buttons
-  document.querySelectorAll(".locale-btn").forEach(btn => {
-    btn.classList.toggle("active", btn.dataset.locale === l);
-  });
+  document.title = t.app_name || "Minefield";
+  const localeSel = document.getElementById("locale-select");
+  if (localeSel) localeSel.setAttribute("aria-label", t.language_label || "Language");
+  const sel = localeSel;
+  if (sel && sel.value !== l) sel.value = l;
 
   // Update all data-i18n elements
   document.querySelectorAll("[data-i18n]").forEach(el => {
@@ -413,8 +436,8 @@ function applyLocale(l) {
   if (currentState) renderGame(currentState);
 }
 
-document.querySelectorAll(".locale-btn").forEach(btn => {
-  btn.addEventListener("click", () => applyLocale(btn.dataset.locale));
+document.getElementById("locale-select").addEventListener("change", (e) => {
+  applyLocale(e.target.value);
 });
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -423,6 +446,7 @@ let myName = "";
 let myPlayerIndex = null;
 let currentState = null;
 let roomId = "";
+let intentionalClose = false;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function showScreen(id) {
@@ -434,20 +458,44 @@ function setRoomIdInUrl(id) { location.hash = id; }
 function generateRoomId() { return Math.random().toString(36).slice(2, 8); }
 function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = "block"; }
 function hideError(id) { document.getElementById(id).style.display = "none"; }
+function syncNameInput(inputId) {
+  const input = document.getElementById(inputId);
+  input.addEventListener("input", () => {
+    const value = input.value.trim();
+    if (value) localStorage.setItem(NAME_STORAGE_KEY, value);
+    else localStorage.removeItem(NAME_STORAGE_KEY);
+  });
+}
+function setErrorScreen(titleKey, descKey) {
+  const titleEl = document.getElementById("error-title");
+  const descEl = document.getElementById("error-desc");
+  titleEl.dataset.i18n = titleKey;
+  descEl.dataset.i18n = descKey;
+  titleEl.textContent = typeof t[titleKey] === "string" ? t[titleKey] : "";
+  descEl.textContent = typeof t[descKey] === "string" ? t[descKey] : "";
+}
 
-// ── Init ───────────────────────────────────────────────────────────────────
-function init() {
-  applyLocale(locale);
-  setupDiffOptions();
-
+function syncScreenWithUrl() {
+  const savedName = (localStorage.getItem(NAME_STORAGE_KEY) || "").trim();
   const rid = getRoomIdFromUrl();
   if (rid) {
     showScreen("screen-join");
     setupJoinScreen(rid);
-  } else {
-    showScreen("screen-create");
-    setupCreateScreen();
+    return;
   }
+  showScreen("screen-create");
+  setupCreateScreen();
+  if (savedName) document.getElementById("create-name").value = savedName;
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function init() {
+  renderLocaleButtons();
+  applyLocale(locale);
+  setupDiffOptions();
+  syncNameInput("create-name");
+  syncNameInput("join-name");
+  syncScreenWithUrl();
 }
 
 // ── Create screen ──────────────────────────────────────────────────────────
@@ -470,6 +518,7 @@ function setupCreateScreen() {
     const id = generateRoomId();
     setRoomIdInUrl(id);
     myName = name;
+    localStorage.setItem(NAME_STORAGE_KEY, name);
     connectToRoom(id, name, diff);
   };
 }
@@ -477,6 +526,9 @@ function setupCreateScreen() {
 // ── Join screen ────────────────────────────────────────────────────────────
 function setupJoinScreen(id) {
   roomId = id;
+  const savedName = (localStorage.getItem(NAME_STORAGE_KEY) || "").trim();
+  const joinInput = document.getElementById("join-name");
+  if (savedName) joinInput.value = savedName;
 
   const tempSocket = new PartySocket({ host: PARTYKIT_HOST, room: id });
   tempSocket.addEventListener("message", (ev) => {
@@ -486,14 +538,12 @@ function setupJoinScreen(id) {
       tempSocket.close();
       if (state.status === "finished") {
         showScreen("screen-error");
-        document.getElementById("error-title").textContent = t.error_title_finished;
-        document.getElementById("error-desc").textContent = t.error_room_finished;
+        setErrorScreen("error_title_finished", "error_room_finished");
         return;
       }
-      if (state.players[0] && state.players[1]) {
-        showScreen("screen-error");
-        document.getElementById("error-title").textContent = t.error_title_full;
-        document.getElementById("error-desc").textContent = t.error_room_full;
+      if (savedName && (state.players[0]?.name === savedName || state.players[1]?.name === savedName)) {
+        myName = savedName;
+        connectToRoom(id, savedName, null);
         return;
       }
       if (state.players[0]) {
@@ -510,8 +560,7 @@ function setupJoinScreen(id) {
     if (msg.type === "error") {
       tempSocket.close();
       showScreen("screen-error");
-      document.getElementById("error-title").textContent = t.error_title_generic;
-      document.getElementById("error-desc").textContent = t.error_room_not_found;
+      setErrorScreen("error_title_generic", "error_room_not_found");
     }
   });
 
@@ -520,6 +569,7 @@ function setupJoinScreen(id) {
     if (!name) { showError("join-error", t.error_name_required); return; }
     hideError("join-error");
     myName = name;
+    localStorage.setItem(NAME_STORAGE_KEY, name);
     connectToRoom(id, name, null);
   };
 }
@@ -527,7 +577,13 @@ function setupJoinScreen(id) {
 // ── WebSocket ──────────────────────────────────────────────────────────────
 function connectToRoom(id, name, difficulty) {
   roomId = id;
+  if (socket) {
+    intentionalClose = true;
+    socket.close();
+  }
+  intentionalClose = false;
   socket = new PartySocket({ host: PARTYKIT_HOST, room: id });
+  let joinAccepted = false;
 
   socket.addEventListener("open", () => {
     document.getElementById("reconnecting-bar").classList.remove("visible");
@@ -537,23 +593,43 @@ function connectToRoom(id, name, difficulty) {
 
   socket.addEventListener("message", (ev) => {
     const msg = JSON.parse(ev.data);
-    if (msg.type === "state") handleState(msg.state);
+    if (msg.type === "state") {
+      const state = msg.state;
+      if (!joinAccepted) {
+        joinAccepted = state.players[0]?.name === name || state.players[1]?.name === name;
+      }
+      if (joinAccepted) handleState(state);
+    }
     if (msg.type === "error") handleServerError(msg.message);
   });
 
   socket.addEventListener("close", () => {
-    document.getElementById("reconnecting-bar").classList.add("visible");
+    if (!intentionalClose) {
+      document.getElementById("reconnecting-bar").classList.add("visible");
+    }
   });
 }
 
 function handleServerError(message) {
-  showScreen("screen-error");
+  if (socket) {
+    intentionalClose = true;
+    socket.close();
+    socket = null;
+  }
   if (message === "room_full") {
-    document.getElementById("error-title").textContent = t.error_title_full;
-    document.getElementById("error-desc").textContent = t.error_room_full;
+    // If we're trying to join via an invite link, keep the user on the join screen
+    // so they can type the same name to reclaim their slot (e.g. on another device).
+    const rid = getRoomIdFromUrl();
+    if (rid) {
+      showScreen("screen-join");
+      showError("join-error", t.error_room_full);
+      return;
+    }
+    showScreen("screen-error");
+    setErrorScreen("error_title_full", "error_room_full");
   } else {
-    document.getElementById("error-title").textContent = t.error_title_generic;
-    document.getElementById("error-desc").textContent = t.error_generic;
+    showScreen("screen-error");
+    setErrorScreen("error_title_generic", "error_generic");
   }
 }
 
@@ -699,7 +775,10 @@ function setupCopyButton(url) {
 }
 
 function rematch() {
-  if (socket) socket.close();
+  if (socket) {
+    intentionalClose = true;
+    socket.close();
+  }
   myPlayerIndex = null;
   const prevDiff = currentState?.difficulty ?? "easy";
   currentState = null;
@@ -708,8 +787,26 @@ function rematch() {
   connectToRoom(id, myName, prevDiff);
 }
 
+function leaveRoom() {
+  if (socket) {
+    intentionalClose = true;
+    socket.close();
+    socket = null;
+  }
+  myPlayerIndex = null;
+  currentState = null;
+  roomId = "";
+  document.getElementById("reconnecting-bar").classList.remove("visible");
+  location.hash = "";
+  showScreen("screen-create");
+  setupCreateScreen();
+}
+
 function newRoom() {
-  if (socket) socket.close();
+  if (socket) {
+    intentionalClose = true;
+    socket.close();
+  }
   socket = null;
   myPlayerIndex = null;
   currentState = null;
@@ -719,12 +816,13 @@ function newRoom() {
   setupCreateScreen();
 }
 
-document.getElementById("btn-leave").addEventListener("click", newRoom);
+document.getElementById("btn-leave").addEventListener("click", leaveRoom);
 document.getElementById("btn-new-room").addEventListener("click", () => {
   location.hash = "";
   showScreen("screen-create");
   setupCreateScreen();
 });
+window.addEventListener("hashchange", syncScreenWithUrl);
 
 init();
 </script>

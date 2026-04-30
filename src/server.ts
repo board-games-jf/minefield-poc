@@ -126,6 +126,19 @@ export function allSafeCellsRevealed(state: GameState): boolean {
 // ── PartyKit Server ────────────────────────────────────────────────────────
 
 export default class GameRoom implements Party.Server {
+  // Serve static files from /public in dev/prod.
+  // PartyKit only routes party URLs automatically; without this, GET / returns 404.
+  static async onFetch(req: Party.Request, lobby: Party.FetchLobby) {
+    const url = new URL(req.url);
+    let path = url.pathname;
+    if (path === "/") path = "/index.html";
+
+    const asset = await lobby.assets.fetch(path);
+    if (asset) return asset;
+
+    return new Response("Not found", { status: 404 });
+  }
+
   state: GameState | null = null;
   connectionToPlayer: Map<string, 0 | 1> = new Map();
 
@@ -160,6 +173,9 @@ export default class GameRoom implements Party.Server {
     if (this.state) {
       const existingSlot = this.findExistingSlot(name);
       if (existingSlot !== null) {
+        // Update the stored connection id for this player (refresh / reconnect / new device).
+        const p = this.state.players[existingSlot];
+        if (p) p.id = conn.id;
         this.connectionToPlayer.set(conn.id, existingSlot);
         await this.persist();
         this.send(conn, { type: "state", state: this.state });
@@ -189,6 +205,8 @@ export default class GameRoom implements Party.Server {
     if (this.state.players[0] !== null && this.state.players[1] === null) {
       this.state.players[1] = { id: conn.id, name, score: 0, bombs: 0 };
       this.state.status = "playing";
+      // Who starts should be random once both players are present.
+      this.state.currentPlayer = (Math.random() < 0.5 ? 0 : 1);
       this.connectionToPlayer.set(conn.id, 1);
       await this.persist();
       this.broadcast();

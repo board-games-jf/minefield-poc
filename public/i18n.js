@@ -9,6 +9,13 @@ export const LOCALE_LABELS = {
   "en":         "English",
 };
 
+// Flag to show in the locale selector (emoji keeps it zero-dependency).
+export const LOCALE_FLAGS = {
+  "pt-BR-x-CE": "🇧🇷",
+  "pt-PT":      "🇵🇹",
+  "en":         "🇺🇸",
+};
+
 // HTML lang attribute to use per locale
 export const LOCALE_LANG = {
   "pt-BR-x-CE": "pt-BR",
@@ -20,6 +27,7 @@ export const TRANSLATIONS = {
   "pt-BR-x-CE": {
     // App
     app_name: "Minefield",
+    language_label: "Idioma",
 
     // Create screen
     create_title:       "Bora jogar!",
@@ -78,6 +86,7 @@ export const TRANSLATIONS = {
 
   "pt-PT": {
     app_name: "Minefield",
+    language_label: "Idioma",
 
     create_title:       "Nova partida",
     name_label:         "O teu nome",
@@ -129,6 +138,7 @@ export const TRANSLATIONS = {
 
   "en": {
     app_name: "Minefield",
+    language_label: "Language",
 
     create_title:       "New game",
     name_label:         "Your name",
