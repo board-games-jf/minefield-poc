@@ -3,6 +3,7 @@ import type * as Party from "partykit/server";
 // ── Types ──────────────────────────────────────────────────────────────────
 
 export type Difficulty = "easy" | "medium" | "hard";
+export type AiLevel = "easy" | "medium" | "hard";
 
 export interface DifficultyConfig {
   rows: number;
@@ -38,7 +39,7 @@ export interface GameState {
 
 // Client → Server
 export type ClientMessage =
-  | { type: "join";   name: string; difficulty?: Difficulty }
+  | { type: "join";   name: string; difficulty?: Difficulty; ai?: { level: AiLevel } }
   | { type: "reveal"; row: number; col: number };
 
 // Server → Client
@@ -141,6 +142,9 @@ export default class GameRoom implements Party.Server {
 
   state: GameState | null = null;
   connectionToPlayer: Map<string, 0 | 1> = new Map();
+  private aiTimer: ReturnType<typeof setTimeout> | null = null;
+  private aiLevel: AiLevel = "medium";
+  private aiFlags: boolean[][] | null = null;
 
   constructor(readonly room: Party.Room) {}
 
@@ -148,6 +152,11 @@ export default class GameRoom implements Party.Server {
     this.state = await this.room.storage.get<GameState>("state") ?? null;
     const saved = await this.room.storage.get<Map<string, 0 | 1>>("connectionToPlayer");
     this.connectionToPlayer = saved ?? new Map();
+    this.aiLevel = await this.room.storage.get<AiLevel>("aiLevel") ?? "medium";
+    this.aiFlags = await this.room.storage.get<boolean[][]>("aiFlags") ?? null;
+    if (this.state && this.state.players[1]?.id === "ai") {
+      this.ensureAiFlags();
+    }
   }
 
   async onConnect(conn: Party.Connection) {
@@ -157,7 +166,7 @@ export default class GameRoom implements Party.Server {
 
   async onMessage(message: string, sender: Party.Connection) {
     const msg = JSON.parse(message) as ClientMessage;
-    if (msg.type === "join")   await this.handleJoin(sender, msg.name, msg.difficulty);
+    if (msg.type === "join")   await this.handleJoin(sender, msg.name, msg.difficulty, msg.ai);
     if (msg.type === "reveal") await this.handleReveal(sender, msg.row, msg.col);
   }
 
@@ -168,7 +177,7 @@ export default class GameRoom implements Party.Server {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  private async handleJoin(conn: Party.Connection, name: string, difficulty?: Difficulty) {
+  private async handleJoin(conn: Party.Connection, name: string, difficulty?: Difficulty, ai?: { level: AiLevel }) {
     // Reconnection: player already has a slot
     if (this.state) {
       const existingSlot = this.findExistingSlot(name);
@@ -196,8 +205,19 @@ export default class GameRoom implements Party.Server {
       this.state = createInitialState(difficulty ?? "easy");
       this.state.players[0] = { id: conn.id, name, score: 0, bombs: 0 };
       this.connectionToPlayer.set(conn.id, 0);
+      if (ai) {
+        this.aiLevel = ai.level;
+        await this.room.storage.put("aiLevel", this.aiLevel);
+        // Single-player: spawn an AI opponent immediately.
+        this.state.players[1] = { id: "ai", name: "AI", score: 0, bombs: 0 };
+        this.state.status = "playing";
+        this.state.currentPlayer = (Math.random() < 0.5 ? 0 : 1);
+        this.ensureAiFlags();
+        await this.room.storage.put("aiFlags", this.aiFlags);
+      }
       await this.persist();
       this.broadcast();
+      if (ai && this.state.currentPlayer === 1) this.scheduleAiMove(this.aiLevel);
       return;
     }
 
@@ -247,6 +267,10 @@ export default class GameRoom implements Party.Server {
 
     await this.persist();
     this.broadcast();
+    // If the move passed the turn to player 2 and they are AI, make them play.
+    if (this.state.status === "playing" && this.state.players[1]?.id === "ai" && this.state.currentPlayer === 1) {
+      this.scheduleAiMove(this.aiLevel);
+    }
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
@@ -271,6 +295,208 @@ export default class GameRoom implements Party.Server {
   private send(conn: Party.Connection, msg: ServerMessage) {
     conn.send(JSON.stringify(msg));
   }
+
+  private clearAiTimer() {
+    if (this.aiTimer) clearTimeout(this.aiTimer);
+    this.aiTimer = null;
+  }
+
+  private scheduleAiMove(level: AiLevel) {
+    this.clearAiTimer();
+    this.aiTimer = setTimeout(() => void this.aiMove(level), 350);
+  }
+
+  private async aiMove(level: AiLevel) {
+    if (!this.state || this.state.status !== "playing") return;
+    if (this.state.players[1]?.id !== "ai") return;
+    if (this.state.currentPlayer !== 1) return;
+    this.ensureAiFlags();
+
+    const pick = pickAiCell(this.state, this.aiFlags!, level);
+    if (!pick) return;
+
+    const { row, col } = pick;
+    const { rows, cols } = CONFIGS[this.state.difficulty];
+    if (row < 0 || row >= rows || col < 0 || col >= cols) return;
+    if (this.state.revealed[row][col]) return;
+
+    const aiPlayer = this.state.players[1]!;
+
+    if (this.state.grid[row][col] === -1) {
+      this.state.revealed[row][col] = true;
+      this.state.foundBy[row][col] = 1;
+      aiPlayer.bombs++;
+      aiPlayer.score += 10;
+      this.aiFlags![row][col] = true;
+      if (countFoundBombs(this.state) >= this.state.totalBombs) {
+        this.state.status = "finished";
+      }
+      // Bomb keeps the turn for the same player (AI), so schedule another move.
+    } else {
+      floodReveal(this.state.grid, this.state.revealed, row, col, rows, cols);
+      this.state.currentPlayer = 0;
+      if (allSafeCellsRevealed(this.state)) {
+        this.state.status = "finished";
+      }
+    }
+
+    await this.persist();
+    await this.room.storage.put("aiFlags", this.aiFlags);
+    this.broadcast();
+
+    if (this.state.status === "playing" && this.state.currentPlayer === 1) {
+      this.scheduleAiMove(level);
+    }
+  }
+
+  private ensureAiFlags() {
+    if (!this.state) return;
+    const rows = this.state.grid.length;
+    const cols = this.state.grid[0]?.length ?? 0;
+    if (!this.aiFlags || this.aiFlags.length !== rows || (this.aiFlags[0]?.length ?? 0) !== cols) {
+      this.aiFlags = Array.from({ length: rows }, () => Array(cols).fill(false));
+    }
+  }
 }
 
 GameRoom satisfies Party.Worker;
+
+export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLevel): { row: number; col: number } | null {
+  const rows = state.grid.length;
+  const cols = state.grid[0]?.length ?? 0;
+  if (rows === 0 || cols === 0) return null;
+
+  const unknown: { row: number; col: number }[] = [];
+  const frontier: { row: number; col: number }[] = [];
+  const frontierSet = new Set<string>();
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!state.revealed[r][c]) unknown.push({ row: r, col: c });
+      if (state.revealed[r][c] && state.grid[r][c] >= 0) {
+        for (const n of neighbors(r, c, rows, cols)) {
+          if (!state.revealed[n.row][n.col]) {
+            const k = `${n.row},${n.col}`;
+            if (!frontierSet.has(k)) {
+              frontierSet.add(k);
+              frontier.push(n);
+            }
+          }
+        }
+      }
+    }
+  }
+  if (unknown.length === 0) return null;
+
+  // Easy: just click random unrevealed.
+  if (level === "easy") return unknown[Math.floor(Math.random() * unknown.length)];
+
+  // Compute simple constraints from revealed numbered cells.
+  const certainBombs: { row: number; col: number }[] = [];
+  const certainSafes: { row: number; col: number }[] = [];
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!state.revealed[r][c]) continue;
+      const v = state.grid[r][c];
+      if (v < 0) continue;
+
+      const neigh = neighbors(r, c, rows, cols);
+      let knownBombs = 0;
+      const unknownNeigh: { row: number; col: number }[] = [];
+      for (const n of neigh) {
+        const isKnownBomb = (state.revealed[n.row][n.col] && state.grid[n.row][n.col] === -1) || aiFlags[n.row][n.col];
+        if (isKnownBomb) knownBombs++;
+        else if (!state.revealed[n.row][n.col]) unknownNeigh.push(n);
+      }
+
+      const remaining = v - knownBombs;
+      if (remaining <= 0 && unknownNeigh.length) {
+        // All unknown neighbors are safe.
+        for (const n of unknownNeigh) certainSafes.push(n);
+      } else if (remaining === unknownNeigh.length && remaining > 0) {
+        // All unknown neighbors are bombs.
+        for (const n of unknownNeigh) certainBombs.push(n);
+      }
+    }
+  }
+
+  const dedup = (cells: { row: number; col: number }[]) => {
+    const out: { row: number; col: number }[] = [];
+    const seen = new Set<string>();
+    for (const c of cells) {
+      const k = `${c.row},${c.col}`;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(c);
+    }
+    return out;
+  };
+  const bombs = dedup(certainBombs).filter(c => !state.revealed[c.row][c.col]);
+  const safes = dedup(certainSafes).filter(c => !state.revealed[c.row][c.col]);
+
+  // Medium: use sure deductions, otherwise pick from frontier randomly (more "human").
+  if (level === "medium") {
+    if (bombs.length) return bombs[Math.floor(Math.random() * bombs.length)];
+    if (frontier.length) return frontier[Math.floor(Math.random() * frontier.length)];
+    return unknown[Math.floor(Math.random() * unknown.length)];
+  }
+
+  // Hard: prefer sure bombs, else estimate bomb probabilities from constraints.
+  if (bombs.length) return bombs[Math.floor(Math.random() * bombs.length)];
+  if (safes.length && frontier.length === 0) return safes[Math.floor(Math.random() * safes.length)];
+
+  const probs = estimateBombProbabilities(state, aiFlags);
+  let best: { row: number; col: number } | null = null;
+  let bestP = -1;
+  const candidates = frontier.length ? frontier : unknown;
+  for (const c of candidates) {
+    const p = probs[c.row]?.[c.col] ?? 0;
+    if (p > bestP) { bestP = p; best = c; }
+  }
+  return best ?? unknown[Math.floor(Math.random() * unknown.length)];
+}
+
+function neighbors(r: number, c: number, rows: number, cols: number): { row: number; col: number }[] {
+  const out: { row: number; col: number }[] = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr;
+      const nc = c + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) out.push({ row: nr, col: nc });
+    }
+  }
+  return out;
+}
+
+function estimateBombProbabilities(state: GameState, aiFlags: boolean[][]): number[][] {
+  const rows = state.grid.length;
+  const cols = state.grid[0]?.length ?? 0;
+  const probs = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (!state.revealed[r][c]) continue;
+      const v = state.grid[r][c];
+      if (v < 0) continue;
+
+      const neigh = neighbors(r, c, rows, cols);
+      let knownBombs = 0;
+      const unknownNeigh: { row: number; col: number }[] = [];
+      for (const n of neigh) {
+        const isKnownBomb = (state.revealed[n.row][n.col] && state.grid[n.row][n.col] === -1) || aiFlags[n.row][n.col];
+        if (isKnownBomb) knownBombs++;
+        else if (!state.revealed[n.row][n.col]) unknownNeigh.push(n);
+      }
+
+      const remaining = Math.max(0, v - knownBombs);
+      if (!unknownNeigh.length) continue;
+      const p = Math.min(1, remaining / unknownNeigh.length);
+      for (const n of unknownNeigh) {
+        probs[n.row][n.col] = Math.max(probs[n.row][n.col], p);
+      }
+    }
+  }
+
+  return probs;
+}

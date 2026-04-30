@@ -6,6 +6,7 @@ import {
   countFoundBombs,
   allSafeCellsRevealed,
   CONFIGS,
+  pickAiCell,
   type GameState,
 } from "../src/server";
 
@@ -283,5 +284,32 @@ describe("reconnection", () => {
     expect(recovered.players[0]?.score).toBe(50);
     expect(recovered.players[1]?.bombs).toBe(2);
     expect(recovered.status).toBe("playing");
+  });
+});
+
+describe("AI move picker", () => {
+  it("hard picks a forced bomb when deducible", () => {
+    const state = createInitialState("easy");
+    // Small contrived board:
+    // (0,0) is revealed "1" and its only unrevealed neighbour is (0,1),
+    // so (0,1) must be a bomb from the AI's point of view.
+    state.grid = [
+      [1, -1],
+      [0, 0],
+    ];
+    state.revealed = [
+      [true, false],
+      [true, true],
+    ];
+    state.foundBy = [
+      [null, null],
+      [null, null],
+    ];
+    const aiFlags = [
+      [false, false],
+      [false, false],
+    ];
+    const pick = pickAiCell(state, aiFlags, "hard");
+    expect(pick).toEqual({ row: 0, col: 1 });
   });
 });

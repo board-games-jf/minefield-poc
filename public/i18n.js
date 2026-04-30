@@ -41,6 +41,12 @@ export const TRANSLATIONS = {
     diff_hard_name:     "Oxe, rapaiz!",
     diff_hard_desc:     "10 × 10 · 30 minas",
     btn_create:         "Bora jogar!",
+    solo_label:         "Jogar contra IA",
+    solo_hint:          "Comeca na hora, sem precisar de parceiro",
+    ai_level_label:     "Nivel da IA",
+    ai_easy:            "De boa",
+    ai_medium:          "Malemolente",
+    ai_hard:            "Apelona",
 
     // Waiting screen
     waiting_title:      "Esperando o caba chegar...",
@@ -99,6 +105,12 @@ export const TRANSLATIONS = {
     diff_hard_name:     "Difícil",
     diff_hard_desc:     "10 × 10 · 30 bombas",
     btn_create:         "Criar partida",
+    solo_label:         "Jogar contra IA",
+    solo_hint:          "Comeca de imediato, sem adversario",
+    ai_level_label:     "Nivel da IA",
+    ai_easy:            "Facil",
+    ai_medium:          "Medio",
+    ai_hard:            "Dificil",
 
     waiting_title:      "Aguardando adversário...",
     invite_label:       "Partilha este link com o teu amigo",
@@ -151,6 +163,12 @@ export const TRANSLATIONS = {
     diff_hard_name:     "Hard",
     diff_hard_desc:     "10 × 10 · 30 bombs",
     btn_create:         "Create game",
+    solo_label:         "Play vs AI",
+    solo_hint:          "Starts immediately, no opponent needed",
+    ai_level_label:     "AI level",
+    ai_easy:            "Easy",
+    ai_medium:          "Medium",
+    ai_hard:            "Hard",
 
     waiting_title:      "Waiting for opponent...",
     invite_label:       "Share this link with your friend",
