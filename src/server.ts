@@ -398,7 +398,6 @@ export default class GameRoom implements Party.Server {
 GameRoom satisfies Party.Worker;
 
 const STICKER_IDS = new Set([
-  "gg",
   "oops",
   "nice",
   "thinking",

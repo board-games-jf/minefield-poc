@@ -249,9 +249,9 @@
     .status-actions { display: flex; align-items: center; gap: 8px; }
 
     .board-wrap {
-      width: fit-content;
+      width: 100%;
       max-width: 100%;
-      margin: 0 auto;
+      margin: 0;
       background: var(--bg-secondary);
       border-radius: var(--radius-lg);
       padding: 14px;
@@ -261,12 +261,15 @@
       scrollbar-width: thin;
       scrollbar-color: rgba(255,255,255,0.18) transparent;
     }
-    .board-row { width: 100%; display: flex; justify-content: center; }
+    .board-row { width: 100%; }
     .board-scroll {
       display: flex;
       justify-content: center;
     }
-    .board { display: inline-grid; gap: 4px; }
+    .board {
+      display: inline-grid;
+      gap: 4px;
+    }
 
     .sticker-launcher-wrap {
       position: relative;
@@ -331,7 +334,7 @@
     }
     .sticker-palette-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(0, 1fr));
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
     }
     .sticker-btn {
@@ -360,8 +363,6 @@
     .sticker-palette.open .sticker-btn:nth-child(6) { animation-delay: 90ms; }
     .sticker-palette.open .sticker-btn:nth-child(7) { animation-delay: 108ms; }
     .sticker-palette.open .sticker-btn:nth-child(8) { animation-delay: 126ms; }
-    .sticker-palette.open .sticker-btn:nth-child(9) { animation-delay: 144ms; }
-    .sticker-palette.open .sticker-btn:nth-child(10) { animation-delay: 162ms; }
     .sticker-btn:hover {
       transform: translateY(-2px) scale(1.02);
       background: rgba(255,255,255,0.06);
@@ -371,7 +372,6 @@
     .sticker-btn:active { transform: translateY(0) scale(0.98); }
     .sticker-btn:disabled { opacity: 0.45; cursor: not-allowed; }
     .sticker-btn-emoji { font-size: 26px; line-height: 1; transform-origin: center; will-change: transform; }
-    .sticker-btn[data-sticker="gg"] .sticker-btn-emoji { animation: stickerFlagWave 1.25s ease-in-out infinite; }
     .sticker-btn[data-sticker="nice"] .sticker-btn-emoji { animation: stickerFireBurst 1s ease-in-out infinite; }
     .sticker-btn[data-sticker="thinking"] .sticker-btn-emoji { animation: stickerThinkBob 1.5s ease-in-out infinite; }
     .sticker-btn[data-sticker="oops"] .sticker-btn-emoji { animation: stickerOopsTilt 1.2s ease-in-out infinite; }
@@ -417,7 +417,6 @@
     .sticker-toast.p1 { border-color: rgba(29,158,117,0.35); }
     .sticker-toast.p2 { border-color: rgba(224,75,74,0.35); }
     .sticker-emoji { font-size: 40px; line-height: 1; transform-origin: center; }
-    .sticker-toast[data-sticker="gg"] .sticker-emoji { animation: stickerFlagWaveToast 700ms ease-in-out 2; }
     .sticker-toast[data-sticker="nice"] .sticker-emoji { animation: stickerFireBurstToast 620ms ease-in-out 2; }
     .sticker-toast[data-sticker="thinking"] .sticker-emoji { animation: stickerThinkBobToast 760ms ease-in-out 2; }
     .sticker-toast[data-sticker="oops"] .sticker-emoji { animation: stickerOopsTiltToast 620ms ease-in-out 2; }
@@ -723,13 +722,11 @@
           </button>
           <div class="sticker-palette" id="sticker-palette">
             <div class="sticker-palette-grid" id="sticker-bar" aria-label="Stickers">
-              <button class="sticker-btn" data-sticker="gg"><span class="sticker-btn-emoji">🏁</span></button>
               <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
               <button class="sticker-btn" data-sticker="thinking"><span class="sticker-btn-emoji">🤔</span></button>
               <button class="sticker-btn" data-sticker="oops"><span class="sticker-btn-emoji">😅</span></button>
-              <button class="sticker-btn" data-sticker="sweat"><span class="sticker-btn-emoji">😰</span></button>
               <button class="sticker-btn" data-sticker="boom"><span class="sticker-btn-emoji">💥</span></button>
-              <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">😈</span></button>
+              <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">🤣</span></button>
               <button class="sticker-btn" data-sticker="cry"><span class="sticker-btn-emoji">😭</span></button>
               <button class="sticker-btn" data-sticker="clap"><span class="sticker-btn-emoji">👏</span></button>
               <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
@@ -844,6 +841,32 @@ let lastStickerSentAt = 0;
 let stickerLockedUntil = 0;
 let audioCtx = null;
 let audioUnlocked = false;
+let fireStickerAudio = null;
+let fireStickerStopTimer = 0;
+let cryStickerAudio = null;
+let cryStickerStopTimer = 0;
+let tauntStickerAudio = null;
+let tauntStickerStopTimer = 0;
+let clapStickerAudio = null;
+let clapStickerStopTimer = 0;
+let trophyStickerAudio = null;
+let trophyStickerStopTimer = 0;
+let boomStickerAudio = null;
+let boomStickerStopTimer = 0;
+let thinkingStickerAudio = null;
+let thinkingStickerStopTimer = 0;
+let oopsStickerAudio = null;
+let oopsStickerStopTimer = 0;
+const STICKER_DISPLAY_MS = 2300;
+const STICKER_DISPLAY_SEC = STICKER_DISPLAY_MS / 1000;
+const FIRE_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+const CRY_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+const TAUNT_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+const CLAP_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+const TROPHY_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+const BOOM_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+const THINKING_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+const OOPS_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function showScreen(id) {
@@ -859,62 +882,314 @@ function ensureAudioUnlocked() {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) { audioUnlocked = true; return; }
   if (!audioCtx) audioCtx = new Ctx();
-  if (audioCtx.state === "suspended") {
-    audioCtx.resume().catch(() => {});
+  if (audioCtx.state === "running") {
+    audioUnlocked = true;
+    return;
   }
-  audioUnlocked = true;
+  audioCtx.resume()
+    .then(() => { audioUnlocked = true; })
+    .catch(() => {});
+  if (fireStickerAudio) {
+    try { fireStickerAudio.load(); } catch {}
+  }
+  if (cryStickerAudio) {
+    try { cryStickerAudio.load(); } catch {}
+  }
+  if (tauntStickerAudio) {
+    try { tauntStickerAudio.load(); } catch {}
+  }
+  if (clapStickerAudio) {
+    try { clapStickerAudio.load(); } catch {}
+  }
+  if (trophyStickerAudio) {
+    try { trophyStickerAudio.load(); } catch {}
+  }
+  if (boomStickerAudio) {
+    try { boomStickerAudio.load(); } catch {}
+  }
+  if (thinkingStickerAudio) {
+    try { thinkingStickerAudio.load(); } catch {}
+  }
+  if (oopsStickerAudio) {
+    try { oopsStickerAudio.load(); } catch {}
+  }
 }
 
 function playStickerSound(id) {
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return;
   if (!audioCtx) audioCtx = new Ctx();
-  if (audioCtx.state === "suspended") return;
+  if (audioCtx.state === "suspended") {
+    // Try to resume (may take a tick); play right after it starts.
+    audioCtx.resume()
+      .then(() => { try { playStickerSound(id); } catch {} })
+      .catch(() => {});
+    return;
+  }
 
-  const map = {
-    gg:       { type: "square",   f1: 440, f2: 660, dur: 0.16 },
-    nice:     { type: "sawtooth", f1: 520, f2: 880, dur: 0.14 },
-    thinking: { type: "sine",     f1: 320, f2: 280, dur: 0.22 },
-    oops:     { type: "triangle", f1: 520, f2: 360, dur: 0.18 },
-    sweat:    { type: "sine",     f1: 220, f2: 260, dur: 0.20 },
-    boom:     { type: "sawtooth", f1: 120, f2: 60,  dur: 0.26 },
-    taunt:    { type: "square",   f1: 260, f2: 220, dur: 0.20 },
-    cry:      { type: "triangle", f1: 300, f2: 180, dur: 0.22 },
-    clap:     { type: "square",   f1: 740, f2: 740, dur: 0.10 },
-    trophy:   { type: "sine",     f1: 660, f2: 990, dur: 0.18 },
-  };
-  const s = map[id] || { type: "sine", f1: 440, f2: 440, dur: 0.14 };
   const t0 = audioCtx.currentTime + 0.005;
 
-  const gain = audioCtx.createGain();
-  gain.gain.setValueAtTime(0.0, t0);
-  gain.gain.linearRampToValueAtTime(0.22, t0 + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.0008, t0 + s.dur);
-  gain.connect(audioCtx.destination);
+  function playSample(audioRef, src, clip, stopTimer) {
+    let audio = audioRef;
+    if (!audio) {
+      audio = new Audio(src);
+      audio.preload = "auto";
+      audio.crossOrigin = "anonymous";
+    }
+    clearTimeout(stopTimer);
+    try {
+      audio.pause();
+      audio.currentTime = clip.start;
+      audio.volume = 0.9;
+      const maybePromise = audio.play();
+      if (maybePromise && typeof maybePromise.catch === "function") {
+        maybePromise.catch(() => {});
+      }
+      const nextStopTimer = window.setTimeout(() => {
+        try {
+          audio.pause();
+          audio.currentTime = clip.start;
+        } catch {}
+      }, Math.max(100, (clip.end - clip.start) * 1000));
+      return { audio, stopTimer: nextStopTimer };
+    } catch {
+      return null;
+    }
+  }
 
-  const osc = audioCtx.createOscillator();
-  osc.type = s.type;
-  osc.frequency.setValueAtTime(s.f1, t0);
-  osc.frequency.linearRampToValueAtTime(s.f2, t0 + s.dur);
-  osc.connect(gain);
-  osc.start(t0);
-  osc.stop(t0 + s.dur + 0.02);
+  function playFireSample() {
+    const result = playSample(fireStickerAudio, "./sticker-fire.wav", FIRE_STICKER_CLIP, fireStickerStopTimer);
+    if (!result) return false;
+    fireStickerAudio = result.audio;
+    fireStickerStopTimer = result.stopTimer;
+    return true;
+  }
 
-  if (id === "boom") {
-    const n = audioCtx.createBufferSource();
-    const len = Math.floor(audioCtx.sampleRate * 0.08);
+  function playCrySample() {
+    const result = playSample(cryStickerAudio, "./sticker-cry.wav", CRY_STICKER_CLIP, cryStickerStopTimer);
+    if (!result) return false;
+    cryStickerAudio = result.audio;
+    cryStickerStopTimer = result.stopTimer;
+    return true;
+  }
+
+  function playTauntSample() {
+    const result = playSample(tauntStickerAudio, "./sticker-taunt.wav", TAUNT_STICKER_CLIP, tauntStickerStopTimer);
+    if (!result) return false;
+    tauntStickerAudio = result.audio;
+    tauntStickerStopTimer = result.stopTimer;
+    return true;
+  }
+
+  function playClapSample() {
+    const result = playSample(clapStickerAudio, "./sticker-clap.wav", CLAP_STICKER_CLIP, clapStickerStopTimer);
+    if (!result) return false;
+    clapStickerAudio = result.audio;
+    clapStickerStopTimer = result.stopTimer;
+    return true;
+  }
+
+  function playTrophySample() {
+    const result = playSample(trophyStickerAudio, "./sticker-trophy.wav", TROPHY_STICKER_CLIP, trophyStickerStopTimer);
+    if (!result) return false;
+    trophyStickerAudio = result.audio;
+    trophyStickerStopTimer = result.stopTimer;
+    return true;
+  }
+
+  function playBoomSample() {
+    const result = playSample(boomStickerAudio, "./sticker-boom.wav", BOOM_STICKER_CLIP, boomStickerStopTimer);
+    if (!result) return false;
+    boomStickerAudio = result.audio;
+    boomStickerStopTimer = result.stopTimer;
+    return true;
+  }
+
+  function playThinkingSample() {
+    const result = playSample(thinkingStickerAudio, "./sticker-thinking.wav", THINKING_STICKER_CLIP, thinkingStickerStopTimer);
+    if (!result) return false;
+    thinkingStickerAudio = result.audio;
+    thinkingStickerStopTimer = result.stopTimer;
+    return true;
+  }
+
+  function playOopsSample() {
+    const result = playSample(oopsStickerAudio, "./sticker-oops.wav", OOPS_STICKER_CLIP, oopsStickerStopTimer);
+    if (!result) return false;
+    oopsStickerAudio = result.audio;
+    oopsStickerStopTimer = result.stopTimer;
+    return true;
+  }
+
+  function tone({ type = "sine", f1 = 440, f2 = f1, dur = 0.12, gain = 0.18, attack = 0.01, start = t0, destination = null } = {}) {
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, start);
+    g.gain.linearRampToValueAtTime(gain, start + attack);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    g.connect(destination || audioCtx.destination);
+
+    const o = audioCtx.createOscillator();
+    o.type = type;
+    o.frequency.setValueAtTime(f1, start);
+    o.frequency.linearRampToValueAtTime(f2, start + dur);
+    o.connect(g);
+    o.start(start);
+    o.stop(start + dur + 0.02);
+    return { osc: o, gain: g };
+  }
+
+  function noiseBurst({ dur = 0.08, gain = 0.14, band = null, start = t0, lowpass = null, highpass = null } = {}) {
+    const len = Math.floor(audioCtx.sampleRate * dur);
     const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
-    const ng = audioCtx.createGain();
-    ng.gain.setValueAtTime(0.18, t0);
-    ng.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.10);
-    n.buffer = buf;
-    n.connect(ng);
-    ng.connect(audioCtx.destination);
-    n.start(t0);
-    n.stop(t0 + 0.11);
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(gain, start);
+    g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+
+    let node = src;
+    if (highpass) {
+      const hp = audioCtx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.setValueAtTime(highpass, start);
+      node.connect(hp);
+      node = hp;
+    }
+    if (lowpass) {
+      const lp = audioCtx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(lowpass, start);
+      node.connect(lp);
+      node = lp;
+    }
+    if (band) {
+      const bp = audioCtx.createBiquadFilter();
+      bp.type = "bandpass";
+      bp.frequency.setValueAtTime(band, start);
+      bp.Q.setValueAtTime(0.9, start);
+      node.connect(bp);
+      node = bp;
+    }
+    node.connect(g);
+    g.connect(audioCtx.destination);
+    src.start(start);
+    src.stop(start + dur + 0.01);
   }
+
+  function fire() {
+    // Base flame bed: airy broadband noise shaped like a short torch burst.
+    noiseBurst({ dur: 0.42, gain: 0.11, highpass: 260, lowpass: 5200 });
+    // Mid hiss layer for the "fsshh" body.
+    noiseBurst({ dur: 0.32, gain: 0.06, band: 1850, start: t0 + 0.012 });
+    // Low rumble to avoid sounding too thin.
+    tone({ type: "triangle", f1: 150, f2: 92, dur: 0.34, gain: 0.022, attack: 0.03 });
+    // Irregular crackles so it feels like flame, not a synth sweep.
+    noiseBurst({ dur: 0.028, gain: 0.09, band: 2900, start: t0 + 0.042 });
+    noiseBurst({ dur: 0.020, gain: 0.07, band: 3500, start: t0 + 0.094 });
+    noiseBurst({ dur: 0.032, gain: 0.08, band: 2400, start: t0 + 0.148 });
+    noiseBurst({ dur: 0.018, gain: 0.06, band: 3900, start: t0 + 0.218 });
+    noiseBurst({ dur: 0.026, gain: 0.065, band: 2800, start: t0 + 0.274 });
+  }
+
+  function cry() {
+    const sob = tone({ type: "sine", f1: 460, f2: 210, dur: 0.34, gain: 0.13, attack: 0.018 });
+    const wobble = audioCtx.createOscillator();
+    wobble.type = "sine";
+    wobble.frequency.setValueAtTime(6.2, t0);
+    const wobbleGain = audioCtx.createGain();
+    wobbleGain.gain.setValueAtTime(24, t0);
+    wobble.connect(wobbleGain);
+    wobbleGain.connect(sob.osc.frequency);
+    wobble.start(t0);
+    wobble.stop(t0 + 0.34);
+    tone({ type: "triangle", f1: 320, f2: 180, dur: 0.18, gain: 0.05, start: t0 + 0.09 });
+    noiseBurst({ dur: 0.11, gain: 0.045, band: 1300, start: t0 + 0.04 });
+  }
+
+  function laugh() {
+    const pulses = [
+      { dt: 0.00, f1: 620, f2: 420, band: 1100 },
+      { dt: 0.09, f1: 660, f2: 460, band: 1200 },
+      { dt: 0.19, f1: 580, f2: 380, band: 980 },
+    ];
+    for (const p of pulses) {
+      const tt = t0 + p.dt;
+      const band = audioCtx.createBiquadFilter();
+      band.type = "bandpass";
+      band.frequency.setValueAtTime(p.band, tt);
+      band.Q.setValueAtTime(1.3, tt);
+      band.connect(audioCtx.destination);
+      tone({ type: "sawtooth", f1: p.f1, f2: p.f2, dur: 0.08, gain: 0.12, attack: 0.005, start: tt, destination: band });
+      tone({ type: "square", f1: p.f1 * 0.5, f2: p.f2 * 0.5, dur: 0.075, gain: 0.045, attack: 0.004, start: tt + 0.002, destination: band });
+      }
+  }
+
+  function clap() {
+    noiseBurst({ dur: 0.045, gain: 0.14, band: 1800 });
+    noiseBurst({ dur: 0.05, gain: 0.12, band: 2400, start: t0 + 0.055 });
+    tone({ type: "triangle", f1: 900, f2: 760, dur: 0.045, gain: 0.03, start: t0 + 0.01 });
+  }
+
+  function trophy() {
+    tone({ type: "triangle", f1: 660, f2: 880, dur: 0.11, gain: 0.12 });
+    tone({ type: "triangle", f1: 880, f2: 1180, dur: 0.12, gain: 0.11, start: t0 + 0.09 });
+    tone({ type: "sine", f1: 990, f2: 1320, dur: 0.16, gain: 0.09, start: t0 + 0.18 });
+  }
+
+  if (id === "nice") {
+    if (playFireSample()) return;
+    return fire();
+  }
+  if (id === "cry") {
+    if (playCrySample()) return;
+    return cry();
+  }
+  if (id === "taunt") {
+    if (playTauntSample()) return;
+    return laugh();
+  }
+  if (id === "clap") {
+    if (playClapSample()) return;
+    return clap();
+  }
+  if (id === "boom") {
+    if (playBoomSample()) return;
+    tone({ type: "sawtooth", f1: 150, f2: 55, dur: 0.20, gain: 0.13, attack: 0.008 });
+    noiseBurst({ dur: 0.12, gain: 0.18, band: 260 });
+    noiseBurst({ dur: 0.18, gain: 0.08, lowpass: 420, start: t0 + 0.015 });
+    return;
+  }
+  if (id === "gg") {
+    tone({ type: "square", f1: 680, f2: 860, dur: 0.10, gain: 0.10 });
+    tone({ type: "triangle", f1: 1020, f2: 1240, dur: 0.09, gain: 0.06, start: t0 + 0.06 });
+    return;
+  }
+  if (id === "thinking") {
+    if (playThinkingSample()) return;
+    tone({ type: "sine", f1: 390, f2: 315, dur: 0.12, gain: 0.08 });
+    tone({ type: "sine", f1: 315, f2: 270, dur: 0.10, gain: 0.06, start: t0 + 0.11 });
+    return;
+  }
+  if (id === "oops") {
+    if (playOopsSample()) return;
+    tone({ type: "triangle", f1: 560, f2: 360, dur: 0.17, gain: 0.11 });
+    tone({ type: "sine", f1: 260, f2: 220, dur: 0.09, gain: 0.05, start: t0 + 0.06 });
+    return;
+  }
+  if (id === "sweat") {
+    tone({ type: "sine", f1: 250, f2: 300, dur: 0.10, gain: 0.06 });
+    tone({ type: "triangle", f1: 420, f2: 330, dur: 0.12, gain: 0.05, start: t0 + 0.08 });
+    return;
+  }
+  if (id === "trophy") {
+    if (playTrophySample()) return;
+    return trophy();
+  }
+
+  tone({ type: "sine", f1: 440, f2: 440, dur: 0.12, gain: 0.10 });
 }
 
 window.addEventListener("pointerdown", ensureAudioUnlocked, { once: true, passive: true });
@@ -1150,13 +1425,11 @@ function handleState(state) {
 }
 
 const STICKERS = {
-  gg:       { emoji: "🏁", key: "sticker_gg" },
   nice:     { emoji: "🔥", key: "sticker_nice" },
   thinking: { emoji: "🤔", key: "sticker_thinking" },
   oops:     { emoji: "😅", key: "sticker_oops" },
-  sweat:    { emoji: "😰", key: "sticker_sweat" },
   boom:     { emoji: "💥", key: "sticker_boom" },
-  taunt:    { emoji: "😈", key: "sticker_taunt" },
+  taunt:    { emoji: "🤣", key: "sticker_taunt" },
   cry:      { emoji: "😭", key: "sticker_cry" },
   clap:     { emoji: "👏", key: "sticker_clap" },
   trophy:   { emoji: "🏆", key: "sticker_trophy" },
@@ -1187,11 +1460,12 @@ function canSendSticker() {
 
 function sendSticker(id) {
   if (!canSendSticker()) return;
+  ensureAudioUnlocked();
   const now = Date.now();
   if (now < stickerLockedUntil) return;
   if (now - lastStickerSentAt < 250) return;
   lastStickerSentAt = now;
-  stickerLockedUntil = Math.max(stickerLockedUntil, now + 2300);
+  stickerLockedUntil = Math.max(stickerLockedUntil, now + STICKER_DISPLAY_MS);
   socket.send(JSON.stringify({ type: "sticker", id }));
   closeStickerPalette();
 }
@@ -1208,9 +1482,10 @@ function showStickerToast(from, id) {
   el.innerHTML = `
     <div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>`;
   toasts.appendChild(el);
-  stickerLockedUntil = Math.max(stickerLockedUntil, Date.now() + 2300);
+  stickerLockedUntil = Math.max(stickerLockedUntil, Date.now() + STICKER_DISPLAY_MS);
+  ensureAudioUnlocked();
   playStickerSound(id);
-  setTimeout(() => { try { el.remove(); } catch {} }, 2300);
+  setTimeout(() => { try { el.remove(); } catch {} }, STICKER_DISPLAY_MS);
 }
 
 function setStickerPaletteOpen(open) {
