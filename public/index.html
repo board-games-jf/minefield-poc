@@ -249,12 +249,22 @@
     .status-actions { display: flex; align-items: center; gap: 8px; }
 
     .board-wrap {
+      width: fit-content;
+      max-width: 100%;
+      margin: 0 auto;
       background: var(--bg-secondary);
       border-radius: var(--radius-lg);
       padding: 14px;
       border: 0.5px solid var(--border);
-      display: grid;
-      place-items: center;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.18) transparent;
+    }
+    .board-row { width: 100%; display: flex; justify-content: center; }
+    .board-scroll {
+      display: flex;
+      justify-content: center;
     }
     .board { display: inline-grid; gap: 4px; }
 
@@ -374,17 +384,19 @@
 
     .sticker-toasts {
       position: fixed;
-      right: 18px;
-      bottom: 18px;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
       display: flex;
       flex-direction: column;
       gap: 10px;
+      align-items: center;
       pointer-events: none;
       z-index: 50;
+      width: min(280px, calc(100vw - 32px));
     }
     .sticker-toast {
-      min-width: 170px;
-      max-width: 260px;
+      width: 100%;
       padding: 13px 15px;
       border-radius: 20px;
       border: 0.5px solid rgba(255,255,255,0.10);
@@ -415,8 +427,13 @@
     .sticker-toast[data-sticker="cry"] .sticker-emoji { animation: stickerCryDropToast 760ms ease-in-out 2; }
     .sticker-toast[data-sticker="clap"] .sticker-emoji { animation: stickerClapPulseToast 560ms ease-in-out 3; }
     .sticker-toast[data-sticker="trophy"] .sticker-emoji { animation: stickerTrophyShineToast 700ms ease-in-out 2; }
-    .sticker-meta { display: flex; flex-direction: column; gap: 1px; }
-    .sticker-from { font-size: 12px; color: var(--text-muted); }
+    .sticker-toast { justify-content: center; }
+    .board-wrap::-webkit-scrollbar { height: 6px; }
+    .board-wrap::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.18);
+      border-radius: 999px;
+    }
+    .board-wrap::-webkit-scrollbar-track { background: transparent; }
     @keyframes toastIn { to { transform: translateY(0) scale(1); opacity: 1; } }
     @keyframes toastOut { to { transform: translateY(8px) scale(0.98); opacity: 0; } }
     @keyframes launcherFloat {
@@ -566,6 +583,13 @@
       font-size: 12px; color: #EF9F27; text-align: center; display: none;
     }
     .reconnecting-bar.visible { display: block; }
+
+    @media (max-width: 720px) {
+      .board-wrap {
+        align-self: stretch;
+        margin: 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -715,8 +739,12 @@
         <button class="btn btn-secondary" style="height:32px;font-size:12px;padding:0 12px;" id="btn-leave" data-i18n="btn_leave"></button>
       </div>
     </div>
-    <div class="board-wrap">
-      <div class="board" id="board"></div>
+    <div class="board-row">
+      <div class="board-wrap">
+        <div class="board-scroll">
+          <div class="board" id="board"></div>
+        </div>
+      </div>
     </div>
     <div id="result-area"></div>
   </div>
@@ -813,6 +841,9 @@ let currentState = null;
 let roomId = "";
 const intentionallyClosedSockets = new WeakSet();
 let lastStickerSentAt = 0;
+let stickerLockedUntil = 0;
+let audioCtx = null;
+let audioUnlocked = false;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function showScreen(id) {
@@ -822,6 +853,72 @@ function showScreen(id) {
     document.getElementById("reconnecting-bar").classList.remove("visible");
   }
 }
+
+function ensureAudioUnlocked() {
+  if (audioUnlocked) return;
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) { audioUnlocked = true; return; }
+  if (!audioCtx) audioCtx = new Ctx();
+  if (audioCtx.state === "suspended") {
+    audioCtx.resume().catch(() => {});
+  }
+  audioUnlocked = true;
+}
+
+function playStickerSound(id) {
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  if (!Ctx) return;
+  if (!audioCtx) audioCtx = new Ctx();
+  if (audioCtx.state === "suspended") return;
+
+  const map = {
+    gg:       { type: "square",   f1: 440, f2: 660, dur: 0.16 },
+    nice:     { type: "sawtooth", f1: 520, f2: 880, dur: 0.14 },
+    thinking: { type: "sine",     f1: 320, f2: 280, dur: 0.22 },
+    oops:     { type: "triangle", f1: 520, f2: 360, dur: 0.18 },
+    sweat:    { type: "sine",     f1: 220, f2: 260, dur: 0.20 },
+    boom:     { type: "sawtooth", f1: 120, f2: 60,  dur: 0.26 },
+    taunt:    { type: "square",   f1: 260, f2: 220, dur: 0.20 },
+    cry:      { type: "triangle", f1: 300, f2: 180, dur: 0.22 },
+    clap:     { type: "square",   f1: 740, f2: 740, dur: 0.10 },
+    trophy:   { type: "sine",     f1: 660, f2: 990, dur: 0.18 },
+  };
+  const s = map[id] || { type: "sine", f1: 440, f2: 440, dur: 0.14 };
+  const t0 = audioCtx.currentTime + 0.005;
+
+  const gain = audioCtx.createGain();
+  gain.gain.setValueAtTime(0.0, t0);
+  gain.gain.linearRampToValueAtTime(0.22, t0 + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.0008, t0 + s.dur);
+  gain.connect(audioCtx.destination);
+
+  const osc = audioCtx.createOscillator();
+  osc.type = s.type;
+  osc.frequency.setValueAtTime(s.f1, t0);
+  osc.frequency.linearRampToValueAtTime(s.f2, t0 + s.dur);
+  osc.connect(gain);
+  osc.start(t0);
+  osc.stop(t0 + s.dur + 0.02);
+
+  if (id === "boom") {
+    const n = audioCtx.createBufferSource();
+    const len = Math.floor(audioCtx.sampleRate * 0.08);
+    const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+    const ng = audioCtx.createGain();
+    ng.gain.setValueAtTime(0.18, t0);
+    ng.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.10);
+    n.buffer = buf;
+    n.connect(ng);
+    ng.connect(audioCtx.destination);
+    n.start(t0);
+    n.stop(t0 + 0.11);
+  }
+}
+
+window.addEventListener("pointerdown", ensureAudioUnlocked, { once: true, passive: true });
+window.addEventListener("keydown", ensureAudioUnlocked, { once: true });
 function getRoomIdFromUrl() { return location.hash.replace("#", "") || null; }
 function setRoomIdInUrl(id) { location.hash = id; }
 function generateRoomId() { return Math.random().toString(36).slice(2, 8); }
@@ -1091,8 +1188,10 @@ function canSendSticker() {
 function sendSticker(id) {
   if (!canSendSticker()) return;
   const now = Date.now();
-  if (now - lastStickerSentAt < 900) return;
+  if (now < stickerLockedUntil) return;
+  if (now - lastStickerSentAt < 250) return;
   lastStickerSentAt = now;
+  stickerLockedUntil = Math.max(stickerLockedUntil, now + 2300);
   socket.send(JSON.stringify({ type: "sticker", id }));
   closeStickerPalette();
 }
@@ -1101,17 +1200,16 @@ function showStickerToast(from, id) {
   const def = STICKERS[id];
   if (!def) return;
   const toasts = document.getElementById("sticker-toasts");
+  // Only one at a time: replace any existing toast.
+  toasts.innerHTML = "";
   const el = document.createElement("div");
   el.className = "sticker-toast " + (from === 0 ? "p1" : "p2");
   el.dataset.sticker = id;
-  const name = currentState?.players?.[from]?.name ?? (from === 0 ? "P1" : "P2");
   el.innerHTML = `
-    <div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>
-    <div class="sticker-meta">
-      <div class="sticker-from">${name}</div>
-    </div>`;
+    <div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>`;
   toasts.appendChild(el);
-  while (toasts.children.length > 4) toasts.removeChild(toasts.firstChild);
+  stickerLockedUntil = Math.max(stickerLockedUntil, Date.now() + 2300);
+  playStickerSound(id);
   setTimeout(() => { try { el.remove(); } catch {} }, 2300);
 }
 
@@ -1160,7 +1258,14 @@ function renderBoard(state) {
   const cols = { easy: 6, medium: 8, hard: 10 }[state.difficulty];
   const rows = state.grid.length;
   const boardEl = document.getElementById("board");
-  const cellSize = Math.min(56, Math.floor((600 - (cols - 1) * 4) / cols));
+  const boardWrap = document.querySelector("#screen-game .board-wrap");
+  const wrapRect = boardWrap.getBoundingClientRect();
+  const topY = wrapRect.top;
+  const availW = Math.max(240, Math.min(640, document.querySelector(".container").clientWidth) - 28 /* wrap padding */ - 2);
+  const availH = Math.max(240, window.innerHeight - topY - 22 /* bottom gap */ - 28 /* wrap padding */ - 2);
+  const byW = Math.floor((availW - (cols - 1) * 4) / cols);
+  const byH = Math.floor((availH - (rows - 1) * 4) / rows);
+  const cellSize = Math.max(28, Math.min(56, byW, byH));
   boardEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
 
   if (boardEl.children.length !== rows * cols) {
@@ -1196,6 +1301,15 @@ function renderBoard(state) {
     }
   }
 }
+
+let _resizeRaf = 0;
+window.addEventListener("resize", () => {
+  if (!currentState) return;
+  if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
+  _resizeRaf = requestAnimationFrame(() => {
+    try { renderBoard(currentState); } catch {}
+  });
+});
 
 function handleCellClick(r, c) {
   if (!currentState || currentState.status !== "playing") return;
