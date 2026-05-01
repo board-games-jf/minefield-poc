@@ -670,13 +670,17 @@ function connectToRoom(id, name, difficulty, aiLevel) {
       if (!joinAccepted) {
         joinAccepted = state.players[0]?.name === name || state.players[1]?.name === name;
       }
-      if (joinAccepted) handleState(state);
+      if (joinAccepted) {
+        document.getElementById("reconnecting-bar").classList.remove("visible");
+        handleState(state);
+      }
     }
     if (msg.type === "error") handleServerError(msg.message);
   });
 
   socket.addEventListener("close", () => {
-    if (!intentionallyClosedSockets.has(thisSocket)) {
+    const inGame = document.getElementById("screen-game").classList.contains("active");
+    if (inGame && !intentionallyClosedSockets.has(thisSocket)) {
       document.getElementById("reconnecting-bar").classList.add("visible");
     }
   });
