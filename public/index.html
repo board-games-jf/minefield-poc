@@ -453,6 +453,17 @@ let locale = localStorage.getItem("minefield-locale") || DEFAULT_LOCALE;
 let t = TRANSLATIONS[locale];
 
 const NAME_STORAGE_KEY = "minefield-name";
+function detectDefaultLocale() {
+  const prefs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
+  for (const lang of prefs) {
+    const l = String(lang).toLowerCase();
+    if (l.startsWith("pt-br")) return "pt-BR-x-CE";
+    if (l.startsWith("pt")) return "pt-PT";
+    if (l.startsWith("en")) return "en";
+  }
+  return DEFAULT_LOCALE;
+}
+
 function renderLocaleButtons() {
   const sel = document.getElementById("locale-select");
   sel.querySelectorAll("option").forEach(opt => {
@@ -548,6 +559,13 @@ function syncScreenWithUrl() {
 // ── Init ───────────────────────────────────────────────────────────────────
 function init() {
   renderLocaleButtons();
+  // If user has no saved preference, pick a sensible default based on browser language.
+  if (!localStorage.getItem("minefield-locale")) {
+    const detected = detectDefaultLocale();
+    localStorage.setItem("minefield-locale", detected);
+    locale = detected;
+    t = TRANSLATIONS[locale];
+  }
   applyLocale(locale);
   setupDiffOptions();
   syncNameInput("create-name");
