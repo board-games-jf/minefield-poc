@@ -40,12 +40,14 @@ export interface GameState {
 // Client → Server
 export type ClientMessage =
   | { type: "join";   name: string; difficulty?: Difficulty; ai?: { level: AiLevel } }
-  | { type: "reveal"; row: number; col: number };
+  | { type: "reveal"; row: number; col: number }
+  | { type: "sticker"; id: string };
 
 // Server → Client
 export type ServerMessage =
   | { type: "state"; state: GameState }
-  | { type: "error"; message: string };
+  | { type: "error"; message: string }
+  | { type: "sticker"; id: string; from: 0 | 1; at: number };
 
 // ── Game Logic ─────────────────────────────────────────────────────────────
 
@@ -154,6 +156,7 @@ export default class GameRoom implements Party.Server {
   private aiTimer: ReturnType<typeof setTimeout> | null = null;
   private aiLevel: AiLevel = "medium";
   private aiFlags: boolean[][] | null = null;
+  private lastStickerAt: Map<string, number> = new Map();
 
   constructor(readonly room: Party.Room) {}
 
@@ -177,6 +180,7 @@ export default class GameRoom implements Party.Server {
     const msg = JSON.parse(message) as ClientMessage;
     if (msg.type === "join")   await this.handleJoin(sender, msg.name, msg.difficulty, msg.ai);
     if (msg.type === "reveal") await this.handleReveal(sender, msg.row, msg.col);
+    if (msg.type === "sticker") await this.handleSticker(sender, msg.id);
   }
 
   async onClose(conn: Party.Connection) {
@@ -285,6 +289,23 @@ export default class GameRoom implements Party.Server {
     }
   }
 
+  private async handleSticker(conn: Party.Connection, id: string) {
+    if (!this.state) return;
+    if (this.state.status !== "playing") return;
+
+    const from = this.connectionToPlayer.get(conn.id);
+    if (from === undefined) return;
+    if (!isValidStickerId(id)) return;
+
+    const now = Date.now();
+    const last = this.lastStickerAt.get(conn.id) ?? 0;
+    // Server-side cooldown to avoid spamming.
+    if (now - last < 900) return;
+    this.lastStickerAt.set(conn.id, now);
+
+    this.room.broadcast(JSON.stringify({ type: "sticker", id, from, at: now } satisfies ServerMessage));
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
 
   private findExistingSlot(name: string): 0 | 1 | null {
@@ -375,6 +396,23 @@ export default class GameRoom implements Party.Server {
 }
 
 GameRoom satisfies Party.Worker;
+
+const STICKER_IDS = new Set([
+  "gg",
+  "oops",
+  "nice",
+  "thinking",
+  "sweat",
+  "boom",
+  "taunt",
+  "cry",
+  "clap",
+  "trophy",
+]);
+
+function isValidStickerId(id: string): boolean {
+  return STICKER_IDS.has(id);
+}
 
 export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLevel): { row: number; col: number } | null {
   const rows = state.grid.length;

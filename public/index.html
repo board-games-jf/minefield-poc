@@ -245,7 +245,8 @@
     .turn-info { text-align: center; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
     .turn-info strong { display: block; font-size: 14px; font-weight: 500; color: var(--text); }
 
-    .status-bar { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-muted); }
+    .status-bar { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-muted); gap: 12px; }
+    .status-actions { display: flex; align-items: center; gap: 8px; }
 
     .board-wrap {
       background: var(--bg-secondary);
@@ -256,6 +257,281 @@
       place-items: center;
     }
     .board { display: inline-grid; gap: 4px; }
+
+    .sticker-launcher-wrap {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    .sticker-launcher {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      border: 0.5px solid rgba(255,255,255,0.08);
+      background:
+        radial-gradient(circle at top left, rgba(224,75,74,0.18), transparent 36%),
+        radial-gradient(circle at top right, rgba(29,158,117,0.14), transparent 34%),
+        rgba(255,255,255,0.03);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.16s, background 0.16s, box-shadow 0.16s, filter 0.16s;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+      animation: launcherFloat 2.8s ease-in-out infinite;
+    }
+    .sticker-launcher:hover {
+      transform: translateY(-2px) scale(1.04);
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.22);
+      filter: saturate(1.12);
+    }
+    .sticker-launcher.open {
+      animation: none;
+      transform: translateY(-1px) scale(1.04);
+      box-shadow: 0 18px 34px rgba(0,0,0,0.28);
+    }
+    .sticker-launcher-icon { font-size: 28px; line-height: 1; transform-origin: center; }
+    .sticker-launcher.open .sticker-launcher-icon { animation: launcherPop 180ms ease-out; }
+    .sticker-palette {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      transform: translateY(10px) scale(0.96);
+      transform-origin: top right;
+      width: min(460px, calc(100vw - 40px));
+      padding: 14px;
+      border-radius: 20px;
+      border: 0.5px solid rgba(255,255,255,0.08);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03)),
+        rgba(22,22,22,0.92);
+      backdrop-filter: blur(18px);
+      box-shadow: 0 24px 60px rgba(0,0,0,0.35);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.16s, transform 0.16s;
+      z-index: 20;
+    }
+    .sticker-palette.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+    .sticker-palette-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .sticker-btn {
+      min-height: 74px;
+      border-radius: 16px;
+      border: 0.5px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: transform 0.12s, background 0.16s, border-color 0.16s, box-shadow 0.16s, opacity 0.16s;
+      user-select: none;
+      padding: 8px 6px;
+      opacity: 0;
+      transform: translateY(10px) scale(0.94);
+    }
+    .sticker-palette.open .sticker-btn { animation: stickerCardIn 220ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+    .sticker-palette.open .sticker-btn:nth-child(1) { animation-delay: 0ms; }
+    .sticker-palette.open .sticker-btn:nth-child(2) { animation-delay: 18ms; }
+    .sticker-palette.open .sticker-btn:nth-child(3) { animation-delay: 36ms; }
+    .sticker-palette.open .sticker-btn:nth-child(4) { animation-delay: 54ms; }
+    .sticker-palette.open .sticker-btn:nth-child(5) { animation-delay: 72ms; }
+    .sticker-palette.open .sticker-btn:nth-child(6) { animation-delay: 90ms; }
+    .sticker-palette.open .sticker-btn:nth-child(7) { animation-delay: 108ms; }
+    .sticker-palette.open .sticker-btn:nth-child(8) { animation-delay: 126ms; }
+    .sticker-palette.open .sticker-btn:nth-child(9) { animation-delay: 144ms; }
+    .sticker-palette.open .sticker-btn:nth-child(10) { animation-delay: 162ms; }
+    .sticker-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: 0 12px 24px rgba(0,0,0,0.18);
+    }
+    .sticker-btn:active { transform: translateY(0) scale(0.98); }
+    .sticker-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .sticker-btn-emoji { font-size: 26px; line-height: 1; transform-origin: center; will-change: transform; }
+    .sticker-btn[data-sticker="gg"] .sticker-btn-emoji { animation: stickerFlagWave 1.25s ease-in-out infinite; }
+    .sticker-btn[data-sticker="nice"] .sticker-btn-emoji { animation: stickerFireBurst 1s ease-in-out infinite; }
+    .sticker-btn[data-sticker="thinking"] .sticker-btn-emoji { animation: stickerThinkBob 1.5s ease-in-out infinite; }
+    .sticker-btn[data-sticker="oops"] .sticker-btn-emoji { animation: stickerOopsTilt 1.2s ease-in-out infinite; }
+    .sticker-btn[data-sticker="sweat"] .sticker-btn-emoji { animation: stickerSweatShake 1.1s ease-in-out infinite; }
+    .sticker-btn[data-sticker="boom"] .sticker-btn-emoji { animation: stickerBoomPop 0.95s ease-in-out infinite; }
+    .sticker-btn[data-sticker="taunt"] .sticker-btn-emoji { animation: stickerTauntSway 1.15s ease-in-out infinite; }
+    .sticker-btn[data-sticker="cry"] .sticker-btn-emoji { animation: stickerCryDrop 1.3s ease-in-out infinite; }
+    .sticker-btn[data-sticker="clap"] .sticker-btn-emoji { animation: stickerClapPulse 0.9s ease-in-out infinite; }
+    .sticker-btn[data-sticker="trophy"] .sticker-btn-emoji { animation: stickerTrophyShine 1.2s ease-in-out infinite; }
+
+    .sticker-toasts {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+      z-index: 50;
+    }
+    .sticker-toast {
+      min-width: 170px;
+      max-width: 260px;
+      padding: 13px 15px;
+      border-radius: 20px;
+      border: 0.5px solid rgba(255,255,255,0.10);
+      background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.08), transparent 38%),
+        rgba(18,18,18,0.78);
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text);
+      transform: translateY(10px) scale(0.96);
+      opacity: 0;
+      box-shadow: 0 18px 36px rgba(0,0,0,0.24);
+      animation: toastIn 170ms cubic-bezier(0.2, 0.8, 0.2, 1) forwards, toastOut 260ms ease-in forwards;
+      animation-delay: 0ms, 1950ms;
+    }
+    .sticker-toast.p1 { border-color: rgba(29,158,117,0.35); }
+    .sticker-toast.p2 { border-color: rgba(224,75,74,0.35); }
+    .sticker-emoji { font-size: 40px; line-height: 1; transform-origin: center; }
+    .sticker-toast[data-sticker="gg"] .sticker-emoji { animation: stickerFlagWaveToast 700ms ease-in-out 2; }
+    .sticker-toast[data-sticker="nice"] .sticker-emoji { animation: stickerFireBurstToast 620ms ease-in-out 2; }
+    .sticker-toast[data-sticker="thinking"] .sticker-emoji { animation: stickerThinkBobToast 760ms ease-in-out 2; }
+    .sticker-toast[data-sticker="oops"] .sticker-emoji { animation: stickerOopsTiltToast 620ms ease-in-out 2; }
+    .sticker-toast[data-sticker="sweat"] .sticker-emoji { animation: stickerSweatShakeToast 680ms ease-in-out 2; }
+    .sticker-toast[data-sticker="boom"] .sticker-emoji { animation: stickerBoomPopToast 580ms ease-in-out 2; }
+    .sticker-toast[data-sticker="taunt"] .sticker-emoji { animation: stickerTauntSwayToast 650ms ease-in-out 2; }
+    .sticker-toast[data-sticker="cry"] .sticker-emoji { animation: stickerCryDropToast 760ms ease-in-out 2; }
+    .sticker-toast[data-sticker="clap"] .sticker-emoji { animation: stickerClapPulseToast 560ms ease-in-out 3; }
+    .sticker-toast[data-sticker="trophy"] .sticker-emoji { animation: stickerTrophyShineToast 700ms ease-in-out 2; }
+    .sticker-meta { display: flex; flex-direction: column; gap: 1px; }
+    .sticker-from { font-size: 12px; color: var(--text-muted); }
+    @keyframes toastIn { to { transform: translateY(0) scale(1); opacity: 1; } }
+    @keyframes toastOut { to { transform: translateY(8px) scale(0.98); opacity: 0; } }
+    @keyframes launcherFloat {
+      0%, 100% { transform: translateY(0); box-shadow: 0 10px 24px rgba(0,0,0,0.16); }
+      50% { transform: translateY(-2px); box-shadow: 0 14px 28px rgba(0,0,0,0.22); }
+    }
+    @keyframes launcherPop {
+      0% { transform: scale(0.86); }
+      65% { transform: scale(1.14); }
+      100% { transform: scale(1); }
+    }
+    @keyframes stickerCardIn {
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes stickerEmojiBounce {
+      0% { transform: scale(0.72) rotate(-10deg); }
+      55% { transform: scale(1.16) rotate(6deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    @keyframes stickerFlagWave {
+      0%,100% { transform: rotate(-6deg) translateY(0); }
+      50% { transform: rotate(6deg) translateY(-2px); }
+    }
+    @keyframes stickerFireBurst {
+      0%,100% { transform: scale(1) rotate(-4deg); filter: saturate(1); }
+      50% { transform: scale(1.16) rotate(4deg); filter: saturate(1.3); }
+    }
+    @keyframes stickerThinkBob {
+      0%,100% { transform: translateY(0); }
+      40% { transform: translateY(-3px) rotate(-6deg); }
+      70% { transform: translateY(1px) rotate(3deg); }
+    }
+    @keyframes stickerOopsTilt {
+      0%,100% { transform: rotate(0deg); }
+      25% { transform: rotate(-10deg) scale(1.04); }
+      75% { transform: rotate(10deg) scale(1.04); }
+    }
+    @keyframes stickerSweatShake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-2px) rotate(-4deg); }
+      40% { transform: translateX(2px) rotate(4deg); }
+      60% { transform: translateX(-1px); }
+    }
+    @keyframes stickerBoomPop {
+      0%,100% { transform: scale(0.98); }
+      35% { transform: scale(1.22); }
+      60% { transform: scale(0.9); }
+    }
+    @keyframes stickerTauntSway {
+      0%,100% { transform: rotate(0deg) translateY(0); }
+      30% { transform: rotate(-8deg) translateY(-2px); }
+      70% { transform: rotate(8deg) translateY(1px); }
+    }
+    @keyframes stickerCryDrop {
+      0%,100% { transform: translateY(0); }
+      30% { transform: translateY(2px) scale(0.98); }
+      60% { transform: translateY(-2px) scale(1.04); }
+    }
+    @keyframes stickerClapPulse {
+      0%,100% { transform: scale(1); }
+      40% { transform: scale(1.16); }
+      60% { transform: scale(0.92); }
+    }
+    @keyframes stickerTrophyShine {
+      0%,100% { transform: rotate(0deg) scale(1); filter: brightness(1); }
+      45% { transform: rotate(-8deg) scale(1.12); filter: brightness(1.25); }
+      70% { transform: rotate(8deg) scale(1.04); }
+    }
+    @keyframes stickerFlagWaveToast {
+      0%,100% { transform: scale(1) rotate(-8deg); }
+      50% { transform: scale(1.18) rotate(10deg) translateY(-2px); }
+    }
+    @keyframes stickerFireBurstToast {
+      0%,100% { transform: scale(1); filter: saturate(1); }
+      45% { transform: scale(1.28) rotate(8deg); filter: saturate(1.5); }
+    }
+    @keyframes stickerThinkBobToast {
+      0%,100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-5px) rotate(-10deg) scale(1.14); }
+    }
+    @keyframes stickerOopsTiltToast {
+      0%,100% { transform: rotate(0deg) scale(1); }
+      35% { transform: rotate(-16deg) scale(1.12); }
+      70% { transform: rotate(16deg) scale(1.12); }
+    }
+    @keyframes stickerSweatShakeToast {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-4px) rotate(-6deg); }
+      40% { transform: translateX(4px) rotate(6deg); }
+      60% { transform: translateX(-2px) scale(1.08); }
+    }
+    @keyframes stickerBoomPopToast {
+      0%,100% { transform: scale(1); }
+      35% { transform: scale(1.35); }
+      65% { transform: scale(0.86); }
+    }
+    @keyframes stickerTauntSwayToast {
+      0%,100% { transform: rotate(0deg); }
+      30% { transform: rotate(-12deg) translateY(-2px) scale(1.08); }
+      70% { transform: rotate(12deg) translateY(1px) scale(1.08); }
+    }
+    @keyframes stickerCryDropToast {
+      0%,100% { transform: translateY(0) scale(1); }
+      30% { transform: translateY(4px) scale(0.96); }
+      55% { transform: translateY(-4px) scale(1.12); }
+    }
+    @keyframes stickerClapPulseToast {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.24) rotate(6deg); }
+    }
+    @keyframes stickerTrophyShineToast {
+      0%,100% { transform: rotate(0deg) scale(1); filter: brightness(1); }
+      45% { transform: rotate(-12deg) scale(1.18); filter: brightness(1.35); }
+      70% { transform: rotate(12deg) scale(1.08); }
+    }
 
     .cell {
       aspect-ratio: 1; border-radius: 5px;
@@ -416,7 +692,28 @@
     </div>
     <div class="status-bar">
       <span id="bombs-remaining"></span>
-      <button class="btn btn-secondary" style="height:32px;font-size:12px;padding:0 12px;" id="btn-leave" data-i18n="btn_leave"></button>
+      <div class="status-actions">
+        <div class="sticker-launcher-wrap">
+          <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false" aria-controls="sticker-palette">
+            <span class="sticker-launcher-icon" aria-hidden="true">💭</span>
+          </button>
+          <div class="sticker-palette" id="sticker-palette">
+            <div class="sticker-palette-grid" id="sticker-bar" aria-label="Stickers">
+              <button class="sticker-btn" data-sticker="gg"><span class="sticker-btn-emoji">🏁</span></button>
+              <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
+              <button class="sticker-btn" data-sticker="thinking"><span class="sticker-btn-emoji">🤔</span></button>
+              <button class="sticker-btn" data-sticker="oops"><span class="sticker-btn-emoji">😅</span></button>
+              <button class="sticker-btn" data-sticker="sweat"><span class="sticker-btn-emoji">😰</span></button>
+              <button class="sticker-btn" data-sticker="boom"><span class="sticker-btn-emoji">💥</span></button>
+              <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">😈</span></button>
+              <button class="sticker-btn" data-sticker="cry"><span class="sticker-btn-emoji">😭</span></button>
+              <button class="sticker-btn" data-sticker="clap"><span class="sticker-btn-emoji">👏</span></button>
+              <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-secondary" style="height:32px;font-size:12px;padding:0 12px;" id="btn-leave" data-i18n="btn_leave"></button>
+      </div>
     </div>
     <div class="board-wrap">
       <div class="board" id="board"></div>
@@ -436,6 +733,8 @@
   </div>
 
 </div>
+
+<div class="sticker-toasts" id="sticker-toasts" aria-live="polite" aria-atomic="true"></div>
 
 <script src="i18n.js" type="module"></script>
 <script type="module">
@@ -496,6 +795,7 @@ function applyLocale(l) {
     const key = el.dataset.i18nPh;
     if (typeof t[key] === "string") el.placeholder = t[key];
   });
+  syncStickerUi();
 
   // Re-render dynamic content if game is active
   if (currentState) renderGame(currentState);
@@ -512,6 +812,7 @@ let myPlayerIndex = null;
 let currentState = null;
 let roomId = "";
 const intentionallyClosedSockets = new WeakSet();
+let lastStickerSentAt = 0;
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function showScreen(id) {
@@ -693,6 +994,9 @@ function connectToRoom(id, name, difficulty, aiLevel) {
         handleState(state);
       }
     }
+    if (msg.type === "sticker") {
+      showStickerToast(msg.from, msg.id);
+    }
     if (msg.type === "error") handleServerError(msg.message);
   });
 
@@ -746,6 +1050,81 @@ function handleState(state) {
 
   showScreen("screen-game");
   renderGame(state);
+}
+
+const STICKERS = {
+  gg:       { emoji: "🏁", key: "sticker_gg" },
+  nice:     { emoji: "🔥", key: "sticker_nice" },
+  thinking: { emoji: "🤔", key: "sticker_thinking" },
+  oops:     { emoji: "😅", key: "sticker_oops" },
+  sweat:    { emoji: "😰", key: "sticker_sweat" },
+  boom:     { emoji: "💥", key: "sticker_boom" },
+  taunt:    { emoji: "😈", key: "sticker_taunt" },
+  cry:      { emoji: "😭", key: "sticker_cry" },
+  clap:     { emoji: "👏", key: "sticker_clap" },
+  trophy:   { emoji: "🏆", key: "sticker_trophy" },
+};
+
+function syncStickerUi() {
+  const launcher = document.getElementById("sticker-launcher");
+  if (launcher) {
+    const label = t.sticker_launcher_label || "Stickers";
+    launcher.setAttribute("title", label);
+    launcher.setAttribute("aria-label", label);
+  }
+  document.querySelectorAll("#sticker-bar .sticker-btn").forEach((btn) => {
+    const def = STICKERS[btn.dataset.sticker];
+    if (!def) return;
+    const text = t[def.key] || def.key;
+    btn.setAttribute("title", text);
+    btn.setAttribute("aria-label", text);
+  });
+}
+
+function canSendSticker() {
+  if (!socket) return false;
+  if (!currentState || currentState.status !== "playing") return false;
+  if (myPlayerIndex === null) return false;
+  return true;
+}
+
+function sendSticker(id) {
+  if (!canSendSticker()) return;
+  const now = Date.now();
+  if (now - lastStickerSentAt < 900) return;
+  lastStickerSentAt = now;
+  socket.send(JSON.stringify({ type: "sticker", id }));
+  closeStickerPalette();
+}
+
+function showStickerToast(from, id) {
+  const def = STICKERS[id];
+  if (!def) return;
+  const toasts = document.getElementById("sticker-toasts");
+  const el = document.createElement("div");
+  el.className = "sticker-toast " + (from === 0 ? "p1" : "p2");
+  el.dataset.sticker = id;
+  const name = currentState?.players?.[from]?.name ?? (from === 0 ? "P1" : "P2");
+  el.innerHTML = `
+    <div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>
+    <div class="sticker-meta">
+      <div class="sticker-from">${name}</div>
+    </div>`;
+  toasts.appendChild(el);
+  while (toasts.children.length > 4) toasts.removeChild(toasts.firstChild);
+  setTimeout(() => { try { el.remove(); } catch {} }, 2300);
+}
+
+function setStickerPaletteOpen(open) {
+  const launcher = document.getElementById("sticker-launcher");
+  const palette = document.getElementById("sticker-palette");
+  launcher.classList.toggle("open", open);
+  launcher.setAttribute("aria-expanded", open ? "true" : "false");
+  palette.classList.toggle("open", open);
+}
+
+function closeStickerPalette() {
+  setStickerPaletteOpen(false);
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -914,6 +1293,26 @@ document.getElementById("btn-new-room").addEventListener("click", () => {
   setupCreateScreen();
 });
 window.addEventListener("hashchange", syncScreenWithUrl);
+
+document.getElementById("sticker-bar").addEventListener("click", (e) => {
+  const btn = e.target.closest(".sticker-btn");
+  if (!btn) return;
+  sendSticker(btn.dataset.sticker);
+});
+document.getElementById("sticker-launcher").addEventListener("click", () => {
+  const palette = document.getElementById("sticker-palette");
+  setStickerPaletteOpen(!palette.classList.contains("open"));
+});
+document.addEventListener("click", (e) => {
+  const palette = document.getElementById("sticker-palette");
+  const launcher = document.getElementById("sticker-launcher");
+  if (!palette.classList.contains("open")) return;
+  if (palette.contains(e.target) || launcher.contains(e.target)) return;
+  closeStickerPalette();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeStickerPalette();
+});
 
 init();
 </script>
