@@ -247,6 +247,30 @@
 
     .status-bar { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--text-muted); gap: 12px; }
     .status-actions { display: flex; align-items: center; gap: 8px; }
+    .icon-toggle {
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 0.5px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.12s, border-color 0.16s, background 0.16s, box-shadow 0.16s;
+    }
+    .icon-toggle:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.18);
+      background: rgba(255,255,255,0.05);
+      box-shadow: 0 10px 20px rgba(0,0,0,0.18);
+    }
+    .icon-toggle.off {
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.02);
+    }
+    .icon-toggle-glyph { font-size: 18px; line-height: 1; }
 
     .board-wrap {
       width: 100%;
@@ -277,9 +301,9 @@
       justify-content: center;
     }
     .sticker-launcher {
-      width: 46px;
-      height: 46px;
-      border-radius: 14px;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
       border: 0.5px solid rgba(255,255,255,0.08);
       background:
         radial-gradient(circle at top left, rgba(224,75,74,0.18), transparent 36%),
@@ -305,7 +329,7 @@
       transform: translateY(-1px) scale(1.04);
       box-shadow: 0 18px 34px rgba(0,0,0,0.28);
     }
-    .sticker-launcher-icon { font-size: 28px; line-height: 1; transform-origin: center; }
+    .sticker-launcher-icon { font-size: 22px; line-height: 1; transform-origin: center; }
     .sticker-launcher.open .sticker-launcher-icon { animation: launcherPop 180ms ease-out; }
     .sticker-palette {
       position: absolute;
@@ -733,7 +757,12 @@
             </div>
           </div>
         </div>
-        <button class="btn btn-secondary" style="height:32px;font-size:12px;padding:0 12px;" id="btn-leave" data-i18n="btn_leave"></button>
+        <button class="icon-toggle" id="sound-toggle" type="button">
+          <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
+        </button>
+        <button class="icon-toggle" id="btn-leave" type="button">
+          <span class="icon-toggle-glyph" aria-hidden="true">↩</span>
+        </button>
       </div>
     </div>
     <div class="board-row">
@@ -777,6 +806,7 @@ let locale = localStorage.getItem("minefield-locale") || DEFAULT_LOCALE;
 let t = TRANSLATIONS[locale];
 
 const NAME_STORAGE_KEY = "minefield-name";
+const SOUND_STORAGE_KEY = "minefield-sound-enabled";
 function detectDefaultLocale() {
   const prefs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
   for (const lang of prefs) {
@@ -820,7 +850,14 @@ function applyLocale(l) {
     const key = el.dataset.i18nPh;
     if (typeof t[key] === "string") el.placeholder = t[key];
   });
+  const leaveBtn = document.getElementById("btn-leave");
+  if (leaveBtn) {
+    const label = t.btn_leave || "Leave";
+    leaveBtn.setAttribute("aria-label", label);
+    leaveBtn.setAttribute("title", label);
+  }
   syncStickerUi();
+  syncSoundToggleUi();
 
   // Re-render dynamic content if game is active
   if (currentState) renderGame(currentState);
@@ -867,6 +904,7 @@ const TROPHY_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
 const BOOM_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
 const THINKING_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
 const OOPS_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
+let soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== "0";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 function showScreen(id) {
@@ -878,6 +916,7 @@ function showScreen(id) {
 }
 
 function ensureAudioUnlocked() {
+  if (!soundEnabled) return;
   if (audioUnlocked) return;
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) { audioUnlocked = true; return; }
@@ -915,7 +954,46 @@ function ensureAudioUnlocked() {
   }
 }
 
+function syncSoundToggleUi() {
+  const btn = document.getElementById("sound-toggle");
+  const glyph = document.getElementById("sound-toggle-glyph");
+  if (!btn || !glyph) return;
+  btn.classList.toggle("off", !soundEnabled);
+  glyph.textContent = soundEnabled ? "🔊" : "🔇";
+  const label = soundEnabled
+    ? (t.sound_on_label || "Sound on")
+    : (t.sound_off_label || "Sound off");
+  btn.setAttribute("aria-label", label);
+  btn.setAttribute("title", label);
+}
+
+function setSoundEnabled(nextValue) {
+  soundEnabled = !!nextValue;
+  localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? "1" : "0");
+  syncSoundToggleUi();
+  if (!soundEnabled) {
+    const audioList = [
+      fireStickerAudio,
+      cryStickerAudio,
+      tauntStickerAudio,
+      clapStickerAudio,
+      trophyStickerAudio,
+      boomStickerAudio,
+      thinkingStickerAudio,
+      oopsStickerAudio,
+    ];
+    for (const audio of audioList) {
+      if (!audio) continue;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {}
+    }
+  }
+}
+
 function playStickerSound(id) {
+  if (!soundEnabled) return;
   const Ctx = window.AudioContext || window.webkitAudioContext;
   if (!Ctx) return;
   if (!audioCtx) audioCtx = new Ctx();
@@ -1240,6 +1318,7 @@ function init() {
     t = TRANSLATIONS[locale];
   }
   applyLocale(locale);
+  syncSoundToggleUi();
   setupDiffOptions();
   syncNameInput("create-name");
   syncNameInput("join-name");
@@ -1676,6 +1755,9 @@ function newRoom() {
 }
 
 document.getElementById("btn-leave").addEventListener("click", leaveRoom);
+document.getElementById("sound-toggle").addEventListener("click", () => {
+  setSoundEnabled(!soundEnabled);
+});
 document.getElementById("btn-new-room").addEventListener("click", () => {
   location.hash = "";
   showScreen("screen-create");
