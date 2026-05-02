@@ -12,9 +12,9 @@ export interface DifficultyConfig {
 }
 
 export const CONFIGS: Record<Difficulty, DifficultyConfig> = {
-  easy:   { rows: 6,  cols: 6,  bombs: 10 },
-  medium: { rows: 8,  cols: 8,  bombs: 20 },
-  hard:   { rows: 10, cols: 10, bombs: 30 },
+  easy: { rows: 6, cols: 6, bombs: 10 },
+  medium: { rows: 8, cols: 8, bombs: 20 },
+  hard: { rows: 10, cols: 10, bombs: 30 },
 };
 
 export type GameStatus = "waiting" | "playing" | "finished";
@@ -35,6 +35,7 @@ export interface GameState {
   revealed: boolean[][];
   foundBy: (0 | 1 | null)[][];
   totalBombs: number;
+  lastClickedCell?: { row: number; col: number; playerIndex: 0 | 1 };
 }
 
 export interface RankingEntry {
@@ -54,7 +55,7 @@ export interface RankingPayload {
 
 // Client → Server
 export type ClientMessage =
-  | { type: "join";   name: string; difficulty?: Difficulty; ai?: { level: AiLevel } }
+  | { type: "join"; name: string; difficulty?: Difficulty; ai?: { level: AiLevel } }
   | { type: "reveal"; row: number; col: number }
   | { type: "sticker"; id: string };
 
@@ -269,7 +270,7 @@ export default class GameRoom implements Party.Server {
   private lastStickerAt: Map<string, number> = new Map();
   private rankingRecorded = false;
 
-  constructor(readonly room: Party.Room) {}
+  constructor(readonly room: Party.Room) { }
 
   async onStart() {
     this.state = await this.room.storage.get<GameState>("state") ?? null;
@@ -319,7 +320,7 @@ export default class GameRoom implements Party.Server {
 
   async onMessage(message: string, sender: Party.Connection) {
     const msg = JSON.parse(message) as ClientMessage;
-    if (msg.type === "join")   await this.handleJoin(sender, msg.name, msg.difficulty, msg.ai);
+    if (msg.type === "join") await this.handleJoin(sender, msg.name, msg.difficulty, msg.ai);
     if (msg.type === "reveal") await this.handleReveal(sender, msg.row, msg.col);
     if (msg.type === "sticker") await this.handleSticker(sender, msg.id);
   }
@@ -407,6 +408,9 @@ export default class GameRoom implements Party.Server {
     if (this.state.revealed[row][col]) return;
 
     const player = this.state.players[playerIndex]!;
+
+    // Store the latest clicked cell, so the client can show a visual indicator of the move.
+    this.state.lastClickedCell = { row, col, playerIndex };
 
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
@@ -502,6 +506,9 @@ export default class GameRoom implements Party.Server {
     if (this.state.revealed[row][col]) return;
 
     const aiPlayer = this.state.players[1]!;
+
+    // Store the latest clicked cell for the AI, so the client can show a visual indicator of the AI's move.
+    this.state.lastClickedCell = { row, col, playerIndex: 1 };
 
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
