@@ -2991,6 +2991,13 @@
       const turnPlayer = state.players[state.currentPlayer];
       let turnName, turnSuffix;
 
+      function truncateName(name, maxLength = 10) {
+        if (name.length > maxLength) {
+          return name.substring(0, maxLength) + "...";
+        }
+        return name;
+      }
+
       if (state.status === "finished") {
         const p1 = state.players[0];
         const p2 = state.players[1];
@@ -2999,17 +3006,17 @@
           turnName = "—";
           turnSuffix = "";
         } else if (p1.score > p2.score) {
-          turnName = p1.name;
+          turnName = truncateName(p1.name);
           turnSuffix = t.result_won_suffix ?? "venceu";
         } else if (p2.score > p1.score) {
-          turnName = p2.name;
+          turnName = truncateName(p2.name);
           turnSuffix = t.result_won_suffix ?? "venceu";
         } else {
           turnName = t.result_draw;
           turnSuffix = "";
         }
       } else {
-        turnName = turnPlayer?.name ?? "—";
+        turnName = truncateName(turnPlayer?.name ?? "—");
         turnSuffix = t.turn_suffix;
       }
 
