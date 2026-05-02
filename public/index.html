@@ -353,6 +353,26 @@
     }
     .sticker-launcher-icon { font-size: 22px; line-height: 1; transform-origin: center; }
     .sticker-launcher.open .sticker-launcher-icon { animation: launcherPop 180ms ease-out; }
+    .sticker-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: rgba(224,75,74,0.95);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid rgba(22,22,22,0.92);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+      pointer-events: none;
+      font-variant-numeric: tabular-nums;
+    }
     .sticker-palette {
       position: fixed;
       top: var(--sticker-palette-top, 0px);
@@ -754,6 +774,45 @@
       font-size: 18px;
     }
 
+    .confetti {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 90;
+      overflow: hidden;
+    }
+    .confetti-piece {
+      position: absolute;
+      top: -20px;
+      width: 10px;
+      height: 14px;
+      border-radius: 3px;
+      opacity: 0.95;
+      transform: translate3d(0,0,0) rotate(0deg);
+      animation: confettiFall 1200ms linear forwards;
+      will-change: transform, opacity;
+    }
+    @keyframes confettiFall {
+      0% { transform: translate3d(var(--x), -20px, 0) rotate(0deg); opacity: 0.0; }
+      8% { opacity: 1; }
+      100% { transform: translate3d(calc(var(--x) + var(--dx)), calc(100vh + 40px), 0) rotate(var(--rot)); opacity: 0.85; }
+    }
+
+    .end-flash {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 85;
+      opacity: 0;
+      background: radial-gradient(circle at 50% 40%, rgba(224,75,74,0.18), rgba(0,0,0,0) 60%);
+    }
+    .end-flash.on { animation: endFlash 420ms ease-out forwards; }
+    @keyframes endFlash {
+      0% { opacity: 0; transform: scale(0.98); }
+      25% { opacity: 1; transform: scale(1); }
+      100% { opacity: 0; transform: scale(1.02); }
+    }
+
     @media (max-width: 720px) {
       .board-wrap {
         align-self: stretch;
@@ -903,6 +962,7 @@
           <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false" aria-controls="sticker-palette">
             <span class="sticker-launcher-icon" aria-hidden="true">💭</span>
           </button>
+          <div class="sticker-badge" id="sticker-badge" aria-hidden="true"></div>
           <div class="sticker-palette" id="sticker-palette">
             <div class="sticker-palette-grid" id="sticker-bar" aria-label="Stickers">
               <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
@@ -960,6 +1020,9 @@
     </div>
   </div>
 </div>
+
+<div class="confetti" id="confetti"></div>
+<div class="end-flash" id="end-flash"></div>
 
 <div class="sticker-toasts" id="sticker-toasts" aria-live="polite" aria-atomic="true"></div>
 
@@ -1085,8 +1148,13 @@ let roomId = "";
 const intentionallyClosedSockets = new WeakSet();
 let lastStickerSentAt = 0;
 let stickerLockedUntil = 0;
+let pendingStickers = [];
+let pendingStickerCount = 0;
 let audioCtx = null;
 let audioUnlocked = false;
+let lastNotifiedTurnKey = "";
+let lastTurnPlayerIndex = null;
+let lastFinishedKey = "";
 let fireStickerAudio = null;
 let fireStickerStopTimer = 0;
 let cryStickerAudio = null;
@@ -1164,6 +1232,121 @@ function ensureAudioUnlocked() {
   if (oopsStickerAudio) {
     try { oopsStickerAudio.load(); } catch {}
   }
+}
+
+function notifyTurnIfNeeded(state) {
+  if (!state || state.status !== "playing") return;
+  if (myPlayerIndex === null) return;
+  if (state.currentPlayer !== myPlayerIndex) { lastTurnPlayerIndex = state.currentPlayer; return; }
+  // Only notify on transition into "your turn".
+  if (lastTurnPlayerIndex === myPlayerIndex) return;
+  lastTurnPlayerIndex = myPlayerIndex;
+
+  // Dedupe within the same game state: use a stable key.
+  const key = `${roomId}:${state.status}:${state.currentPlayer}:${state.players?.[0]?.score ?? 0}:${state.players?.[1]?.score ?? 0}:${state.players?.[0]?.bombs ?? 0}:${state.players?.[1]?.bombs ?? 0}`;
+  if (key === lastNotifiedTurnKey) return;
+  lastNotifiedTurnKey = key;
+
+  if (!soundEnabled) return;
+  ensureAudioUnlocked();
+  try {
+    // Short "your turn" chime.
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (!audioCtx || audioCtx.state !== "running") return;
+    const t0 = audioCtx.currentTime + 0.01;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.30);
+    g.connect(audioCtx.destination);
+    const o = audioCtx.createOscillator();
+    o.type = "sine";
+    o.frequency.setValueAtTime(880, t0);
+    o.frequency.linearRampToValueAtTime(660, t0 + 0.30);
+    o.connect(g);
+    o.start(t0);
+    o.stop(t0 + 0.33);
+  } catch {}
+}
+
+function playConfetti() {
+  const root = document.getElementById("confetti");
+  if (!root) return;
+  root.innerHTML = "";
+  const colors = ["#1D9E75", "#EF9F27", "#378ADD", "#E24B4A", "#7F77DD", "#F0997B"];
+  const count = 80;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement("div");
+    el.className = "confetti-piece";
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    el.style.background = c;
+    const x = Math.floor(Math.random() * 100);
+    const dx = Math.floor((Math.random() * 2 - 1) * 120);
+    const rot = Math.floor((Math.random() * 2 - 1) * 540);
+    const delay = Math.floor(Math.random() * 160);
+    const dur = 900 + Math.floor(Math.random() * 800);
+    const w = 8 + Math.floor(Math.random() * 8);
+    const h = 10 + Math.floor(Math.random() * 14);
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
+    el.style.setProperty("--x", `${x}vw`);
+    el.style.setProperty("--dx", `${dx}px`);
+    el.style.setProperty("--rot", `${rot}deg`);
+    el.style.animationDuration = `${dur}ms`;
+    el.style.animationDelay = `${delay}ms`;
+    root.appendChild(el);
+  }
+  setTimeout(() => { try { root.innerHTML = ""; } catch {} }, 2200);
+}
+
+function playDefeatEffect() {
+  const flash = document.getElementById("end-flash");
+  if (flash) {
+    flash.classList.remove("on");
+    // Force reflow so the animation can replay.
+    void flash.offsetWidth;
+    flash.classList.add("on");
+  }
+
+  if (!soundEnabled) return;
+  ensureAudioUnlocked();
+  try {
+    if (!audioCtx) {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (Ctx) audioCtx = new Ctx();
+    }
+    if (!audioCtx || audioCtx.state !== "running") return;
+    const t0 = audioCtx.currentTime + 0.01;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.14, t0 + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
+    g.connect(audioCtx.destination);
+    const o = audioCtx.createOscillator();
+    o.type = "triangle";
+    o.frequency.setValueAtTime(220, t0);
+    o.frequency.linearRampToValueAtTime(140, t0 + 0.28);
+    o.connect(g);
+    o.start(t0);
+    o.stop(t0 + 0.30);
+  } catch {}
+}
+
+function notifyFinishedIfNeeded(state) {
+  if (!state || state.status !== "finished") return;
+  const key = `${roomId}:${state.players?.[0]?.score ?? 0}:${state.players?.[1]?.score ?? 0}:${state.players?.[0]?.bombs ?? 0}:${state.players?.[1]?.bombs ?? 0}`;
+  if (key === lastFinishedKey) return;
+  lastFinishedKey = key;
+  const p1 = state.players?.[0];
+  const p2 = state.players?.[1];
+  if (!p1 || !p2 || myPlayerIndex === null) return;
+  if (p1.score === p2.score) return;
+  const winnerIndex = p1.score > p2.score ? 0 : 1;
+  if (winnerIndex === myPlayerIndex) playConfetti();
+  else playDefeatEffect();
 }
 
 function syncSoundToggleUi() {
@@ -1673,7 +1856,8 @@ function connectToRoom(id, name, difficulty, aiLevel) {
       }
     }
     if (msg.type === "sticker") {
-      showStickerToast(msg.from, msg.id);
+      if (document.hidden || !isGameScreenActive()) enqueueSticker(msg.from, msg.id);
+      else showStickerToast(msg.from, msg.id);
     }
     if (msg.type === "error") handleServerError(msg.message);
   });
@@ -1739,6 +1923,8 @@ function handleState(state) {
 
   showScreen("screen-game");
   renderGame(state);
+  notifyTurnIfNeeded(state);
+  notifyFinishedIfNeeded(state);
 }
 
 const STICKERS = {
@@ -1816,6 +2002,39 @@ function setStickerPaletteOpen(open) {
 
 function closeStickerPalette() {
   setStickerPaletteOpen(false);
+}
+
+function isGameScreenActive() {
+  return document.getElementById("screen-game").classList.contains("active");
+}
+
+function setStickerBadgeCount(n) {
+  const badge = document.getElementById("sticker-badge");
+  if (!badge) return;
+  const count = Math.max(0, n | 0);
+  pendingStickerCount = count;
+  if (!count) {
+    badge.style.display = "none";
+    badge.textContent = "";
+    return;
+  }
+  badge.style.display = "inline-flex";
+  badge.textContent = count > 99 ? "99+" : String(count);
+}
+
+function enqueueSticker(from, id) {
+  pendingStickers.push({ from, id });
+  if (pendingStickers.length > 25) pendingStickers = pendingStickers.slice(-25);
+  setStickerBadgeCount(pendingStickerCount + 1);
+}
+
+function flushPendingStickers() {
+  if (!pendingStickers.length) return;
+  const recent = pendingStickers.slice(-1);
+  pendingStickers = [];
+  setStickerBadgeCount(0);
+  const s = recent[0];
+  try { showStickerToast(s.from, s.id); } catch {}
 }
 
 function updateStickerPalettePosition() {
@@ -1964,6 +2183,14 @@ function renderResult(state) {
   document.getElementById("btn-rematch").onclick = rematch;
   document.getElementById("btn-new-game").onclick = newRoom;
   renderResultRankingSummary();
+
+  // Bring the end-of-game summary into view (especially on mobile).
+  try {
+    setTimeout(() => {
+      const el = document.getElementById("result-area");
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  } catch {}
 }
 
 async function fetchRankingSnapshot(limit) {
@@ -2115,6 +2342,7 @@ function leaveRoom() {
     socket = null;
   }
   myPlayerIndex = null;
+  lastTurnPlayerIndex = null;
   currentState = null;
   roomId = "";
   document.getElementById("reconnecting-bar").classList.remove("visible");
@@ -2130,6 +2358,7 @@ function newRoom() {
   }
   socket = null;
   myPlayerIndex = null;
+  lastTurnPlayerIndex = null;
   currentState = null;
   myName = "";
   location.hash = "";
@@ -2165,6 +2394,7 @@ document.getElementById("sticker-bar").addEventListener("click", (e) => {
 });
 document.getElementById("sticker-launcher").addEventListener("click", () => {
   const palette = document.getElementById("sticker-palette");
+  flushPendingStickers();
   setStickerPaletteOpen(!palette.classList.contains("open"));
 });
 document.addEventListener("click", (e) => {
@@ -2176,6 +2406,12 @@ document.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeStickerPalette();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) return;
+  if (!isGameScreenActive()) return;
+  flushPendingStickers();
 });
 
 init();
