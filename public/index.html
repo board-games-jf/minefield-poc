@@ -963,10 +963,34 @@
 
 <div class="sticker-toasts" id="sticker-toasts" aria-live="polite" aria-atomic="true"></div>
 
-<script src="i18n.js" type="module"></script>
+<script>
+  // Auto-refresh on new deploys (prevents users needing a hard refresh).
+  // `version.json` is fetched with `no-store` so it always reflects the latest deploy.
+  (function () {
+    const KEY = "minefield-version";
+    const stored = localStorage.getItem(KEY) || "";
+    fetch("./version.json", { cache: "no-store" })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const v = data && data.version ? String(data.version) : "";
+        // Expose for cache-busting imports/assets.
+        window.__MF_VERSION__ = v || stored || "dev";
+        if (!v || v === stored) return;
+        localStorage.setItem(KEY, v);
+        // Avoid infinite reload loops if something is wrong with caching.
+        const onceKey = KEY + ":reloaded:" + v;
+        if (sessionStorage.getItem(onceKey)) return;
+        sessionStorage.setItem(onceKey, "1");
+        location.reload();
+      })
+      .catch(() => { window.__MF_VERSION__ = stored || "dev"; });
+  })();
+</script>
 <script type="module">
 import PartySocket from "https://cdn.jsdelivr.net/npm/partysocket@1.0.2/dist/index.mjs";
-import { TRANSLATIONS, LOCALE_FLAGS, LOCALE_LABELS, LOCALE_LANG } from "./i18n.js";
+const ASSET_VERSION = globalThis.__MF_VERSION__ || "dev";
+const { TRANSLATIONS, LOCALE_FLAGS, LOCALE_LABELS, LOCALE_LANG } =
+  await import(`./i18n.js?v=${encodeURIComponent(ASSET_VERSION)}`);
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const PARTYKIT_HOST = location.hostname === "localhost" || location.hostname === "127.0.0.1"
@@ -1195,10 +1219,10 @@ function playStickerSound(id) {
 
   const t0 = audioCtx.currentTime + 0.005;
 
-  function playSample(audioRef, src, clip, stopTimer) {
+function playSample(audioRef, src, clip, stopTimer) {
     let audio = audioRef;
     if (!audio) {
-      audio = new Audio(src);
+      audio = new Audio(src + `?v=${encodeURIComponent(ASSET_VERSION)}`);
       audio.preload = "auto";
       audio.crossOrigin = "anonymous";
     }

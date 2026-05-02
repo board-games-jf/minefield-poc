@@ -98,6 +98,23 @@ Open `public/index.html` and replace:
 const PARTYKIT_HOST = "minefield.SEU-USERNAME.partykit.dev";
 ```
 
+### 3. Bump the frontend version (cache busting)
+
+This project auto-refreshes clients on new deploys via `public/version.json`.
+Before publishing, update the version so browsers don't keep an old cached build.
+
+Use the current git commit short SHA:
+
+```bash
+git rev-parse --short HEAD
+```
+
+Then set it in `public/version.json`, e.g.:
+
+```json
+{ "version": "a1b2c3d" }
+```
+
 ### 3. Deploy the frontend (GitHub Pages)
 
 1. Push the project to your GitHub repository
