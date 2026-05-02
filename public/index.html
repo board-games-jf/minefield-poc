@@ -3367,10 +3367,14 @@
       document.getElementById("reconnecting-bar").classList.remove("visible");
       location.hash = "";
       showScreen("screen-create");
-      // Reset solo game toggle
-      document.getElementById("solo-toggle").classList.remove("on");
-      document.getElementById("solo-toggle").setAttribute("aria-checked", "false");
-      document.getElementById("ai-level-field").classList.remove("visible");
+      
+      // Reset do solo toggle e AI level
+      const soloToggle = document.getElementById("solo-toggle");
+      const aiLevelField = document.getElementById("ai-level-field");
+      soloToggle.classList.remove("on");
+      soloToggle.setAttribute("aria-checked", "false");
+      aiLevelField.classList.remove("visible");
+      
       setupCreateScreen();
     }
 
