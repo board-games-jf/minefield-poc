@@ -3071,9 +3071,12 @@
           cell.className = "cell";
           cell.textContent = "";
           // Restore highlight if this is the last clicked cell (from server)
-          if (currentState.lastClickedCell && r === currentState.lastClickedCell.row && c === currentState.lastClickedCell.col) {
-            const className = currentState.lastClickedCell.playerIndex === 0 ? "last-clicked-p1" : "last-clicked-p2";
-            cell.classList.add(className);
+          if (state.lastPlayerClicks?.length > 0) {
+            const isInLastPlayerClicks = state.lastPlayerClicks.some(click => click.row === r && click.col === c);
+            if (isInLastPlayerClicks) {
+              const className = state.lastPlayerClicks[0].playerIndex === 0 ? "last-clicked-p1" : "last-clicked-p2";
+              cell.classList.add(className);
+            }
           }
           if (!state.revealed[r][c]) continue;
           if (state.grid[r][c] === -1) {

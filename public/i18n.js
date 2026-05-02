@@ -236,7 +236,7 @@ export const TRANSLATIONS = {
     turn_suffix:        "to play",
     bombs_remaining:    (n) => `${n} ${n === 1 ? "bomb" : "bombs"} left`,
     bomb_count:         (n) => `${n} ${n === 1 ? "bomb" : "bombs"}`,
-    btn_leave:          "Leave",
+    btn_leave:          "Exit",
     sound_on_label:     "Sound on",
     sound_off_label:    "Sound off",
     sticker_launcher_label: "Open stickers",

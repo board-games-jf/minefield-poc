@@ -31,11 +31,12 @@ export interface GameState {
   difficulty: Difficulty;
   players: [Player | null, Player | null];
   currentPlayer: 0 | 1;
-  grid: number[][];        // -1 = bomb, 0-8 = neighbour count
+  grid: number[][];
   revealed: boolean[][];
   foundBy: (0 | 1 | null)[][];
   totalBombs: number;
   lastClickedCell?: { row: number; col: number; playerIndex: 0 | 1 };
+  lastPlayerClicks: { row: number; col: number; playerIndex: 0 | 1 }[];
 }
 
 export interface RankingEntry {
@@ -186,6 +187,7 @@ export function createInitialState(difficulty: Difficulty): GameState {
     revealed: Array.from({ length: rows }, () => Array(cols).fill(false)),
     foundBy: Array.from({ length: rows }, () => Array<0 | 1 | null>(cols).fill(null)),
     totalBombs: bombs,
+    lastPlayerClicks: [],
   };
 }
 
@@ -281,6 +283,9 @@ export default class GameRoom implements Party.Server {
     this.rankingRecorded = await this.room.storage.get<boolean>("rankingRecorded") ?? false;
     if (this.state && this.state.players[1]?.id === "ai") {
       this.ensureAiFlags();
+    }
+    if (this.state && !this.state.lastPlayerClicks) {
+      this.state.lastPlayerClicks = [];
     }
   }
 
@@ -409,8 +414,12 @@ export default class GameRoom implements Party.Server {
 
     const player = this.state.players[playerIndex]!;
 
-    // Store the latest clicked cell, so the client can show a visual indicator of the move.
+    if (this.state.lastPlayerClicks.length > 0 && this.state.lastPlayerClicks[0].playerIndex !== playerIndex) {
+      this.state.lastPlayerClicks = [];
+    }
+
     this.state.lastClickedCell = { row, col, playerIndex };
+    this.state.lastPlayerClicks.push({ row, col, playerIndex });
 
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
@@ -423,6 +432,16 @@ export default class GameRoom implements Party.Server {
       if (countFoundBombs(this.state) >= this.state.totalBombs) {
         this.state.status = "finished";
       }
+
+      await this.finalizeMatchIfNeeded();
+      await this.persist();
+      this.broadcast();
+
+      // Bomba: mantém a rodada, não limpa, não passa a vez
+      if (this.state.status === "playing" && this.state.players[1]?.id === "ai" && this.state.currentPlayer === 1) {
+        this.scheduleAiMove(this.aiLevel);
+      }
+      return; // IMPORTANTE: retorna aqui
     } else {
       floodReveal(this.state.grid, this.state.revealed, row, col, rows, cols);
       this.state.currentPlayer = playerIndex === 0 ? 1 : 0;
@@ -434,7 +453,7 @@ export default class GameRoom implements Party.Server {
     await this.finalizeMatchIfNeeded();
     await this.persist();
     this.broadcast();
-    // If the move passed the turn to player 2 and they are AI, make them play.
+
     if (this.state.status === "playing" && this.state.players[1]?.id === "ai" && this.state.currentPlayer === 1) {
       this.scheduleAiMove(this.aiLevel);
     }
@@ -507,8 +526,12 @@ export default class GameRoom implements Party.Server {
 
     const aiPlayer = this.state.players[1]!;
 
-    // Store the latest clicked cell for the AI, so the client can show a visual indicator of the AI's move.
+    if (this.state.lastPlayerClicks.length > 0 && this.state.lastPlayerClicks[0].playerIndex !== 1) {
+      this.state.lastPlayerClicks = [];
+    }
+
     this.state.lastClickedCell = { row, col, playerIndex: 1 };
+    this.state.lastPlayerClicks.push({ row, col, playerIndex: 1 });
 
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
@@ -522,7 +545,17 @@ export default class GameRoom implements Party.Server {
       if (countFoundBombs(this.state) >= this.state.totalBombs) {
         this.state.status = "finished";
       }
-      // Bomb keeps the turn for the same player (AI), so schedule another move.
+
+      await this.finalizeMatchIfNeeded();
+      await this.persist();
+      await this.room.storage.put("aiFlags", this.aiFlags);
+      this.broadcast();
+
+      // Bomb keeps the turn, doesn't clear, doesn't switch, just schedules the next click.
+      if (this.state.status === "playing" && this.state.currentPlayer === 1) {
+        this.scheduleAiMove(level);
+      }
+      return; // Don't forget to return here, otherwise it would switch the turn after hitting a bomb, which is not intended.
     } else {
       floodReveal(this.state.grid, this.state.revealed, row, col, rows, cols);
       this.state.currentPlayer = 0;
