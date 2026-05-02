@@ -215,24 +215,50 @@ export default class GameRoom implements Party.Server {
   // Serve static files from /public in dev/prod.
   // PartyKit only routes party URLs automatically; without this, GET / returns 404.
   static async onFetch(req: Party.Request, lobby: Party.FetchLobby) {
-    const url = new URL(req.url);
-    if (url.pathname === "/api/ranking") {
-      const partyName = Object.keys(lobby.parties)[0];
-      if (!partyName) return Response.json({ top: [], player: null } satisfies RankingPayload);
-      const player = url.searchParams.get("player");
-      const limit = url.searchParams.get("limit") || "10";
-      return lobby.parties[partyName]
-        .get(RANKING_ROOM_ID)
-        .fetch(`/snapshot?limit=${encodeURIComponent(limit)}${player ? `&player=${encodeURIComponent(player)}` : ""}`);
+    try {
+      const url = new URL(req.url);
+      if (url.pathname === "/api/ranking") {
+        const partyName = Object.keys(lobby.parties)[0];
+        if (!partyName) return Response.json({ top: [], player: null } satisfies RankingPayload);
+        const player = url.searchParams.get("player");
+        const limit = url.searchParams.get("limit") || "10";
+        return lobby.parties[partyName]
+          .get(RANKING_ROOM_ID)
+          .fetch(`/snapshot?limit=${encodeURIComponent(limit)}${player ? `&player=${encodeURIComponent(player)}` : ""}`);
+      }
+
+      let path = url.pathname;
+      if (path === "/") path = "/index.html";
+
+      const asset = await lobby.assets.fetch(path);
+      if (asset) return asset;
+
+      return new Response("Not found", { status: 404 });
+    } catch (err) {
+      // Avoid surfacing platform "internal error" pages for simple GET requests.
+      console.error("onFetch error", err);
+      return new Response(
+        `<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minefield — Error</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,sans-serif;padding:24px;line-height:1.4}
+  .card{max-width:520px;margin:0 auto;border:1px solid #ddd;border-radius:12px;padding:18px}
+  h1{font-size:18px;margin:0 0 8px}
+  p{margin:0 0 14px;color:#444}
+  button{padding:10px 14px;border-radius:10px;border:1px solid #bbb;background:#fff;cursor:pointer}
+  button:active{transform:scale(.99)}
+  code{background:#f6f6f6;padding:2px 6px;border-radius:6px}
+</style>
+<div class="card">
+  <h1>We hit an error</h1>
+  <p>Please try again in a moment. If it keeps happening, reload the page.</p>
+  <button onclick="location.reload()">Reload</button>
+  <p style="margin-top:12px;font-size:12px;color:#666">Code: <code>server_error</code></p>
+</div>`,
+        { status: 500, headers: { "content-type": "text/html; charset=utf-8" } }
+      );
     }
-
-    let path = url.pathname;
-    if (path === "/") path = "/index.html";
-
-    const asset = await lobby.assets.fetch(path);
-    if (asset) return asset;
-
-    return new Response("Not found", { status: 404 });
   }
 
   state: GameState | null = null;
@@ -258,27 +284,32 @@ export default class GameRoom implements Party.Server {
   }
 
   async onRequest(req: Party.Request) {
-    if (this.room.id !== RANKING_ROOM_ID) {
+    try {
+      if (this.room.id !== RANKING_ROOM_ID) {
+        return new Response("Not found", { status: 404 });
+      }
+
+      const url = new URL(req.url);
+      if (req.method === "GET" && url.pathname.endsWith("/snapshot")) {
+        const limit = Number.parseInt(url.searchParams.get("limit") || "10", 10);
+        const player = url.searchParams.get("player");
+        const ranking = await this.room.storage.get<RankingEntry[]>(RANKING_STORAGE_KEY) ?? [];
+        return Response.json(buildRankingPayload(ranking, player, Number.isFinite(limit) ? limit : 10));
+      }
+
+      if (req.method === "POST" && url.pathname.endsWith("/apply-match")) {
+        const body = await req.json() as { winners: Player[] };
+        const ranking = await this.room.storage.get<RankingEntry[]>(RANKING_STORAGE_KEY) ?? [];
+        const updated = applyMatchResultToRanking(ranking, body.winners);
+        await this.room.storage.put(RANKING_STORAGE_KEY, updated);
+        return Response.json({ ok: true });
+      }
+
       return new Response("Not found", { status: 404 });
+    } catch (err) {
+      console.error("onRequest error", err);
+      return new Response("Internal error", { status: 500 });
     }
-
-    const url = new URL(req.url);
-    if (req.method === "GET" && url.pathname.endsWith("/snapshot")) {
-      const limit = Number.parseInt(url.searchParams.get("limit") || "10", 10);
-      const player = url.searchParams.get("player");
-      const ranking = await this.room.storage.get<RankingEntry[]>(RANKING_STORAGE_KEY) ?? [];
-      return Response.json(buildRankingPayload(ranking, player, Number.isFinite(limit) ? limit : 10));
-    }
-
-    if (req.method === "POST" && url.pathname.endsWith("/apply-match")) {
-      const body = await req.json() as { winners: Player[] };
-      const ranking = await this.room.storage.get<RankingEntry[]>(RANKING_STORAGE_KEY) ?? [];
-      const updated = applyMatchResultToRanking(ranking, body.winners);
-      await this.room.storage.put(RANKING_STORAGE_KEY, updated);
-      return Response.json({ ok: true });
-    }
-
-    return new Response("Not found", { status: 404 });
   }
 
   async onConnect(conn: Party.Connection) {
