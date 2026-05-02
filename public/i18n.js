@@ -102,6 +102,17 @@ export const TRANSLATIONS = {
 
     // Reconnect
     reconnecting:         "Reconectando, aguenta aí...",
+
+    // Ranking
+    ranking_btn_label:    "Ranking",
+    ranking_top10_title:  "🏆 Top 10",
+    ranking_top3_title:   "🏆 Top 3",
+    ranking_you:          "(você)",
+    ranking_your_position:"Sua posição",
+    ranking_points_label: "pontos",
+    ranking_wins_label:   "vitórias",
+    ranking_close_label:  "Fechar",
+    ranking_empty:        "Ainda não tem ranking.",
   },
 
   "pt-PT": {
@@ -174,6 +185,17 @@ export const TRANSLATIONS = {
     btn_new_room:         "Nova partida",
 
     reconnecting:         "A reconectar...",
+
+    // Ranking
+    ranking_btn_label:    "Ranking",
+    ranking_top10_title:  "🏆 Top 10",
+    ranking_top3_title:   "🏆 Top 3",
+    ranking_you:          "(tu)",
+    ranking_your_position:"A tua posição",
+    ranking_points_label: "pontos",
+    ranking_wins_label:   "vitórias",
+    ranking_close_label:  "Fechar",
+    ranking_empty:        "Ainda não há ranking.",
   },
 
   "en": {
@@ -246,5 +268,16 @@ export const TRANSLATIONS = {
     btn_new_room:         "New game",
 
     reconnecting:         "Reconnecting...",
+
+    // Ranking
+    ranking_btn_label:    "Ranking",
+    ranking_top10_title:  "🏆 Top 10",
+    ranking_top3_title:   "🏆 Top 3",
+    ranking_you:          "(you)",
+    ranking_your_position:"Your position",
+    ranking_points_label: "points",
+    ranking_wins_label:   "wins",
+    ranking_close_label:  "Close",
+    ranking_empty:        "No ranking yet.",
   },
 };

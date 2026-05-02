@@ -37,6 +37,21 @@ export interface GameState {
   totalBombs: number;
 }
 
+export interface RankingEntry {
+  name: string;
+  points: number;
+  wins: number;
+}
+
+export interface RankedEntry extends RankingEntry {
+  position: number;
+}
+
+export interface RankingPayload {
+  top: RankedEntry[];
+  player: RankedEntry | null;
+}
+
 // Client → Server
 export type ClientMessage =
   | { type: "join";   name: string; difficulty?: Difficulty; ai?: { level: AiLevel } }
@@ -49,6 +64,9 @@ export type ServerMessage =
   | { type: "error"; message: string }
   | { type: "sticker"; id: string; from: 0 | 1; at: number };
 
+const RANKING_ROOM_ID = "__ranking__";
+const RANKING_STORAGE_KEY = "ranking";
+
 const AI_NAMES: Record<AiLevel, string> = {
   easy: "EireneBot",
   medium: "AtenaBot",
@@ -58,6 +76,51 @@ const AI_NAMES: Record<AiLevel, string> = {
 function isReservedPlayerName(name: string): boolean {
   const normalized = name.trim().toLowerCase();
   return Object.values(AI_NAMES).some((n) => n.toLowerCase() === normalized);
+}
+
+function normalizeRankingName(name: string): string {
+  return name.trim().toLocaleLowerCase();
+}
+
+function cloneRanking(entries: RankingEntry[]): RankingEntry[] {
+  return entries.map((entry) => ({ ...entry }));
+}
+
+function sortRanking(entries: RankingEntry[]): RankingEntry[] {
+  return cloneRanking(entries).sort((a, b) =>
+    b.points - a.points ||
+    b.wins - a.wins ||
+    a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+  );
+}
+
+export function applyMatchResultToRanking(entries: RankingEntry[], winners: Player[]): RankingEntry[] {
+  const next = cloneRanking(entries);
+  for (const winner of winners) {
+    const key = normalizeRankingName(winner.name);
+    const existing = next.find((entry) => normalizeRankingName(entry.name) === key);
+    if (existing) {
+      existing.points += winner.score;
+      existing.wins += 1;
+    } else {
+      next.push({ name: winner.name, points: winner.score, wins: 1 });
+    }
+  }
+  return sortRanking(next);
+}
+
+export function buildRankingPayload(entries: RankingEntry[], playerName: string | null, limit: number): RankingPayload {
+  const sorted = sortRanking(entries);
+  const top = sorted.slice(0, limit).map((entry, index) => ({ ...entry, position: index + 1 }));
+  if (!playerName) return { top, player: null };
+
+  const playerIndex = sorted.findIndex((entry) => normalizeRankingName(entry.name) === normalizeRankingName(playerName));
+  if (playerIndex === -1) return { top, player: null };
+
+  return {
+    top,
+    player: { ...sorted[playerIndex], position: playerIndex + 1 },
+  };
 }
 
 // ── Game Logic ─────────────────────────────────────────────────────────────
@@ -153,6 +216,16 @@ export default class GameRoom implements Party.Server {
   // PartyKit only routes party URLs automatically; without this, GET / returns 404.
   static async onFetch(req: Party.Request, lobby: Party.FetchLobby) {
     const url = new URL(req.url);
+    if (url.pathname === "/api/ranking") {
+      const partyName = Object.keys(lobby.parties)[0];
+      if (!partyName) return Response.json({ top: [], player: null } satisfies RankingPayload);
+      const player = url.searchParams.get("player");
+      const limit = url.searchParams.get("limit") || "10";
+      return lobby.parties[partyName]
+        .get(RANKING_ROOM_ID)
+        .fetch(`/snapshot?limit=${encodeURIComponent(limit)}${player ? `&player=${encodeURIComponent(player)}` : ""}`);
+    }
+
     let path = url.pathname;
     if (path === "/") path = "/index.html";
 
@@ -168,6 +241,7 @@ export default class GameRoom implements Party.Server {
   private aiLevel: AiLevel = "medium";
   private aiFlags: boolean[][] | null = null;
   private lastStickerAt: Map<string, number> = new Map();
+  private rankingRecorded = false;
 
   constructor(readonly room: Party.Room) {}
 
@@ -177,9 +251,34 @@ export default class GameRoom implements Party.Server {
     this.connectionToPlayer = saved ?? new Map();
     this.aiLevel = await this.room.storage.get<AiLevel>("aiLevel") ?? "medium";
     this.aiFlags = await this.room.storage.get<boolean[][]>("aiFlags") ?? null;
+    this.rankingRecorded = await this.room.storage.get<boolean>("rankingRecorded") ?? false;
     if (this.state && this.state.players[1]?.id === "ai") {
       this.ensureAiFlags();
     }
+  }
+
+  async onRequest(req: Party.Request) {
+    if (this.room.id !== RANKING_ROOM_ID) {
+      return new Response("Not found", { status: 404 });
+    }
+
+    const url = new URL(req.url);
+    if (req.method === "GET" && url.pathname.endsWith("/snapshot")) {
+      const limit = Number.parseInt(url.searchParams.get("limit") || "10", 10);
+      const player = url.searchParams.get("player");
+      const ranking = await this.room.storage.get<RankingEntry[]>(RANKING_STORAGE_KEY) ?? [];
+      return Response.json(buildRankingPayload(ranking, player, Number.isFinite(limit) ? limit : 10));
+    }
+
+    if (req.method === "POST" && url.pathname.endsWith("/apply-match")) {
+      const body = await req.json() as { winners: Player[] };
+      const ranking = await this.room.storage.get<RankingEntry[]>(RANKING_STORAGE_KEY) ?? [];
+      const updated = applyMatchResultToRanking(ranking, body.winners);
+      await this.room.storage.put(RANKING_STORAGE_KEY, updated);
+      return Response.json({ ok: true });
+    }
+
+    return new Response("Not found", { status: 404 });
   }
 
   async onConnect(conn: Party.Connection) {
@@ -297,6 +396,7 @@ export default class GameRoom implements Party.Server {
       }
     }
 
+    await this.finalizeMatchIfNeeded();
     await this.persist();
     this.broadcast();
     // If the move passed the turn to player 2 and they are AI, make them play.
@@ -334,6 +434,7 @@ export default class GameRoom implements Party.Server {
   private async persist() {
     await this.room.storage.put("state", this.state);
     await this.room.storage.put("connectionToPlayer", this.connectionToPlayer);
+    await this.room.storage.put("rankingRecorded", this.rankingRecorded);
   }
 
   private broadcast() {
@@ -392,6 +493,7 @@ export default class GameRoom implements Party.Server {
       }
     }
 
+    await this.finalizeMatchIfNeeded();
     await this.persist();
     await this.room.storage.put("aiFlags", this.aiFlags);
     this.broadcast();
@@ -408,6 +510,37 @@ export default class GameRoom implements Party.Server {
     if (!this.aiFlags || this.aiFlags.length !== rows || (this.aiFlags[0]?.length ?? 0) !== cols) {
       this.aiFlags = Array.from({ length: rows }, () => Array(cols).fill(false));
     }
+  }
+
+  private getRankingParty() {
+    return this.room.context.parties[this.room.name].get(RANKING_ROOM_ID);
+  }
+
+  private getMatchWinners(): Player[] {
+    if (!this.state || this.state.status !== "finished") return [];
+    const [playerOne, playerTwo] = this.state.players;
+    if (!playerOne || !playerTwo) return [];
+    if (playerOne.score === playerTwo.score) return [];
+    return playerOne.score > playerTwo.score ? [playerOne] : [playerTwo];
+  }
+
+  private async finalizeMatchIfNeeded() {
+    if (!this.state || this.state.status !== "finished" || this.rankingRecorded) return;
+    this.rankingRecorded = true;
+    const winners = this.getMatchWinners();
+    if (!winners.length) return;
+    await this.getRankingParty().fetch("/apply-match", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        winners: winners.map((winner) => ({
+          id: winner.id,
+          name: winner.name,
+          score: winner.score,
+          bombs: winner.bombs,
+        })),
+      }),
+    });
   }
 }
 
