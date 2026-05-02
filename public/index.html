@@ -306,6 +306,8 @@
       overflow-y: hidden;
       scrollbar-width: thin;
       scrollbar-color: rgba(255,255,255,0.18) transparent;
+      max-height: 70vh;
+      flex-shrink: 0;
     }
     .board-row { width: 100%; }
     .board-scroll {
@@ -2061,10 +2063,32 @@ function renderGame(state) {
   document.getElementById("p2-card").className = "player-card" + (state.currentPlayer === 1 ? " active-p2" : "");
 
   const turnPlayer = state.players[state.currentPlayer];
-  document.getElementById("turn-name").textContent =
-    state.status === "finished" ? "—" : (turnPlayer?.name ?? "—");
-  document.getElementById("turn-suffix").textContent =
-    state.status === "finished" ? "" : t.turn_suffix;
+  let turnName, turnSuffix;
+  
+  if (state.status === "finished") {
+    const p1 = state.players[0];
+    const p2 = state.players[1];
+    
+    if (!p1 || !p2) {
+      turnName = "—";
+      turnSuffix = "";
+    } else if (p1.score > p2.score) {
+      turnName = p1.name;
+      turnSuffix = t.result_won_suffix ?? "venceu";
+    } else if (p2.score > p1.score) {
+      turnName = p2.name;
+      turnSuffix = t.result_won_suffix ?? "venceu";
+    } else {
+      turnName = t.result_draw;
+      turnSuffix = "";
+    }
+  } else {
+    turnName = turnPlayer?.name ?? "—";
+    turnSuffix = t.turn_suffix;
+  }
+  
+  document.getElementById("turn-name").textContent = turnName;
+  document.getElementById("turn-suffix").textContent = turnSuffix;
 
   const found = (p1?.bombs ?? 0) + (p2?.bombs ?? 0);
   document.getElementById("bombs-remaining").textContent = t.bombs_remaining(state.totalBombs - found);

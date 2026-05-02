@@ -82,6 +82,7 @@ export const TRANSLATIONS = {
 
     // Result
     result_won:         (name) => `${name} ganhô!`,
+    result_won_suffix:  "ganhô",
     result_draw:        "Empatô, ma!",
     result_score:       (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "mina" : "minas"} · ${l}: ${lb} ${lb === 1 ? "mina" : "minas"}`,
     result_draw_score:  (n) => `Os dois acharam ${n} ${n === 1 ? "mina" : "minas"}`,
@@ -167,6 +168,7 @@ export const TRANSLATIONS = {
     sticker_trophy:     "GG EZ",
 
     result_won:         (name) => `${name} venceu!`,
+    result_won_suffix:  "venceu",
     result_draw:        "Empate!",
     result_score:       (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "bomba" : "bombas"} · ${l}: ${lb} ${lb === 1 ? "bomba" : "bombas"}`,
     result_draw_score:  (n) => `Ambos encontraram ${n} ${n === 1 ? "bomba" : "bombas"}`,
@@ -250,6 +252,7 @@ export const TRANSLATIONS = {
     sticker_trophy:     "GG EZ",
 
     result_won:         (name) => `${name} won!`,
+    result_won_suffix:  "won",
     result_draw:        "Draw!",
     result_score:       (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "bomb" : "bombs"} · ${l}: ${lb} ${lb === 1 ? "bomb" : "bombs"}`,
     result_draw_score:  (n) => `Both found ${n} ${n === 1 ? "bomb" : "bombs"}`,
