@@ -49,6 +49,17 @@ export type ServerMessage =
   | { type: "error"; message: string }
   | { type: "sticker"; id: string; from: 0 | 1; at: number };
 
+const AI_NAMES: Record<AiLevel, string> = {
+  easy: "EireneBot",
+  medium: "AtenaBot",
+  hard: "ÉrisBot",
+};
+
+function isReservedPlayerName(name: string): boolean {
+  const normalized = name.trim().toLowerCase();
+  return Object.values(AI_NAMES).some((n) => n.toLowerCase() === normalized);
+}
+
 // ── Game Logic ─────────────────────────────────────────────────────────────
 
 export function generateGrid(rows: number, cols: number, bombs: number): number[][] {
@@ -191,6 +202,11 @@ export default class GameRoom implements Party.Server {
   // ── Handlers ──────────────────────────────────────────────────────────────
 
   private async handleJoin(conn: Party.Connection, name: string, difficulty?: Difficulty, ai?: { level: AiLevel }) {
+    if (isReservedPlayerName(name)) {
+      this.send(conn, { type: "error", message: "name_reserved" });
+      return;
+    }
+
     // Reconnection: player already has a slot
     if (this.state) {
       const existingSlot = this.findExistingSlot(name);
@@ -222,7 +238,7 @@ export default class GameRoom implements Party.Server {
         this.aiLevel = ai.level;
         await this.room.storage.put("aiLevel", this.aiLevel);
         // Single-player: spawn an AI opponent immediately.
-        this.state.players[1] = { id: "ai", name: "AI", score: 0, bombs: 0 };
+        this.state.players[1] = { id: "ai", name: AI_NAMES[this.aiLevel], score: 0, bombs: 0 };
         this.state.status = "playing";
         this.state.currentPlayer = (Math.random() < 0.5 ? 0 : 1);
         this.ensureAiFlags();

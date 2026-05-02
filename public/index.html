@@ -1285,6 +1285,11 @@ function setRoomIdInUrl(id) { location.hash = id; }
 function generateRoomId() { return Math.random().toString(36).slice(2, 8); }
 function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = "block"; }
 function hideError(id) { document.getElementById(id).style.display = "none"; }
+function normalizeNameForCompare(name) {
+  return name.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "");
+}
+const RESERVED_NAMES = new Set(["EireneBot", "AtenaBot", "ÉrisBot"].map(normalizeNameForCompare));
+function isReservedName(name) { return RESERVED_NAMES.has(normalizeNameForCompare(name)); }
 function syncNameInput(inputId) {
   const input = document.getElementById(inputId);
   input.addEventListener("input", () => {
@@ -1345,6 +1350,7 @@ function setupDiffOptions() {
 }
 
 function setupCreateScreen() {
+  const soloRow = document.getElementById("solo-row");
   const toggle = document.getElementById("solo-toggle");
   const aiField = document.getElementById("ai-level-field");
   const setSolo = (on) => {
@@ -1354,13 +1360,16 @@ function setupCreateScreen() {
   };
   const isSolo = () => toggle.classList.contains("on");
   const toggleSolo = () => setSolo(!isSolo());
-  toggle.addEventListener("click", toggleSolo);
+  // Make the whole row clickable (not just the tiny switch) to avoid missed taps on mobile.
+  soloRow.addEventListener("click", toggleSolo);
+  toggle.addEventListener("click", (e) => { e.stopPropagation(); toggleSolo(); });
   toggle.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSolo(); } });
   setSolo(false);
 
   document.getElementById("btn-create").onclick = () => {
     const name = document.getElementById("create-name").value.trim();
     if (!name) { showError("create-error", t.error_name_required); return; }
+    if (isReservedName(name)) { showError("create-error", t.error_name_reserved); return; }
     hideError("create-error");
     const diff = document.querySelector("input[name='diff']:checked").value;
     const aiLevel = isSolo() ? document.getElementById("ai-level").value : null;
@@ -1416,6 +1425,7 @@ function setupJoinScreen(id) {
   document.getElementById("btn-join").onclick = () => {
     const name = document.getElementById("join-name").value.trim();
     if (!name) { showError("join-error", t.error_name_required); return; }
+    if (isReservedName(name)) { showError("join-error", t.error_name_reserved); return; }
     hideError("join-error");
     myName = name;
     localStorage.setItem(NAME_STORAGE_KEY, name);
@@ -1472,6 +1482,17 @@ function handleServerError(message) {
     intentionallyClosedSockets.add(socket);
     socket.close();
     socket = null;
+  }
+  if (message === "name_reserved") {
+    const rid = getRoomIdFromUrl();
+    if (rid) {
+      showScreen("screen-join");
+      showError("join-error", t.error_name_reserved);
+      return;
+    }
+    showScreen("screen-create");
+    showError("create-error", t.error_name_reserved);
+    return;
   }
   if (message === "room_full") {
     // If we're trying to join via an invite link, keep the user on the join screen

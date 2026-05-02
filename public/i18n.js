@@ -31,7 +31,7 @@ export const TRANSLATIONS = {
 
     // Create screen
     create_title:       "Bora jogar!",
-    name_label:         "Qual é o teu nome, meu?",
+    name_label:         "Qual é o teu nome, ma?",
     name_placeholder:   "Ex: Zé",
     difficulty_label:   "Quão macho és?",
     diff_easy_name:     "Molezinha",
@@ -41,9 +41,9 @@ export const TRANSLATIONS = {
     diff_hard_name:     "Oxe, rapaiz!",
     diff_hard_desc:     "10 × 10 · 30 minas",
     btn_create:         "Bora jogar!",
-    solo_label:         "Jogar contra IA",
+    solo_label:         "Jogar contra Máquina",
     solo_hint:          "Comeca na hora, sem precisar de parceiro",
-    ai_level_label:     "Nivel da IA",
+    ai_level_label:     "Nivel da Máquina",
     ai_easy:            "De boa",
     ai_medium:          "Malemolente",
     ai_hard:            "Apelona",
@@ -57,7 +57,7 @@ export const TRANSLATIONS = {
     // Join screen
     join_title:         "Entrar na farra",
     invited_by:         "Chamado por",
-    join_name_label:    "Qual é o teu nome, meu?",
+    join_name_label:    "Qual é o teu nome, ma?",
     join_name_ph:       "Ex: Xuxa",
     btn_join:           "Entrar na farra",
 
@@ -82,18 +82,19 @@ export const TRANSLATIONS = {
 
     // Result
     result_won:         (name) => `${name} ganhô!`,
-    result_draw:        "Empatô, meu!",
+    result_draw:        "Empatô, ma!",
     result_score:       (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "mina" : "minas"} · ${l}: ${lb} ${lb === 1 ? "mina" : "minas"}`,
     result_draw_score:  (n) => `Os dois acharam ${n} ${n === 1 ? "mina" : "minas"}`,
     btn_rematch:        "Duvido tu ir de novo",
     btn_new_game:       "Bora mais uma",
 
     // Errors
-    error_name_required:  "Coloca teu nome, meu!",
+    error_name_required:  "Coloca teu nome, ma!",
     error_room_full:      "Essa farra já tá cheia!",
-    error_room_finished:  "Essa partida já acabou, meu.",
+    error_room_finished:  "Essa partida já acabou, ma.",
     error_room_not_found: "Essa sala não existe não, véi.",
-    error_generic:        "Deu ruim aí, meu.",
+    error_name_reserved:  "Esse nome é reservado pra Máquina, ma! Escolhe outro.",
+    error_generic:        "Deu ruim aí, ma.",
     error_title_full:     "Tá cheio!",
     error_title_finished: "Acabou!",
     error_title_generic:  "Eita!",
@@ -165,6 +166,7 @@ export const TRANSLATIONS = {
     error_room_full:      "Esta sala já tem dois jogadores.",
     error_room_finished:  "Esta partida já chegou ao fim.",
     error_room_not_found: "Esta sala não existe ou já terminou.",
+    error_name_reserved:  "Esse nome está reservado para a IA. Escolhe outro.",
     error_generic:        "Ocorreu um erro inesperado.",
     error_title_full:     "Partida em curso",
     error_title_finished: "Partida terminada",
@@ -236,6 +238,7 @@ export const TRANSLATIONS = {
     error_room_full:      "This room is already full.",
     error_room_finished:  "This game has already ended.",
     error_room_not_found: "This room does not exist or has ended.",
+    error_name_reserved:  "That name is reserved for the AI. Please choose another.",
     error_generic:        "An unexpected error occurred.",
     error_title_full:     "Game in progress",
     error_title_finished: "Game ended",
