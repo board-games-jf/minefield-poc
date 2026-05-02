@@ -23,6 +23,7 @@
       --radius-sm: 6px;
       --radius-md: 10px;
       --radius-lg: 14px;
+      --cell-gap: 2px;
     }
 
     body {
@@ -34,6 +35,7 @@
       align-items: center;
       justify-content: center;
       padding: 1rem;
+      overflow-x: hidden;
     }
 
     .container { width: 100%; max-width: 640px; }
@@ -292,7 +294,7 @@
     }
     .board {
       display: inline-grid;
-      gap: 4px;
+      gap: var(--cell-gap);
     }
 
     .sticker-launcher-wrap {
@@ -332,12 +334,14 @@
     .sticker-launcher-icon { font-size: 22px; line-height: 1; transform-origin: center; }
     .sticker-launcher.open .sticker-launcher-icon { animation: launcherPop 180ms ease-out; }
     .sticker-palette {
-      position: absolute;
-      top: calc(100% + 10px);
-      right: 0;
-      transform: translateY(10px) scale(0.96);
-      transform-origin: top right;
-      width: min(460px, calc(100vw - 40px));
+      position: fixed;
+      top: var(--sticker-palette-top, 0px);
+      left: 50%;
+      right: auto;
+      transform: translate(-50%, 10px) scale(0.96);
+      transform-origin: top center;
+      width: min(460px, calc(100vw - 40px - env(safe-area-inset-left) - env(safe-area-inset-right)));
+      max-height: calc(100vh - var(--sticker-palette-top, 0px) - 24px);
       padding: 14px;
       border-radius: 20px;
       border: 0.5px solid rgba(255,255,255,0.08);
@@ -350,15 +354,17 @@
       pointer-events: none;
       transition: opacity 0.16s, transform 0.16s;
       z-index: 20;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
     .sticker-palette.open {
       opacity: 1;
       pointer-events: auto;
-      transform: translateY(0) scale(1);
+      transform: translate(-50%, 0) scale(1);
     }
     .sticker-palette-grid {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
       gap: 10px;
     }
     .sticker-btn {
@@ -613,6 +619,7 @@
         margin: 0;
       }
     }
+
   </style>
 </head>
 <body>
@@ -1570,6 +1577,7 @@ function showStickerToast(from, id) {
 function setStickerPaletteOpen(open) {
   const launcher = document.getElementById("sticker-launcher");
   const palette = document.getElementById("sticker-palette");
+  if (open) updateStickerPalettePosition();
   launcher.classList.toggle("open", open);
   launcher.setAttribute("aria-expanded", open ? "true" : "false");
   palette.classList.toggle("open", open);
@@ -1577,6 +1585,14 @@ function setStickerPaletteOpen(open) {
 
 function closeStickerPalette() {
   setStickerPaletteOpen(false);
+}
+
+function updateStickerPalettePosition() {
+  const launcher = document.getElementById("sticker-launcher");
+  const palette = document.getElementById("sticker-palette");
+  const rect = launcher.getBoundingClientRect();
+  const top = Math.min(window.innerHeight - 24, rect.bottom + 10);
+  palette.style.setProperty("--sticker-palette-top", `${top}px`);
 }
 
 // ── Render ─────────────────────────────────────────────────────────────────
@@ -1617,8 +1633,10 @@ function renderBoard(state) {
   const topY = wrapRect.top;
   const availW = Math.max(240, Math.min(640, document.querySelector(".container").clientWidth) - 28 /* wrap padding */ - 2);
   const availH = Math.max(240, window.innerHeight - topY - 22 /* bottom gap */ - 28 /* wrap padding */ - 2);
-  const byW = Math.floor((availW - (cols - 1) * 4) / cols);
-  const byH = Math.floor((availH - (rows - 1) * 4) / rows);
+  const cssGap = getComputedStyle(document.documentElement).getPropertyValue("--cell-gap").trim();
+  const gap = Number.parseFloat(cssGap) || 4;
+  const byW = Math.floor((availW - (cols - 1) * gap) / cols);
+  const byH = Math.floor((availH - (rows - 1) * gap) / rows);
   const cellSize = Math.max(28, Math.min(56, byW, byH));
   boardEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
 
@@ -1628,13 +1646,18 @@ function renderBoard(state) {
       for (let c = 0; c < cols; c++) {
         const cell = document.createElement("div");
         cell.className = "cell";
-        cell.style.width = cellSize + "px";
-        cell.style.fontSize = Math.max(11, Math.floor(cellSize * 0.42)) + "px";
         const row = r, col = c;
         cell.addEventListener("click", () => handleCellClick(row, col));
         boardEl.appendChild(cell);
       }
     }
+  }
+
+  // Keep cell sizing responsive even when reusing existing DOM nodes (e.g. rotate phone / resize window).
+  const fontSize = Math.max(11, Math.floor(cellSize * 0.42));
+  for (const el of boardEl.children) {
+    el.style.width = cellSize + "px";
+    el.style.fontSize = fontSize + "px";
   }
 
   for (let r = 0; r < rows; r++) {
@@ -1662,8 +1685,14 @@ window.addEventListener("resize", () => {
   if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
   _resizeRaf = requestAnimationFrame(() => {
     try { renderBoard(currentState); } catch {}
+    try { updateStickerPalettePosition(); } catch {}
   });
 });
+window.addEventListener("scroll", () => {
+  const palette = document.getElementById("sticker-palette");
+  if (!palette.classList.contains("open")) return;
+  updateStickerPalettePosition();
+}, { passive: true });
 
 function handleCellClick(r, c) {
   if (!currentState || currentState.status !== "playing") return;
