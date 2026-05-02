@@ -3320,6 +3320,10 @@
       document.getElementById("reconnecting-bar").classList.remove("visible");
       location.hash = "";
       showScreen("screen-create");
+      // Reset solo game toggle
+      document.getElementById("solo-toggle").classList.remove("on");
+      document.getElementById("solo-toggle").setAttribute("aria-checked", "false");
+      document.getElementById("ai-level-field").classList.remove("visible");
       setupCreateScreen();
     }
 
