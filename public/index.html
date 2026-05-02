@@ -2103,10 +2103,13 @@ function renderBoard(state) {
   const rows = state.grid.length;
   const boardEl = document.getElementById("board");
   const boardWrap = document.querySelector("#screen-game .board-wrap");
-  const wrapRect = boardWrap.getBoundingClientRect();
-  const topY = wrapRect.top;
+  
+  // Get the actual available height from the max-height CSS property (70vh)
+  const maxHeightStyle = getComputedStyle(boardWrap).maxHeight;
+  const maxHeightPx = parseFloat(maxHeightStyle) || (window.innerHeight * 0.7);
+  
   const availW = Math.max(240, Math.min(640, document.querySelector(".container").clientWidth) - 28 /* wrap padding */ - 2);
-  const availH = Math.max(240, window.innerHeight - topY - 22 /* bottom gap */ - 28 /* wrap padding */ - 2);
+  const availH = maxHeightPx - 28 /* wrap padding */ - 2;
   const cssGap = getComputedStyle(document.documentElement).getPropertyValue("--cell-gap").trim();
   const gap = Number.parseFloat(cssGap) || 4;
   const byW = Math.floor((availW - (cols - 1) * gap) / cols);
