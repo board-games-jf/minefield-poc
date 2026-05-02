@@ -2163,7 +2163,6 @@
       // Delay to allow AudioContext to transition from suspended to running state
       setTimeout(() => {
         try {
-          // Short "your turn" chime.
           if (!audioCtx) {
             const Ctx = window.AudioContext || window.webkitAudioContext;
             if (Ctx) audioCtx = new Ctx();
@@ -2179,18 +2178,24 @@
           if (audioCtx.state !== "running") return;
 
           const t0 = audioCtx.currentTime + 0.01;
-          const g = audioCtx.createGain();
-          g.gain.setValueAtTime(0.0001, t0);
-          g.gain.exponentialRampToValueAtTime(0.12, t0 + 0.02);
-          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.30);
-          g.connect(audioCtx.destination);
-          const o = audioCtx.createOscillator();
-          o.type = "sine";
-          o.frequency.setValueAtTime(880, t0);
-          o.frequency.linearRampToValueAtTime(660, t0 + 0.30);
-          o.connect(g);
-          o.start(t0);
-          o.stop(t0 + 0.33);
+
+          // Victory chime - three ascending tones
+          function beep(freq, start, dur) {
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.15, start);
+            g.gain.exponentialRampToValueAtTime(0.001, start + dur);
+            g.connect(audioCtx.destination);
+            const o = audioCtx.createOscillator();
+            o.type = "sine";
+            o.frequency.setValueAtTime(freq, start);
+            o.connect(g);
+            o.start(start);
+            o.stop(start + dur);
+          }
+
+          beep(523, t0, 0.15);
+          beep(659, t0 + 0.1, 0.15);
+          beep(783, t0 + 0.2, 0.25);
         } catch { }
       }, 50);
     }
@@ -2588,6 +2593,41 @@
       tone({ type: "sine", f1: 440, f2: 440, dur: 0.12, gain: 0.10 });
     }
 
+    function playBombSound() {
+      if (!soundEnabled) return;
+      ensureAudioUnlocked();
+      try {
+        if (!audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) audioCtx = new Ctx();
+        }
+        if (!audioCtx) return;
+
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume().then(() => playBombSound()).catch(() => { });
+          return;
+        }
+
+        if (audioCtx.state !== "running") return;
+
+        const t0 = audioCtx.currentTime + 0.005;
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.15, t0);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
+        g.connect(audioCtx.destination);
+
+        const o = audioCtx.createOscillator();
+        o.type = "sawtooth";
+        o.frequency.setValueAtTime(180, t0);
+        o.frequency.exponentialRampToValueAtTime(50, t0 + 0.25);
+        o.connect(g);
+        o.start(t0);
+        o.stop(t0 + 0.27);
+      } catch (e) {
+        console.error("Bomb sound error:", e);
+      }
+    }
+
     window.addEventListener("pointerdown", ensureAudioUnlocked, { once: true, passive: true });
     window.addEventListener("keydown", ensureAudioUnlocked, { once: true });
     function getRoomIdFromUrl() { return location.hash.replace("#", "") || null; }
@@ -2781,6 +2821,9 @@
         if (msg.type === "sticker") {
           if (document.hidden || !isGameScreenActive()) enqueueSticker(msg.from, msg.id);
           else showStickerToast(msg.from, msg.id);
+        }
+        if (msg.type === "bomb-found") {
+          playBombSound();
         }
         if (msg.type === "error") handleServerError(msg.message);
       });
@@ -3119,6 +3162,10 @@
       if (!currentState || currentState.status !== "playing") return;
       if (currentState.revealed[r][c]) return;
       if (myPlayerIndex !== currentState.currentPlayer) return;
+
+      if (currentState.grid[r][c] === -1) {
+        playBombSound();
+      }
 
       socket.send(JSON.stringify({ type: "reveal", row: r, col: c }));
     }

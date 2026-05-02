@@ -64,7 +64,8 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "state"; state: GameState }
   | { type: "error"; message: string }
-  | { type: "sticker"; id: string; from: 0 | 1; at: number };
+  | { type: "sticker"; id: string; from: 0 | 1; at: number }
+  | { type: "bomb-found"; playerIndex: 0 | 1 };
 
 const RANKING_ROOM_ID = "__ranking__";
 const RANKING_STORAGE_KEY = "ranking";
@@ -550,12 +551,13 @@ export default class GameRoom implements Party.Server {
       await this.persist();
       await this.room.storage.put("aiFlags", this.aiFlags);
       this.broadcast();
+      this.room.broadcast(JSON.stringify({ type: "bomb-found", playerIndex: 1 } satisfies ServerMessage));
 
-      // Bomb keeps the turn, doesn't clear, doesn't switch, just schedules the next click.
+      // Bomb keeps the turn, so schedule another move immediately.
       if (this.state.status === "playing" && this.state.currentPlayer === 1) {
         this.scheduleAiMove(level);
       }
-      return; // Don't forget to return here, otherwise it would switch the turn after hitting a bomb, which is not intended.
+      return; // Retorna aqui, não executa o resto
     } else {
       floodReveal(this.state.grid, this.state.revealed, row, col, rows, cols);
       this.state.currentPlayer = 0;
