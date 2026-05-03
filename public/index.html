@@ -1380,32 +1380,40 @@
     .cell.last-clicked-p1 {
       border: 2.5px solid var(--teal);
       box-shadow: 0 0 14px rgba(29, 158, 117, 0.7), inset 0 0 8px rgba(29, 158, 117, 0.25);
-      animation: cellPulseP1 0.4s ease-out forwards;
+      animation: cellBlinkP1 0.8s ease-in-out infinite;
     }
 
     .cell.last-clicked-p2 {
       border: 2.5px solid var(--coral);
       box-shadow: 0 0 14px rgba(153, 60, 29, 0.7), inset 0 0 8px rgba(153, 60, 29, 0.25);
-      animation: cellPulseP2 0.4s ease-out forwards;
+      animation: cellBlinkP2 0.8s ease-in-out infinite;
     }
 
-    @keyframes cellPulseP1 {
-      0% {
-        box-shadow: 0 0 0 0 rgba(29, 158, 117, 0.8), inset 0 0 8px rgba(29, 158, 117, 0.25);
+    @keyframes cellBlinkP1 {
+
+      0%,
+      100% {
+        border-color: var(--teal);
+        box-shadow: 0 0 14px rgba(29, 158, 117, 0.7), inset 0 0 8px rgba(29, 158, 117, 0.25);
       }
 
-      100% {
-        box-shadow: 0 0 14px rgba(29, 158, 117, 0.3), inset 0 0 8px rgba(29, 158, 117, 0.25);
+      50% {
+        border-color: rgba(29, 158, 117, 0.5);
+        box-shadow: 0 0 8px rgba(29, 158, 117, 0.35), inset 0 0 4px rgba(29, 158, 117, 0.12);
       }
     }
 
-    @keyframes cellPulseP2 {
-      0% {
-        box-shadow: 0 0 0 0 rgba(153, 60, 29, 0.8), inset 0 0 8px rgba(153, 60, 29, 0.25);
+    @keyframes cellBlinkP2 {
+
+      0%,
+      100% {
+        border-color: var(--coral);
+        box-shadow: 0 0 14px rgba(153, 60, 29, 0.7), inset 0 0 8px rgba(153, 60, 29, 0.25);
       }
 
-      100% {
-        box-shadow: 0 0 14px rgba(153, 60, 29, 0.3), inset 0 0 8px rgba(153, 60, 29, 0.25);
+      50% {
+        border-color: rgba(153, 60, 29, 0.5);
+        box-shadow: 0 0 8px rgba(153, 60, 29, 0.35), inset 0 0 4px rgba(153, 60, 29, 0.12);
       }
     }
 
@@ -2708,19 +2716,19 @@
       const soloRow = document.getElementById("solo-row");
       const toggle = document.getElementById("solo-toggle");
       const aiField = document.getElementById("ai-level-field");
-      
+
       // Remove listeners antigos
       const newSoloRow = soloRow.cloneNode(true);
       const newToggle = newSoloRow.querySelector("#solo-toggle");
       soloRow.parentNode.replaceChild(newSoloRow, soloRow);
-      
+
       const toggleSolo = () => {
         const isOn = newToggle.classList.contains("on");
         newToggle.classList.toggle("on");
         newToggle.setAttribute("aria-checked", !isOn ? "true" : "false");
         document.getElementById("ai-level-field").classList.toggle("visible");
       };
-      
+
       // Add listeners
       newSoloRow.addEventListener("click", toggleSolo);
       newToggle.addEventListener("click", (e) => { e.stopPropagation(); toggleSolo(); });
