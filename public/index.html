@@ -2708,26 +2708,23 @@
       const soloRow = document.getElementById("solo-row");
       const toggle = document.getElementById("solo-toggle");
       const aiField = document.getElementById("ai-level-field");
-
-      const setSolo = (on) => {
-        toggle.classList.toggle("on", on);
-        toggle.setAttribute("aria-checked", on ? "true" : "false");
-        aiField.classList.toggle("visible", on);
-      };
-
-      const isSolo = () => toggle.classList.contains("on");
-      const toggleSolo = () => setSolo(!isSolo());
-
-      // Remove old listeners before adding new ones, to prevent duplicates if user returns to this screen.
+      
+      // Remove listeners antigos
       const newSoloRow = soloRow.cloneNode(true);
-      soloRow.parentNode.replaceChild(newSoloRow, soloRow);
       const newToggle = newSoloRow.querySelector("#solo-toggle");
-
-      // Add listeners to both the row and the toggle for better accessibility
+      soloRow.parentNode.replaceChild(newSoloRow, soloRow);
+      
+      const toggleSolo = () => {
+        const isOn = newToggle.classList.contains("on");
+        newToggle.classList.toggle("on");
+        newToggle.setAttribute("aria-checked", !isOn ? "true" : "false");
+        document.getElementById("ai-level-field").classList.toggle("visible");
+      };
+      
+      // Add listeners
       newSoloRow.addEventListener("click", toggleSolo);
       newToggle.addEventListener("click", (e) => { e.stopPropagation(); toggleSolo(); });
       newToggle.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSolo(); } });
-      setSolo(false);
 
       document.getElementById("btn-create").onclick = () => {
         const name = document.getElementById("create-name").value.trim();
@@ -2735,7 +2732,7 @@
         if (isReservedName(name)) { showError("create-error", t.error_name_reserved); return; }
         hideError("create-error");
         const diff = document.querySelector("input[name='diff']:checked").value;
-        const aiLevel = isSolo() ? document.getElementById("ai-level").value : null;
+        const aiLevel = newToggle.classList.contains("on") ? document.getElementById("ai-level").value : null;
         const id = generateRoomId();
         setRoomIdInUrl(id);
         myName = name;
