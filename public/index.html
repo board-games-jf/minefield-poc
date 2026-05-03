@@ -2708,17 +2708,25 @@
       const soloRow = document.getElementById("solo-row");
       const toggle = document.getElementById("solo-toggle");
       const aiField = document.getElementById("ai-level-field");
+
       const setSolo = (on) => {
         toggle.classList.toggle("on", on);
         toggle.setAttribute("aria-checked", on ? "true" : "false");
         aiField.classList.toggle("visible", on);
       };
+
       const isSolo = () => toggle.classList.contains("on");
       const toggleSolo = () => setSolo(!isSolo());
-      // Make the whole row clickable (not just the tiny switch) to avoid missed taps on mobile.
-      soloRow.addEventListener("click", toggleSolo);
-      toggle.addEventListener("click", (e) => { e.stopPropagation(); toggleSolo(); });
-      toggle.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSolo(); } });
+
+      // Remove old listeners before adding new ones, to prevent duplicates if user returns to this screen.
+      const newSoloRow = soloRow.cloneNode(true);
+      soloRow.parentNode.replaceChild(newSoloRow, soloRow);
+      const newToggle = newSoloRow.querySelector("#solo-toggle");
+
+      // Add listeners to both the row and the toggle for better accessibility
+      newSoloRow.addEventListener("click", toggleSolo);
+      newToggle.addEventListener("click", (e) => { e.stopPropagation(); toggleSolo(); });
+      newToggle.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSolo(); } });
       setSolo(false);
 
       document.getElementById("btn-create").onclick = () => {
@@ -3367,14 +3375,14 @@
       document.getElementById("reconnecting-bar").classList.remove("visible");
       location.hash = "";
       showScreen("screen-create");
-      
+
       // Reset do solo toggle e AI level
       const soloToggle = document.getElementById("solo-toggle");
       const aiLevelField = document.getElementById("ai-level-field");
       soloToggle.classList.remove("on");
       soloToggle.setAttribute("aria-checked", "false");
       aiLevelField.classList.remove("visible");
-      
+
       setupCreateScreen();
     }
 
