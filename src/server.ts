@@ -235,7 +235,18 @@ export default class GameRoom implements Party.Server {
       if (path === "/") path = "/index.html";
 
       const asset = await lobby.assets.fetch(path);
-      if (asset) return asset;
+      if (asset) {
+        // version.json and index.html never should be cached, to ensure clients always get the latest version and the app shell.
+        if (path === "/version.json" || path === "/index.html") {
+          const headers = new Headers(asset.headers);
+          headers.set("cache-control", "no-store, no-cache, must-revalidate, max-age=0");
+          return new Response(asset.body, {
+            status: asset.status,
+            headers: headers,
+          });
+        }
+        return asset;
+      }
 
       return new Response("Not found", { status: 404 });
     } catch (err) {
