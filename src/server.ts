@@ -6,6 +6,12 @@ export type Difficulty = "easy" | "medium" | "hard";
 export type AiLevel = "easy" | "medium" | "hard";
 export type GameMode = "versus" | "coop" | "explosive";
 
+const POINTS_TABLE = {
+  versus: { easy: 60, medium: 110, hard: 160 },
+  coop: { easy: 50, medium: 90, hard: 130 },
+  explosive: { 2: 10, 3: 20, 5: 30, 10: 40 } as Record<2 | 3 | 5 | 10, number>,
+} as const;
+
 export interface DifficultyConfig {
   rows: number;
   cols: number;
@@ -43,6 +49,8 @@ export interface GameState {
   lastClickedCell?: { row: number; col: number; playerIndex: 0 | 1 };
   lastPlayerClicks: { row: number; col: number; playerIndex: 0 | 1 }[];
   explosiveSeries?: { target: 2 | 3 | 5 | 10; wins: [number, number]; round: number };
+  explosiveCooldownUntil?: number;
+  explosiveBoardId?: number;
   coopResult?: "win" | "loss";
   rematchReady?: [boolean, boolean];
 }
@@ -239,6 +247,15 @@ export function createInitialState(difficulty: Difficulty, mode: GameMode = "ver
   };
 }
 
+function createExplosiveSeries(target: 2 | 3 | 5 | 10): NonNullable<GameState["explosiveSeries"]> {
+  return { target, wins: [0, 0], round: 1 };
+}
+
+function nextExplosiveBoardId(prev: number | undefined): number {
+  const v = (prev ?? 0) | 0;
+  return v + 1;
+}
+
 export function countFoundBombs(state: GameState): number {
   return (state.players[0]?.bombs ?? 0) + (state.players[1]?.bombs ?? 0);
 }
@@ -326,6 +343,7 @@ export default class GameRoom implements Party.Server {
   state: GameState | null = null;
   connectionToPlayer: Map<string, 0 | 1> = new Map();
   private aiTimer: ReturnType<typeof setTimeout> | null = null;
+  private explosiveCooldownTimer: ReturnType<typeof setTimeout> | null = null;
   private aiLevel: AiLevel = "medium";
   private aiFlags: boolean[][] | null = null;
   private lastStickerAt: Map<string, number> = new Map();
@@ -351,6 +369,13 @@ export default class GameRoom implements Party.Server {
     }
     if (this.state && !this.state.rematchReady) {
       this.state.rematchReady = [false, false];
+    }
+
+    // Resume any pending explosive cooldown on wake.
+    if (this.state?.mode === "explosive" && this.state.explosiveCooldownUntil && this.state.status === "playing") {
+      const ms = Math.max(0, this.state.explosiveCooldownUntil - Date.now());
+      if (ms > 0) this.explosiveCooldownTimer = setTimeout(() => void this.finishExplosiveCooldown(), ms);
+      else await this.finishExplosiveCooldown();
     }
   }
 
@@ -434,6 +459,11 @@ export default class GameRoom implements Party.Server {
     // Player 1 creates room
     if (!this.state) {
       this.state = createInitialState(difficulty ?? "easy", mode ?? "versus");
+      if (this.state.mode === "explosive") {
+        const target = (ft ?? 5) as 2 | 3 | 5 | 10;
+        this.state.explosiveSeries = createExplosiveSeries(target);
+        this.state.explosiveBoardId = nextExplosiveBoardId(this.state.explosiveBoardId);
+      }
       this.state.players[0] = { id: conn.id, name, score: 0, bombs: 0 };
       this.connectionToPlayer.set(conn.id, 0);
       if (ai) {
@@ -462,6 +492,10 @@ export default class GameRoom implements Party.Server {
     if (this.state.players[0] !== null && this.state.players[1] === null) {
       this.state.players[1] = { id: conn.id, name, score: 0, bombs: 0 };
       this.state.status = "playing";
+      if (this.state.mode === "explosive" && !this.state.explosiveSeries) {
+        const target = (ft ?? 5) as 2 | 3 | 5 | 10;
+        this.state.explosiveSeries = createExplosiveSeries(target);
+      }
       // Who starts should be random once both players are present.
       this.state.currentPlayer = (Math.random() < 0.5 ? 0 : 1);
       this.connectionToPlayer.set(conn.id, 1);
@@ -475,6 +509,7 @@ export default class GameRoom implements Party.Server {
 
   private async handleReveal(conn: Party.Connection, row: number, col: number) {
     if (!this.state || this.state.status !== "playing") return;
+    if (this.state.mode === "explosive" && this.state.explosiveCooldownUntil && Date.now() < this.state.explosiveCooldownUntil) return;
 
     const playerIndex = this.connectionToPlayer.get(conn.id);
     if (playerIndex === undefined) return;
@@ -496,6 +531,39 @@ export default class GameRoom implements Party.Server {
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
       this.state.foundBy[row][col] = playerIndex;
+      if (this.state.mode === "explosive") {
+        // Explosive: the round ends immediately on a bomb. Point goes to the other player.
+        const series = this.state.explosiveSeries ?? createExplosiveSeries(5);
+        this.state.explosiveSeries = series;
+        const winner: 0 | 1 = playerIndex === 0 ? 1 : 0;
+        series.wins[winner] += 1;
+        series.round += 1;
+
+        const target = series.target;
+        if (series.wins[winner] >= target) {
+          // Match over: award ranking points to the series winner.
+          const pts = POINTS_TABLE.explosive[target];
+          const pWin = this.state.players[winner];
+          const pLose = this.state.players[winner === 0 ? 1 : 0];
+          if (pWin) pWin.score = pts;
+          if (pLose) pLose.score = 0;
+          this.state.status = "finished";
+        } else {
+          // Start cooldown so players can see where they lost before the next round starts.
+          this.state.currentPlayer = winner;
+          this.state.explosiveCooldownUntil = Date.now() + 5000;
+          this.clearExplosiveCooldownTimer();
+          this.explosiveCooldownTimer = setTimeout(() => void this.finishExplosiveCooldown(), 5000);
+        }
+
+        await this.finalizeMatchIfNeeded();
+        await this.persist();
+        this.broadcast();
+        if (this.state.status === "playing" && this.state.players[1]?.id === "ai" && this.state.currentPlayer === 1) {
+          this.scheduleAiMove(this.aiLevel);
+        }
+        return;
+      }
       if (this.state.mode === "coop") {
         // Coop: hitting any bomb ends the game immediately (team loss).
         this.state.status = "finished";
@@ -559,6 +627,35 @@ export default class GameRoom implements Party.Server {
     this.lastStickerAt.set(conn.id, now);
 
     this.room.broadcast(JSON.stringify({ type: "sticker", id, from, at: now } satisfies ServerMessage));
+  }
+
+  private async finishExplosiveCooldown() {
+    if (!this.state) return;
+    if (this.state.mode !== "explosive") return;
+    if (this.state.status !== "playing") return;
+    if (!this.state.explosiveSeries) return;
+    if (!this.state.explosiveCooldownUntil) return;
+
+    this.clearExplosiveCooldownTimer();
+    this.state.explosiveCooldownUntil = undefined;
+
+    const { rows, cols, bombs } = CONFIGS[this.state.difficulty];
+    this.state.grid = generateGrid(rows, cols, bombs);
+    this.state.revealed = Array.from({ length: rows }, () => Array(cols).fill(false));
+    this.state.foundBy = Array.from({ length: rows }, () => Array<0 | 1 | null>(cols).fill(null));
+    this.state.safeRevealedBy = [];
+    this.state.lastClickedCell = undefined;
+    this.state.lastPlayerClicks = [];
+    this.state.explosiveBoardId = nextExplosiveBoardId(this.state.explosiveBoardId);
+
+    await this.persist();
+    this.broadcast();
+
+    if (this.state.players[1]?.id === "ai" && this.state.currentPlayer === 1) {
+      this.ensureAiFlags();
+      await this.room.storage.put("aiFlags", this.aiFlags);
+      this.scheduleAiMove(this.aiLevel);
+    }
   }
 
   private resetMatchStatePreservingPlayers() {
@@ -661,6 +758,11 @@ export default class GameRoom implements Party.Server {
     this.aiTimer = null;
   }
 
+  private clearExplosiveCooldownTimer() {
+    if (this.explosiveCooldownTimer) clearTimeout(this.explosiveCooldownTimer);
+    this.explosiveCooldownTimer = null;
+  }
+
   private scheduleAiMove(level: AiLevel) {
     this.clearAiTimer();
     this.aiTimer = setTimeout(() => void this.aiMove(level), 350);
@@ -670,6 +772,7 @@ export default class GameRoom implements Party.Server {
     if (!this.state || this.state.status !== "playing") return;
     if (this.state.players[1]?.id !== "ai") return;
     if (this.state.currentPlayer !== 1) return;
+    if (this.state.mode === "explosive" && this.state.explosiveCooldownUntil && Date.now() < this.state.explosiveCooldownUntil) return;
     this.ensureAiFlags();
 
     const pick = pickAiCell(this.state, this.aiFlags!, level);
@@ -692,6 +795,34 @@ export default class GameRoom implements Party.Server {
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
       this.state.foundBy[row][col] = 1;
+      if (this.state.mode === "explosive") {
+        const series = this.state.explosiveSeries ?? createExplosiveSeries(5);
+        this.state.explosiveSeries = series;
+        const winner: 0 | 1 = 0; // AI (player 1) hit a bomb, so human wins.
+        series.wins[winner] += 1;
+        series.round += 1;
+        const target = series.target;
+        if (series.wins[winner] >= target) {
+          const pts = POINTS_TABLE.explosive[target];
+          const pWin = this.state.players[winner];
+          const pLose = this.state.players[1];
+          if (pWin) pWin.score = pts;
+          if (pLose) pLose.score = 0;
+          this.state.status = "finished";
+        } else {
+          this.state.currentPlayer = winner;
+          this.state.explosiveCooldownUntil = Date.now() + 5000;
+          this.clearExplosiveCooldownTimer();
+          this.explosiveCooldownTimer = setTimeout(() => void this.finishExplosiveCooldown(), 5000);
+        }
+
+        await this.finalizeMatchIfNeeded();
+        await this.persist();
+        if (this.aiFlags) await this.room.storage.put("aiFlags", this.aiFlags);
+        this.broadcast();
+        this.room.broadcast(JSON.stringify({ type: "bomb-found", playerIndex: 1 } satisfies ServerMessage));
+        return;
+      }
       if (this.state.mode === "coop") {
         // Coop: AI hitting a bomb ends the game immediately (team loss).
         this.state.status = "finished";
