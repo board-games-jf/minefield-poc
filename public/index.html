@@ -6,6 +6,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Minefield</title>
   <style>
+    .points-preview {
+      background: rgba(29, 158, 117, 0.1);
+      border: 0.5px solid rgba(29, 158, 117, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--teal);
+      font-weight: 500;
+      text-align: center;
+      display: none;
+    }
+
+    .points-preview.visible {
+      display: block;
+    }
+
+    .mode-description-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    .explosive-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border-strong);
+      transition: background 0.2s;
+    }
+
+    .explosive-dot.filled-p1 {
+      background: var(--teal);
+    }
+
+    .explosive-dot.filled-p2 {
+      background: var(--coral);
+    }
+
     *,
     *::before,
     *::after {
@@ -1764,7 +1806,27 @@
         <div class="card-title" data-i18n="create_title"></div>
         <div class="field">
           <label for="create-name" data-i18n="name_label"></label>
-          <input type="text" id="create-name" maxlength="20" data-i18n-ph="name_placeholder" />
+          <input id="create-name" type="text" autocomplete="nickname" data-i18n-placeholder="name_placeholder" />
+        </div>
+        <div class="field" id="mode-field">
+          <label for="mode-select" data-i18n="mode_label"></label>
+          <select id="mode-select" class="locale-select"
+            style="width:100%; border-radius: var(--radius-sm); height: 40px; font-size: 13px;">
+            <option value="versus"></option>
+            <option value="coop"></option>
+            <option value="explosive"></option>
+          </select>
+          <div id="mode-description" class="mode-description-card"></div>
+        </div>
+        <div class="field ai-level" id="ft-field">
+          <label data-i18n="ft_label"></label>
+          <select id="ft-select" class="locale-select"
+            style="width:100%; border-radius: var(--radius-sm); height: 40px; font-size: 13px;">
+            <option value="2"></option>
+            <option value="3"></option>
+            <option value="5" selected></option>
+            <option value="10"></option>
+          </select>
         </div>
         <div class="field">
           <label data-i18n="difficulty_label"></label>
@@ -1814,6 +1876,8 @@
           </select>
         </div>
         <div id="create-error" class="error-msg"></div>
+        <div id="points-preview" class="points-preview"></div>
+        <div id="coop-ai-warning" class="error-msg" style="display:none;" data-i18n="coop_ai_no_points"></div>
         <button class="btn btn-primary" id="btn-create" data-i18n="btn_create"></button>
       </div>
     </div>
@@ -1853,6 +1917,21 @@
     <div class="screen" id="screen-game">
       <div class="reconnecting-bar" id="reconnecting-bar" data-i18n="reconnecting"></div>
       <div class="scoreboard">
+        <div id="coop-progress" style="display:none;">
+          <div style="font-size: 12px; color: var(--text-muted); text-align:center; margin-bottom: 4px;"
+            id="coop-progress-label"></div>
+          <div style="background: var(--border); border-radius: 4px; height: 4px; overflow: hidden;">
+            <div id="coop-progress-bar"
+              style="background: var(--teal); height: 100%; width: 0%; transition: width 0.3s;"></div>
+          </div>
+        </div>
+        <div id="explosive-scoreboard" style="display:none;">
+          <div style="display:flex; justify-content:center; gap: 24px; align-items:center;">
+            <div id="explosive-dots-p1" style="display:flex; gap:6px;"></div>
+            <div style="font-size: 11px; color: var(--text-muted);" id="explosive-round-label"></div>
+            <div id="explosive-dots-p2" style="display:flex; gap:6px;"></div>
+          </div>
+        </div>
         <div class="player-card active-p1" id="p1-card">
           <div class="player-name-label">
             <div class="dot-p1"></div><span id="p1-name">—</span>
@@ -2026,6 +2105,10 @@
       });
       document.querySelectorAll("[data-i18n-ph]").forEach(el => {
         const key = el.dataset.i18nPh;
+        if (typeof t[key] === "string") el.placeholder = t[key];
+      });
+      document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+        const key = el.dataset.i18nPlaceholder;
         if (typeof t[key] === "string") el.placeholder = t[key];
       });
       const leaveBtn = document.getElementById("btn-leave");
@@ -2696,6 +2779,7 @@
       applyLocale(locale);
       syncSoundToggleUi();
       setupDiffOptions();
+      setupModeOptions();
       syncNameInput("create-name");
       syncNameInput("join-name");
       syncScreenWithUrl();
@@ -2712,40 +2796,194 @@
       });
     }
 
+    // Points awarded per mode/difficulty/ft combination
+    const POINTS_TABLE = {
+      versus: { easy: 60, medium: 110, hard: 160 },
+      coop: { easy: 50, medium: 90, hard: 130 },
+      explosive: { 2: 10, 3: 20, 5: 30, 10: 40 },
+    };
+
+    function getSelectedMode() {
+      return document.getElementById("mode-select")?.value ?? "versus";
+    }
+
+    function getSelectedDifficulty() {
+      return document.querySelector("input[name='diff']:checked")?.value ?? "easy";
+    }
+
+    function isAiEnabled() {
+      return document.getElementById("solo-toggle")?.classList.contains("on") ?? false;
+    }
+
+    function syncAiLevelVisibility() {
+      const mode = getSelectedMode();
+      const aiField = document.getElementById("ai-level-field");
+      if (!aiField) return;
+      // Coop uses NêmesisBot, always hard, so it has no AI difficulty selector.
+      aiField.classList.toggle("visible", isAiEnabled() && mode !== "coop");
+    }
+
+    function updatePointsPreview() {
+      const preview = document.getElementById("points-preview");
+      const coopWarning = document.getElementById("coop-ai-warning");
+      const ftField = document.getElementById("ft-field");
+      if (!preview) return;
+
+      const mode = getSelectedMode();
+      const diff = getSelectedDifficulty();
+      const isAi = isAiEnabled();
+      const ft = Number.parseInt(document.getElementById("ft-select")?.value ?? "5", 10);
+
+      if (ftField) ftField.classList.toggle("visible", mode === "explosive");
+      syncAiLevelVisibility();
+
+      if (mode === "coop" && isAi) {
+        preview.classList.remove("visible");
+        if (coopWarning) {
+          coopWarning.style.display = "block";
+          coopWarning.textContent = t.coop_ai_no_points;
+        }
+        return;
+      }
+
+      if (coopWarning) coopWarning.style.display = "none";
+
+      const pts = mode === "explosive"
+        ? (POINTS_TABLE.explosive[ft] ?? 30)
+        : (POINTS_TABLE[mode]?.[diff] ?? 0);
+
+      preview.textContent = mode === "explosive"
+        ? t.points_preview_explosive(ft, pts)
+        : t.points_preview(pts);
+      preview.classList.add("visible");
+    }
+
+    function bindPointsPreviewUpdates() {
+      const update = () => updatePointsPreview();
+
+      document.getElementById("mode-select")?.addEventListener("change", update);
+      document.getElementById("ft-select")?.addEventListener("change", update);
+
+      document.querySelectorAll("input[name='diff']").forEach((radio) => {
+        radio.addEventListener("change", update);
+      });
+
+      document.getElementById("solo-toggle")?.addEventListener("click", update);
+    }
+
+    function updateModeSelectLabels() {
+      const modeSelect = document.getElementById("mode-select");
+      if (!modeSelect) return;
+      const labels = { versus: t.mode_versus, coop: t.mode_coop, explosive: t.mode_explosive };
+      Array.from(modeSelect.options).forEach(option => {
+        option.textContent = labels[option.value] || option.value;
+      });
+    }
+
+    function updateModeDescription() {
+      const mode = getSelectedMode();
+      const desc = document.getElementById("mode-description");
+      if (!desc) return;
+      const key = `mode_${mode}_desc`;
+      desc.textContent = t[key] || "";
+    }
+
+    function updateFtOptions() {
+      const ftSelect = document.getElementById("ft-select");
+      if (!ftSelect) return;
+      Array.from(ftSelect.options).forEach(option => {
+        const n = Number.parseInt(option.value, 10);
+        option.textContent = typeof t.ft_option === "function" ? t.ft_option(n) : `FT${n}`;
+      });
+    }
+
+    function setupModeOptions() {
+      const modeSelect = document.getElementById("mode-select");
+      if (!modeSelect) return;
+      modeSelect.onchange = () => {
+        updateModeDescription();
+        updatePointsPreview();
+      };
+      updateModeSelectLabels();
+      updateModeDescription();
+      updateFtOptions();
+      updatePointsPreview();
+    }
+
     function setupCreateScreen() {
       const soloRow = document.getElementById("solo-row");
       const toggle = document.getElementById("solo-toggle");
-      const aiField = document.getElementById("ai-level-field");
+      if (!soloRow || !toggle) return;
 
-      // Remove listeners antigos
+      // Remove old listeners by cloning the row.
       const newSoloRow = soloRow.cloneNode(true);
-      const newToggle = newSoloRow.querySelector("#solo-toggle");
       soloRow.parentNode.replaceChild(newSoloRow, soloRow);
+      const newToggle = newSoloRow.querySelector("#solo-toggle");
 
       const toggleSolo = () => {
-        const isOn = newToggle.classList.contains("on");
-        newToggle.classList.toggle("on");
-        newToggle.setAttribute("aria-checked", !isOn ? "true" : "false");
-        document.getElementById("ai-level-field").classList.toggle("visible");
+        const nextOn = !newToggle.classList.contains("on");
+        newToggle.classList.toggle("on", nextOn);
+        newToggle.setAttribute("aria-checked", nextOn ? "true" : "false");
+        syncAiLevelVisibility();
+        updatePointsPreview();
       };
 
-      // Add listeners
-      newSoloRow.addEventListener("click", toggleSolo);
-      newToggle.addEventListener("click", (e) => { e.stopPropagation(); toggleSolo(); });
-      newToggle.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleSolo(); } });
+      newSoloRow.addEventListener("click", (e) => {
+        e.preventDefault();
+        toggleSolo();
+      });
+      newToggle.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          toggleSolo();
+        }
+      });
+
+      document.querySelectorAll("input[name='diff']").forEach(radio => {
+        radio.onchange = updatePointsPreview;
+      });
+
+      const refreshCreatePreview = () => {
+        updateModeDescription();
+        updatePointsPreview();
+      };
+
+      const ftSelect = document.getElementById("ft-select");
+      if (ftSelect) {
+        ftSelect.onchange = refreshCreatePreview;
+        ftSelect.oninput = refreshCreatePreview;
+      }
+
+      const modeSelect = document.getElementById("mode-select");
+      if (modeSelect) {
+        modeSelect.onchange = refreshCreatePreview;
+        modeSelect.oninput = refreshCreatePreview;
+      }
+
+      document.querySelectorAll("input[name='diff']").forEach(radio => {
+        radio.onchange = refreshCreatePreview;
+        radio.onclick = refreshCreatePreview;
+      });
+
+      updateModeSelectLabels();
+      updateModeDescription();
+      updateFtOptions();
+      updatePointsPreview();
 
       document.getElementById("btn-create").onclick = () => {
         const name = document.getElementById("create-name").value.trim();
         if (!name) { showError("create-error", t.error_name_required); return; }
         if (isReservedName(name)) { showError("create-error", t.error_name_reserved); return; }
         hideError("create-error");
-        const diff = document.querySelector("input[name='diff']:checked").value;
-        const aiLevel = newToggle.classList.contains("on") ? document.getElementById("ai-level").value : null;
+        const diff = getSelectedDifficulty();
+        const mode = getSelectedMode();
+        const ft = mode === "explosive" ? Number.parseInt(document.getElementById("ft-select")?.value ?? "5", 10) : null;
+        const aiLevel = isAiEnabled() ? document.getElementById("ai-level").value : null;
         const id = generateRoomId();
         setRoomIdInUrl(id);
         myName = name;
         localStorage.setItem(NAME_STORAGE_KEY, name);
-        connectToRoom(id, name, diff, aiLevel);
+        connectToRoom(id, name, diff, aiLevel, mode, ft);
       };
     }
 
@@ -2802,8 +3040,9 @@
     }
 
     // ── WebSocket ──────────────────────────────────────────────────────────────
-    function connectToRoom(id, name, difficulty, aiLevel) {
+    function connectToRoom(id, name, difficulty, aiLevel, mode, ft) {
       roomId = id;
+      // mode and ft can be used in join message or stored in state as needed
       if (socket) {
         intentionallyClosedSockets.add(socket);
         socket.close();
@@ -2815,6 +3054,8 @@
       socket.addEventListener("open", () => {
         document.getElementById("reconnecting-bar").classList.remove("visible");
         const msg = difficulty ? { type: "join", name, difficulty } : { type: "join", name };
+        if (mode) msg.mode = mode;
+        if (ft) msg.ft = ft;
         if (aiLevel) msg.ai = { level: aiLevel };
         socket.send(JSON.stringify(msg));
       });
@@ -3034,8 +3275,17 @@
       const p1 = state.players[0];
       const p2 = state.players[1];
 
-      document.getElementById("p1-name").textContent = p1?.name ?? "—";
-      document.getElementById("p2-name").textContent = p2?.name ?? "—";
+      // Add AI badge if needed
+      const p1IsAi = p1?.id === "ai";
+      const p2IsAi = p2?.id === "ai";
+      function renderPlayerName(spanEl, player, isAi) {
+        if (!player) { spanEl.textContent = "—"; return; }
+        spanEl.innerHTML = isAi
+          ? `${player.name} <span style="font-size:10px; padding:2px 5px; border-radius:4px; background:rgba(255,255,255,0.1); color:var(--text-muted);">${t.ai_badge}</span>`
+          : player.name;
+      }
+      renderPlayerName(document.getElementById("p1-name"), p1, p1IsAi);
+      renderPlayerName(document.getElementById("p2-name"), p2, p2IsAi);
       document.getElementById("p1-score").textContent = p1?.score ?? 0;
       document.getElementById("p2-score").textContent = p2?.score ?? 0;
       document.getElementById("p1-bombs").textContent = t.bomb_count(p1?.bombs ?? 0);
@@ -3083,8 +3333,61 @@
       document.getElementById("bombs-remaining").textContent = t.bombs_remaining(state.totalBombs - found);
 
       renderBoard(state);
+      renderScoreboardExtras(state);
       if (state.status === "finished") renderResult(state);
       else document.getElementById("result-area").innerHTML = "";
+      function renderScoreboardExtras(state) {
+        const coopProgress = document.getElementById("coop-progress");
+        const explosiveScoreboard = document.getElementById("explosive-scoreboard");
+
+        // Hide both by default
+        if (coopProgress) coopProgress.style.display = "none";
+        if (explosiveScoreboard) explosiveScoreboard.style.display = "none";
+
+        if (state.mode === "coop") {
+          // Count revealed safe cells
+          const { rows, cols } = { easy: { rows: 6, cols: 6 }, medium: { rows: 8, cols: 8 }, hard: { rows: 10, cols: 10 } }[state.difficulty];
+          const totalSafe = (rows * cols) - state.totalBombs;
+          let foundSafe = 0;
+          for (let r = 0; r < rows; r++)
+            for (let c = 0; c < cols; c++)
+              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
+
+          const pct = totalSafe > 0 ? Math.round((foundSafe / totalSafe) * 100) : 0;
+          if (coopProgress) {
+            coopProgress.style.display = "block";
+            document.getElementById("coop-progress-label").textContent = t.coop_cells_progress(foundSafe, totalSafe);
+            document.getElementById("coop-progress-bar").style.width = pct + "%";
+          }
+        }
+
+        if (state.mode === "explosive" && state.explosiveSeries) {
+          if (explosiveScoreboard) {
+            explosiveScoreboard.style.display = "block";
+            const { target, wins, round } = state.explosiveSeries;
+
+            // Render dots P1
+            const dotsP1 = document.getElementById("explosive-dots-p1");
+            dotsP1.innerHTML = "";
+            for (let i = 0; i < target; i++) {
+              const dot = document.createElement("div");
+              dot.className = "explosive-dot" + (i < wins[0] ? " filled-p1" : "");
+              dotsP1.appendChild(dot);
+            }
+
+            // Render dots P2
+            const dotsP2 = document.getElementById("explosive-dots-p2");
+            dotsP2.innerHTML = "";
+            for (let i = 0; i < target; i++) {
+              const dot = document.createElement("div");
+              dot.className = "explosive-dot" + (i < wins[1] ? " filled-p2" : "");
+              dotsP2.appendChild(dot);
+            }
+
+            document.getElementById("explosive-round-label").textContent = t.explosive_round_current(round);
+          }
+        }
+      }
     }
 
     function renderBoard(state) {
@@ -3188,24 +3491,53 @@
       const p2 = state.players[1];
       let title, subtitle;
 
-      if (!p1 || !p2) {
-        title = "—"; subtitle = "";
-      } else if (p1.score > p2.score) {
-        title = t.result_won(p1.name);
-        subtitle = t.result_score(p1.name, p1.bombs, p2.name, p2.bombs);
-      } else if (p2.score > p1.score) {
-        title = t.result_won(p2.name);
-        subtitle = t.result_score(p2.name, p2.bombs, p1.name, p1.bombs);
+      if (state.mode === "coop") {
+        if (state.coopResult === "win") {
+          title = t.coop_won;
+          subtitle = t.coop_cells_progress(
+            (state.grid.flat().filter((v, i) => state.revealed[Math.floor(i / state.grid[0].length)][i % state.grid[0].length] && v !== -1).length),
+            (state.grid.length * state.grid[0].length) - state.totalBombs
+          );
+        } else {
+          title = t.coop_lost;
+          subtitle = "";
+        }
+      } else if (state.mode === "explosive" && state.explosiveSeries) {
+        const { wins } = state.explosiveSeries;
+        if (!p1 || !p2) { title = "—"; subtitle = ""; }
+        else if (wins[0] > wins[1]) {
+          title = t.result_won_series(p1.name);
+          subtitle = `${p1.name} ${wins[0]} — ${p2.name} ${wins[1]}`;
+        } else {
+          title = t.result_won_series(p2.name);
+          subtitle = `${p2.name} ${wins[1]} — ${p1.name} ${wins[0]}`;
+        }
       } else {
-        title = t.result_draw;
-        subtitle = t.result_draw_score(p1.bombs);
+        // Versus — lógica atual
+        if (!p1 || !p2) { title = "—"; subtitle = ""; }
+        else if (p1.score > p2.score) {
+          title = t.result_won(p1.name);
+          subtitle = t.result_score(p1.name, p1.bombs, p2.name, p2.bombs);
+        } else if (p2.score > p1.score) {
+          title = t.result_won(p2.name);
+          subtitle = t.result_score(p2.name, p2.bombs, p1.name, p1.bombs);
+        } else {
+          title = t.result_draw;
+          subtitle = t.result_draw_score(p1.bombs);
+        }
       }
+
+      // Coop + IA warning
+      const coopAiWarning = (state.mode === "coop" && state.players.some(p => p?.id === "ai"))
+        ? `<div style="font-size:12px; color:var(--text-muted); text-align:center; padding: 4px 0;">${t.coop_ai_no_points}</div>`
+        : "";
 
       document.getElementById("result-area").innerHTML = `
     <div class="result-card">
       <div class="result-title">${title}</div>
       <div class="result-subtitle">${subtitle}</div>
       <div id="result-ranking"></div>
+      ${coopAiWarning}
       <div class="result-actions">
         <button class="btn btn-primary" id="btn-rematch">${t.btn_rematch}</button>
         <button class="btn btn-secondary" id="btn-new-game">${t.btn_new_game}</button>
@@ -3240,7 +3572,8 @@
       const isMe = isSamePlayerName(entry.name, activeName);
       const youSuffix = isMe ? ` <span class="ranking-you">${t.ranking_you || "(you)"}</span>` : "";
       const points = `${entry.points}`;
-      const wins = `${entry.wins} ${t.ranking_wins_label || "wins"}`;
+      const winsLabel = typeof t.ranking_wins_label === "function" ? t.ranking_wins_label(entry.wins) : (t.ranking_wins_label || "wins");
+      const wins = `${entry.wins} ${winsLabel}`;
       const pointsLabel = t.ranking_points_label || "points";
       const medal = entry.position === 1 ? "🥇" : entry.position === 2 ? "🥈" : entry.position === 3 ? "🥉" : null;
       const posHtml = medal
@@ -3260,7 +3593,8 @@
     }
 
     function rankingPlayerCardHtml(entry) {
-      const wins = `${entry.wins} ${t.ranking_wins_label || "wins"}`;
+      const winsLabel = typeof t.ranking_wins_label === "function" ? t.ranking_wins_label(entry.wins) : (t.ranking_wins_label || "wins");
+      const wins = `${entry.wins} ${winsLabel}`;
       const points = `${entry.points} ${t.ranking_points_label || "points"}`;
       const title = t.ranking_your_position || "Your position";
       return `
@@ -3368,6 +3702,13 @@
     }
 
     function leaveRoom() {
+      // Reset mode selector to Versus.
+      const modeSelect = document.getElementById("mode-select");
+      if (modeSelect) modeSelect.value = "versus";
+      updateModeDescription();
+      updatePointsPreview();
+      // Hide FT field
+      document.getElementById("ft-field")?.classList.remove("visible");
       if (socket) {
         intentionallyClosedSockets.add(socket);
         socket.close();
@@ -3392,6 +3733,13 @@
     }
 
     function newRoom() {
+      // Reset mode selector to Versus.
+      const modeSelect = document.getElementById("mode-select");
+      if (modeSelect) modeSelect.value = "versus";
+      updateModeDescription();
+      updatePointsPreview();
+      // Hide FT field
+      document.getElementById("ft-field")?.classList.remove("visible");
       if (socket) {
         intentionallyClosedSockets.add(socket);
         socket.close();

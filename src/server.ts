@@ -4,6 +4,7 @@ import type * as Party from "partykit/server";
 
 export type Difficulty = "easy" | "medium" | "hard";
 export type AiLevel = "easy" | "medium" | "hard";
+export type GameMode = "versus" | "coop" | "explosive";
 
 export interface DifficultyConfig {
   rows: number;
@@ -29,6 +30,7 @@ export interface Player {
 export interface GameState {
   status: GameStatus;
   difficulty: Difficulty;
+  mode: GameMode;
   players: [Player | null, Player | null];
   currentPlayer: 0 | 1;
   grid: number[][];
@@ -37,6 +39,8 @@ export interface GameState {
   totalBombs: number;
   lastClickedCell?: { row: number; col: number; playerIndex: 0 | 1 };
   lastPlayerClicks: { row: number; col: number; playerIndex: 0 | 1 }[];
+  explosiveSeries?: { target: 2 | 3 | 5 | 10; wins: [number, number]; round: number };
+  coopResult?: "win" | "loss";
 }
 
 export interface RankingEntry {
@@ -56,7 +60,7 @@ export interface RankingPayload {
 
 // Client → Server
 export type ClientMessage =
-  | { type: "join"; name: string; difficulty?: Difficulty; ai?: { level: AiLevel } }
+  | { type: "join"; name: string; difficulty?: Difficulty; mode?: GameMode; ft?: 2 | 3 | 5 | 10; ai?: { level: AiLevel } }
   | { type: "reveal"; row: number; col: number }
   | { type: "sticker"; id: string };
 
@@ -177,11 +181,12 @@ export function floodReveal(
   }
 }
 
-export function createInitialState(difficulty: Difficulty): GameState {
+export function createInitialState(difficulty: Difficulty, mode: GameMode = "versus"): GameState {
   const { rows, cols, bombs } = CONFIGS[difficulty];
   return {
     status: "waiting",
     difficulty,
+    mode,
     players: [null, null],
     currentPlayer: 0,
     grid: generateGrid(rows, cols, bombs),
@@ -337,7 +342,7 @@ export default class GameRoom implements Party.Server {
 
   async onMessage(message: string, sender: Party.Connection) {
     const msg = JSON.parse(message) as ClientMessage;
-    if (msg.type === "join") await this.handleJoin(sender, msg.name, msg.difficulty, msg.ai);
+    if (msg.type === "join") await this.handleJoin(sender, msg.name, msg.difficulty, msg.mode, msg.ft, msg.ai);
     if (msg.type === "reveal") await this.handleReveal(sender, msg.row, msg.col);
     if (msg.type === "sticker") await this.handleSticker(sender, msg.id);
   }
@@ -349,7 +354,7 @@ export default class GameRoom implements Party.Server {
 
   // ── Handlers ──────────────────────────────────────────────────────────────
 
-  private async handleJoin(conn: Party.Connection, name: string, difficulty?: Difficulty, ai?: { level: AiLevel }) {
+  private async handleJoin(conn: Party.Connection, name: string, difficulty?: Difficulty, mode?: GameMode, ft?: 2 | 3 | 5 | 10, ai?: { level: AiLevel }) {
     if (isReservedPlayerName(name)) {
       this.send(conn, { type: "error", message: "name_reserved" });
       return;
@@ -379,7 +384,7 @@ export default class GameRoom implements Party.Server {
 
     // Player 1 creates room
     if (!this.state) {
-      this.state = createInitialState(difficulty ?? "easy");
+      this.state = createInitialState(difficulty ?? "easy", mode ?? "versus");
       this.state.players[0] = { id: conn.id, name, score: 0, bombs: 0 };
       this.connectionToPlayer.set(conn.id, 0);
       if (ai) {
@@ -582,7 +587,7 @@ export default class GameRoom implements Party.Server {
     await this.room.storage.put("aiFlags", this.aiFlags);
     this.broadcast();
 
-    if (this.state.status === "playing" && this.state.currentPlayer === 1) {
+    if (this.state.status === "playing" && (this.state.currentPlayer as 0 | 1) === 1) {
       this.scheduleAiMove(level);
     }
   }
