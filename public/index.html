@@ -2553,7 +2553,7 @@
             <button class="mode-status-pill" id="btn-mode-info" type="button">
               <span id="mode-status-icon"></span><span id="mode-status-name"></span><span id="mode-status-ft" style="display:none;align-items:center;"><span style="opacity:0.6;margin:0 6px;line-height:1;vertical-align:middle;">·</span><span id="mode-status-ft-val"></span></span>
             </button>
-            <span id="flags-counter" style="flex-shrink:0; font-size:11px; color:var(--text-subtle); display:none;"></span>
+            <button id="flags-counter" type="button" style="flex-shrink:0; font-size:11px; color:var(--text-subtle); display:none; background:none; border:none; padding:0; cursor:pointer;"></button>
             <span id="bombs-remaining" style="flex-shrink:0;"></span>
             <span id="points-worth" style="flex-shrink:0; display:none;"></span>
           </div>
@@ -2770,19 +2770,25 @@
       try {
         const wrap = document.getElementById("mode-briefing-wrap");
         const toast = wrap?.querySelector(".mode-briefing-toast");
-        if (toast && currentState) {
-          const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
-          const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
+        if (toast) {
           const nameEl = toast.querySelector(".mode-briefing-name");
           const descEl = toast.querySelector(".mode-briefing-desc");
           const captionEl = toast.querySelector(".mode-preview-caption");
-          if (nameEl) nameEl.textContent = t[MODE_NAME_KEYS[currentState.mode]] ?? currentState.mode;
-          if (descEl) descEl.textContent = t[MODE_DESC_KEYS[currentState.mode]] ?? "";
-          if (captionEl) {
-            const capKey = currentState.mode === "versus" ? "briefing_versus_caption"
-              : currentState.mode === "coop" ? "briefing_coop_caption"
-              : "briefing_explosive_caption";
-            captionEl.textContent = t[capKey] ?? "";
+          if (toast.dataset.toastType === "flags") {
+            if (nameEl) nameEl.textContent = t.flag_help_title ?? "Flags";
+            if (descEl) descEl.textContent = t.flag_help_desc ?? "";
+            if (captionEl) captionEl.textContent = t.flag_help_caption ?? "";
+          } else if (currentState) {
+            const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
+            const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
+            if (nameEl) nameEl.textContent = t[MODE_NAME_KEYS[currentState.mode]] ?? currentState.mode;
+            if (descEl) descEl.textContent = t[MODE_DESC_KEYS[currentState.mode]] ?? "";
+            if (captionEl) {
+              const capKey = currentState.mode === "versus" ? "briefing_versus_caption"
+                : currentState.mode === "coop" ? "briefing_coop_caption"
+                : "briefing_explosive_caption";
+              captionEl.textContent = t[capKey] ?? "";
+            }
           }
         }
       } catch { }
@@ -4334,6 +4340,50 @@
       el.querySelector(".mode-briefing-close").addEventListener("click", dismiss);
     }
 
+    function showFlagsHelpToast() {
+      const wrap = document.getElementById("mode-briefing-wrap");
+      if (!wrap) return;
+      // Toggle off if already visible
+      const existing = wrap.querySelector(".mode-briefing-toast");
+      if (existing) {
+        existing.classList.add("hide");
+        setTimeout(() => { try { existing.remove(); } catch {} }, 320);
+        return;
+      }
+      const flagSvg = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="currentColor"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="currentColor"/></svg>`;
+
+      function cell(cls, content = "") {
+        return `<div class="mp-cell ${cls}">${content}</div>`;
+      }
+      const flaggedSvg = (color) => `<svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="${color}"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="${color}"/></svg>`;
+      const flaggedCell = (color) => `<div class="mp-cell hidden flagged" style="border-color:rgba(200,160,0,0.7);display:flex;align-items:center;justify-content:center;">${flaggedSvg(color)}</div>`;
+      const grid = [
+        cell("revealed n1","1"), cell("hidden"),            flaggedCell("var(--teal)"), cell("hidden"),
+        cell("revealed","·"),   cell("revealed n2","2"),   cell("hidden"),              cell("hidden"),
+        cell("revealed n1","1"), flaggedCell("var(--teal)"), cell("revealed n1","1"),   cell("hidden"),
+        cell("revealed","·"),   cell("revealed n1","1"),    cell("revealed","·"),       cell("hidden"),
+      ];
+      const previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.flag_help_caption ?? "Segura ou clique direito para marcar"}</div></div>`;
+
+      const el = document.createElement("div");
+      el.className = "mode-briefing-toast";
+      el.dataset.toastType = "flags";
+      el.innerHTML = `
+        <div class="mode-briefing-icon" aria-hidden="true">${flagSvg}</div>
+        <div class="mode-briefing-body">
+          <div class="mode-briefing-name">${t.flag_help_title ?? "Flags"}</div>
+          <div class="mode-briefing-desc">${t.flag_help_desc ?? ""}</div>
+          ${previewHTML}
+        </div>
+        <button class="mode-briefing-close" aria-label="Fechar" type="button">×</button>`;
+      wrap.innerHTML = "";
+      wrap.appendChild(el);
+      el.querySelector(".mode-briefing-close").addEventListener("click", () => {
+        el.classList.add("hide");
+        setTimeout(() => { try { el.remove(); } catch {} }, 320);
+      });
+    }
+
     function showStickerToast(from, id) {
       const def = STICKERS[id];
       if (!def) return;
@@ -4591,6 +4641,11 @@
       if (btnModeInfo && !btnModeInfo.dataset.listenerAttached) {
         btnModeInfo.dataset.listenerAttached = "1";
         btnModeInfo.addEventListener("click", () => { if (currentState) showModeBriefingToast(currentState, true); });
+      }
+      const flagsCounterBtn = document.getElementById("flags-counter");
+      if (flagsCounterBtn && !flagsCounterBtn.dataset.listenerAttached) {
+        flagsCounterBtn.dataset.listenerAttached = "1";
+        flagsCounterBtn.addEventListener("click", () => showFlagsHelpToast());
       }
 
       // Explosive FT meter is rendered in the status-bar; keep the old explosive scoreboard hidden.
