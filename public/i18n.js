@@ -163,6 +163,7 @@ export const TRANSLATIONS = {
     briefing_coop_caption: "Revelem tudo juntos sem pisar nas minas",
     briefing_explosive_caption: "Primeira mina = perde a rodada",
     briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
+    briefing_how_it_works: "Explica aí, ma!",
   },
 
   "pt-PT": {
@@ -294,6 +295,7 @@ export const TRANSLATIONS = {
     briefing_coop_caption: "Revelem tudo juntos sem carregar em nenhuma bomba",
     briefing_explosive_caption: "Primeira bomba = perde a ronda",
     briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
+    briefing_how_it_works: "Como funciona?",
   },
 
   "en": {
@@ -425,5 +427,6 @@ export const TRANSLATIONS = {
     briefing_coop_caption: "Reveal everything together without hitting a mine",
     briefing_explosive_caption: "First mine = lose the round",
     briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
+    briefing_how_it_works: "How does it work?",
   },
 };

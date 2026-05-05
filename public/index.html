@@ -115,6 +115,100 @@
 
     .mode-briefing-close:hover { color: var(--text-muted); }
 
+    /* ── Join screen mode card ── */
+    .join-mode-card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 10px 14px;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: border-color 0.15s;
+      user-select: none;
+    }
+
+    .join-mode-card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .join-mode-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .join-mode-card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .join-mode-card-icon {
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .join-mode-card-chevron {
+      font-size: 10px;
+      color: var(--text-subtle);
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    .join-mode-card.open .join-mode-card-chevron {
+      transform: rotate(180deg);
+    }
+
+    .join-mode-card-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .join-mode-card-hint {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 11px;
+      color: var(--teal);
+      margin-top: 2px;
+    }
+
+    .join-mode-card-hint-chevron {
+      display: inline-flex;
+      align-items: center;
+      transition: transform 0.2s;
+    }
+
+    .join-mode-card.open .join-mode-card-hint-chevron {
+      transform: rotate(180deg);
+    }
+
+    .join-mode-card-expand {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.28s ease, opacity 0.2s ease, margin-top 0.2s;
+      margin-top: 0;
+    }
+
+    .join-mode-card.open .join-mode-card-expand,
+    .mode-description-card.open .join-mode-card-expand {
+      max-height: 240px;
+      opacity: 1;
+      margin-top: 4px;
+    }
+
+    .mode-description-card.open .join-mode-card-hint-chevron {
+      transform: rotate(180deg);
+    }
+
     /* ── Mode briefing mini-grid ── */
     .mode-preview {
       margin-top: 10px;
@@ -634,11 +728,17 @@
     }
 
     .ai-level {
-      display: none;
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.25s ease, opacity 0.2s ease, margin-top 0.2s;
+      margin-top: 0;
     }
 
     .ai-level.visible {
-      display: block;
+      max-height: 80px;
+      opacity: 1;
+      margin-top: 8px;
     }
 
     /* ── Game ── */
@@ -2310,15 +2410,15 @@
             </div>
             <div class="switch" id="solo-toggle" role="switch" aria-checked="false" tabindex="0"></div>
           </div>
-        </div>
-        <div class="field ai-level" id="ai-level-field">
-          <label for="ai-level" data-i18n="ai_level_label"></label>
-          <select id="ai-level" class="locale-select"
-            style="width:100%; border-radius: var(--radius-sm); height: 40px; font-size: 13px;">
-            <option value="easy" data-i18n="ai_easy"></option>
-            <option value="medium" data-i18n="ai_medium"></option>
-            <option value="hard" data-i18n="ai_hard"></option>
-          </select>
+          <div class="ai-level" id="ai-level-field">
+            <label for="ai-level" data-i18n="ai_level_label"></label>
+            <select id="ai-level" class="locale-select"
+              style="width:100%; border-radius: var(--radius-sm); height: 40px; font-size: 13px;">
+              <option value="easy" data-i18n="ai_easy"></option>
+              <option value="medium" data-i18n="ai_medium"></option>
+              <option value="hard" data-i18n="ai_hard"></option>
+            </select>
+          </div>
         </div>
         <div id="create-error" class="error-msg"></div>
         <div id="points-preview" class="points-preview"></div>
@@ -2356,7 +2456,22 @@
       <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
       <div class="card">
         <div class="card-title" data-i18n="join_title"></div>
-        <div id="join-info" style="font-size:13px; color:var(--text-muted); text-align:center;"></div>
+        <div id="join-invited-by" style="font-size:13px; color:var(--text-muted); text-align:center;"></div>
+        <div id="join-mode-card" class="join-mode-card" style="display:none;">
+          <div class="join-mode-card-header">
+            <div class="join-mode-card-title">
+              <span class="join-mode-card-icon" id="join-mode-icon"></span>
+              <span id="join-mode-name"></span>
+            </div>
+          </div>
+          <div class="join-mode-card-desc" id="join-mode-desc"></div>
+          <div class="join-mode-card-hint">
+            <span id="join-mode-hint-text" data-i18n="briefing_how_it_works"></span>
+            <span class="join-mode-card-hint-chevron"><svg width="12" height="12" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><polygon fill="currentColor" points="43,17.1 39.9,14 24,29.9 8.1,14 5,17.1 24,36"/></svg></span>
+          </div>
+          <div class="join-mode-card-expand" id="join-mode-expand"></div>
+        </div>
+        <div id="join-diff-info" style="font-size:12px; color:var(--text-subtle); text-align:center; display:none;"></div>
         <div class="field">
           <label for="join-name" data-i18n="join_name_label"></label>
           <input type="text" id="join-name" maxlength="20" data-i18n-ph="join_name_ph" />
@@ -2630,6 +2745,42 @@
               : currentState.mode === "coop" ? "briefing_coop_caption"
               : "briefing_explosive_caption";
             captionEl.textContent = t[capKey] ?? "";
+          }
+        }
+      } catch { }
+
+      // Re-render join screen mode card if it's visible
+      try {
+        const modeCard = document.getElementById("join-mode-card");
+        if (modeCard && modeCard.style.display !== "none") {
+          const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
+          const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
+          // Detect current mode from the icon element's sibling text
+          const modeNameEl = document.getElementById("join-mode-name");
+          const modeDescEl = document.getElementById("join-mode-desc");
+          const captionEl = modeCard.querySelector(".mode-preview-caption");
+          const modeIconEl = document.getElementById("join-mode-icon");
+          const mode = modeCard.dataset.mode;
+          if (mode) {
+            if (modeNameEl) modeNameEl.textContent = t[MODE_NAME_KEYS[mode]] ?? mode;
+            if (modeDescEl) modeDescEl.textContent = t[MODE_DESC_KEYS[mode]] ?? "";
+            if (captionEl) {
+              const capKey = mode === "versus" ? "briefing_versus_caption"
+                : mode === "coop" ? "briefing_coop_caption"
+                : "briefing_explosive_caption";
+              captionEl.textContent = t[capKey] ?? "";
+            }
+          }
+          // diff info
+          const diffEl = document.getElementById("join-diff-info");
+          if (diffEl && diffEl.dataset.difficulty) {
+            const diffDesc = { easy: t.diff_easy_desc, medium: t.diff_medium_desc, hard: t.diff_hard_desc };
+            diffEl.textContent = diffDesc[diffEl.dataset.difficulty] ?? "";
+          }
+          // invited_by line
+          const invitedByEl = document.getElementById("join-invited-by");
+          if (invitedByEl && invitedByEl.dataset.playerName) {
+            invitedByEl.innerHTML = `${t.invited_by} <strong style="color:var(--text)">${invitedByEl.dataset.playerName}</strong>`;
           }
         }
       } catch { }
@@ -3444,8 +3595,47 @@
       const mode = getSelectedMode();
       const desc = document.getElementById("mode-description");
       if (!desc) return;
-      const key = `mode_${mode}_desc`;
-      desc.textContent = t[key] || "";
+      const modeDesc = t[`mode_${mode}_desc`] || "";
+      function cell(cls, content = "") {
+        return `<div class="mp-cell ${cls}">${content}</div>`;
+      }
+      let previewHTML = "";
+      if (mode === "versus") {
+        const grid = [
+          cell("revealed n1","1"), cell("bomb-p1","💣"), cell("revealed n2","2"), cell("hidden"),
+          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n3","3"), cell("hidden"),
+          cell("revealed n1","1"), cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-p2","💣"),
+          cell("hidden"),          cell("hidden"),          cell("revealed n1","1"), cell("hidden"),
+        ];
+        previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_versus_caption ?? ""}</div></div>`;
+      } else if (mode === "coop") {
+        const grid = [
+          cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),           cell("bomb-coop","?"),
+          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n2","2"),  cell("hidden"),
+          cell("revealed n1","1"),cell("revealed n2","2"), cell("revealed n2","2"),  cell("bomb-coop","?"),
+          cell("revealed n1","1"),cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),
+        ];
+        previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_coop_caption ?? ""}</div></div>`;
+      } else if (mode === "explosive") {
+        const grid = [
+          cell("revealed n1","1"), cell("hidden"),           cell("hidden"),           cell("hidden active-turn"),
+          cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),           cell("hidden"),
+          cell("revealed","·"),   cell("revealed n1","1"),  cell("bomb-explosive","💣"), cell("hidden"),
+          cell("revealed n1","1"),cell("revealed n2","2"),  cell("hidden"),           cell("hidden"),
+        ];
+        previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_explosive_caption ?? ""}</div></div>`;
+      }
+      const chevronSvg = `<svg width="12" height="12" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><polygon fill="currentColor" points="43,17.1 39.9,14 24,29.9 8.1,14 5,17.1 24,36"/></svg>`;
+      const wasOpen = desc.classList.contains("open");
+      desc.innerHTML = `
+        <div style="font-size:13px; color:var(--text-muted); line-height:1.35;">${modeDesc}</div>
+        <div class="join-mode-card-hint" style="margin-top:6px;">
+          <span>${t.briefing_how_it_works ?? "Como funciona?"}</span>
+          <span class="join-mode-card-hint-chevron">${chevronSvg}</span>
+        </div>
+        <div class="join-mode-card-expand">${previewHTML}</div>`;
+      desc.querySelector(".join-mode-card-hint").addEventListener("click", () => desc.classList.toggle("open"));
+      if (wasOpen) desc.classList.add("open");
     }
 
     function updateFtOptions() {
@@ -3624,12 +3814,73 @@
             };
             const MODE_ICONS = { versus: "⚔️", coop: "🤝", explosive: "💥" };
             const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
+            const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
             const modeIcon = MODE_ICONS[state.mode] ?? "🎮";
             const modeName = t[MODE_NAME_KEYS[state.mode]] ?? state.mode;
-            document.getElementById("join-info").innerHTML =
-              `${t.invited_by} <strong style="color:var(--text)">${state.players[0].name}</strong><br>
-           <span style="font-size:12px;">${diffDesc[state.difficulty]}</span><br>
-           <span style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:12px;padding:3px 8px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg-secondary);color:var(--text-muted);">${modeIcon} ${modeName}</span>`;
+            const modeDesc = t[MODE_DESC_KEYS[state.mode]] ?? "";
+
+            // Invited by
+            const invitedByEl = document.getElementById("join-invited-by");
+            if (invitedByEl) {
+              invitedByEl.dataset.playerName = state.players[0].name;
+              invitedByEl.innerHTML = `${t.invited_by} <strong style="color:var(--text)">${state.players[0].name}</strong>`;
+            }
+
+            // Difficulty
+            const diffEl = document.getElementById("join-diff-info");
+            if (diffEl) { diffEl.dataset.difficulty = state.difficulty; diffEl.textContent = diffDesc[state.difficulty] ?? ""; diffEl.style.display = ""; }
+
+            // Mode card
+            const modeCard = document.getElementById("join-mode-card");
+            const modeIconEl = document.getElementById("join-mode-icon");
+            const modeNameEl = document.getElementById("join-mode-name");
+            const modeDescEl = document.getElementById("join-mode-desc");
+            const modeExpandEl = document.getElementById("join-mode-expand");
+            if (modeCard && modeIconEl && modeNameEl && modeDescEl && modeExpandEl) {
+              modeCard.dataset.mode = state.mode;
+              modeIconEl.textContent = modeIcon;
+              modeIconEl.style.fontSize = "24px";
+              modeIconEl.style.lineHeight = "1";
+              modeNameEl.textContent = modeName;
+              modeDescEl.textContent = modeDesc;
+              modeCard.style.display = "";
+
+              // Build mini-grid preview (reuse same logic as briefing toast)
+              function cell(cls, content = "") {
+                return `<div class="mp-cell ${cls}">${content}</div>`;
+              }
+              const p1name = state.players[0].name.split(" ")[0].substring(0, 6);
+              let previewHTML = "";
+              if (state.mode === "versus") {
+                const grid = [
+                  cell("revealed n1","1"), cell("bomb-p1","💣"), cell("revealed n2","2"), cell("hidden"),
+                  cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n3","3"), cell("hidden"),
+                  cell("revealed n1","1"), cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-p2","💣"),
+                  cell("hidden"),          cell("hidden"),          cell("revealed n1","1"), cell("hidden"),
+                ];
+                previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_versus_caption ?? ""}</div></div>`;
+              } else if (state.mode === "coop") {
+                const grid = [
+                  cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),           cell("bomb-coop","?"),
+                  cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n2","2"),  cell("hidden"),
+                  cell("revealed n1","1"),cell("revealed n2","2"), cell("revealed n2","2"),  cell("bomb-coop","?"),
+                  cell("revealed n1","1"),cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),
+                ];
+                previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_coop_caption ?? ""}</div></div>`;
+              } else if (state.mode === "explosive") {
+                const grid = [
+                  cell("revealed n1","1"), cell("hidden"),           cell("hidden"),           cell("hidden active-turn"),
+                  cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),           cell("hidden"),
+                  cell("revealed","·"),   cell("revealed n1","1"),  cell("bomb-explosive","💣"), cell("hidden"),
+                  cell("revealed n1","1"),cell("revealed n2","2"),  cell("hidden"),           cell("hidden"),
+                ];
+                previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_explosive_caption ?? ""}</div></div>`;
+              }
+              modeExpandEl.innerHTML = previewHTML;
+
+              // Toggle expand on click
+              modeCard.addEventListener("click", () => modeCard.classList.toggle("open"));
+            }
           }
         }
         if (msg.type === "error") {
@@ -3935,6 +4186,32 @@
       closeStickerPalette();
     }
 
+    function modeIconSvg(mode, size = 20) {
+      const s = size;
+      const icons = {
+        versus: `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="4" x2="20" y2="20"/>
+          <polyline points="8,4 4,4 4,8"/>
+          <polyline points="16,20 20,20 20,16"/>
+          <line x1="20" y1="4" x2="4" y2="20"/>
+          <polyline points="16,4 20,4 20,8"/>
+          <polyline points="8,20 4,20 4,16"/>
+        </svg>`,
+        coop: `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="8" cy="6" r="3"/>
+          <circle cx="16" cy="6" r="3"/>
+          <path d="M2 21 C2 16 5 14 8 14 L8 11 L12 9 L16 11 L16 14 C19 14 22 16 22 21"/>
+        </svg>`,
+        explosive: `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="15" r="7"/>
+          <path d="M12 8 L12 5"/>
+          <path d="M12 5 Q15 2 16 4 L18 2"/>
+          <circle cx="9.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/>
+        </svg>`,
+      };
+      return icons[mode] ?? icons.versus;
+    }
+
     function showModeBriefingToast(state, force = false) {
       const seenKey = "mf-mode-seen:" + roomId;
       if (!force && sessionStorage.getItem(seenKey)) return;
@@ -3949,10 +4226,9 @@
       }
       // If auto-show but toast already visible (rapid state updates), do nothing
       if (!force && wrap.querySelector(".mode-briefing-toast")) return;
-      const MODE_ICONS = { versus: "⚔️", coop: "🤝", explosive: "💥" };
       const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
       const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
-      const icon = MODE_ICONS[state.mode] ?? "🎮";
+      const icon = modeIconSvg(state.mode, 32);
       const name = t[MODE_NAME_KEYS[state.mode]] ?? state.mode;
       const desc = t[MODE_DESC_KEYS[state.mode]] ?? "";
 
@@ -4234,9 +4510,8 @@
       const btnModeInfo = document.getElementById("btn-mode-info");
       const modeStatusIcon = document.getElementById("mode-status-icon");
       const modeStatusName = document.getElementById("mode-status-name");
-      const MODE_ICONS_BTN = { versus: "⚔️", coop: "🤝", explosive: "💥" };
       const MODE_NAME_KEYS_BTN = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
-      if (modeStatusIcon) modeStatusIcon.textContent = MODE_ICONS_BTN[state.mode] ?? "🎮";
+      if (modeStatusIcon) modeStatusIcon.innerHTML = modeIconSvg(state.mode, 13);
       if (modeStatusName) modeStatusName.textContent = t[MODE_NAME_KEYS_BTN[state.mode]] ?? state.mode;
       if (btnModeInfo && !btnModeInfo.dataset.listenerAttached) {
         btnModeInfo.dataset.listenerAttached = "1";
