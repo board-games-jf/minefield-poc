@@ -2123,6 +2123,11 @@
       }
       syncStickerUi();
       syncSoundToggleUi();
+      // Update dynamic labels that are not driven by data-i18n attributes.
+      try { updateModeSelectLabels(); } catch { }
+      try { updateModeDescription(); } catch { }
+      try { updateFtOptions(); } catch { }
+      try { updatePointsPreview(); } catch { }
 
       // Re-render dynamic content if game is active
       if (currentState) renderGame(currentState);
