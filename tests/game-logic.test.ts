@@ -8,7 +8,9 @@ import {
   CONFIGS,
   pickAiCell,
   isScoreUncatchable,
+  applyMatchResultToRanking,
   type GameState,
+  type RankingEntry,
 } from "../src/server";
 
 // ── generateGrid ───────────────────────────────────────────────────────────
@@ -325,5 +327,76 @@ describe("AI move picker", () => {
     ];
     const pick = pickAiCell(state, aiFlags, "hard");
     expect(pick).toEqual({ row: 0, col: 1 });
+  });
+});
+
+// ── applyMatchResultToRanking ──────────────────────────────────────────────
+
+describe("applyMatchResultToRanking", () => {
+  it("adds a new entry for a first-time winner", () => {
+    const result = applyMatchResultToRanking([], [
+      { id: "a", name: "Alice", score: 160, bombs: 0 },
+    ] as any);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("Alice");
+    expect(result[0].points).toBe(160);
+    expect(result[0].wins).toBe(1);
+  });
+
+  it("accumulates points and wins for returning player", () => {
+    const existing: RankingEntry[] = [{ name: "Alice", points: 100, wins: 1 }];
+    const result = applyMatchResultToRanking(existing, [
+      { id: "a", name: "Alice", score: 160, bombs: 0 },
+    ] as any);
+    expect(result[0].points).toBe(260);
+    expect(result[0].wins).toBe(2);
+  });
+
+  it("coop win: both players receive points (same entry each)", () => {
+    const result = applyMatchResultToRanking([], [
+      { id: "a", name: "Alice", score: 130, bombs: 0 },
+      { id: "b", name: "Bob",   score: 130, bombs: 0 },
+    ] as any);
+    expect(result).toHaveLength(2);
+    const alice = result.find(e => e.name === "Alice")!;
+    const bob   = result.find(e => e.name === "Bob")!;
+    expect(alice.points).toBe(130);
+    expect(alice.wins).toBe(1);
+    expect(bob.points).toBe(130);
+    expect(bob.wins).toBe(1);
+  });
+
+  it("coop win: existing players get incremented", () => {
+    const existing: RankingEntry[] = [
+      { name: "Alice", points: 50, wins: 1 },
+      { name: "Bob",   points: 50, wins: 1 },
+    ];
+    const result = applyMatchResultToRanking(existing, [
+      { id: "a", name: "Alice", score: 90, bombs: 0 },
+      { id: "b", name: "Bob",   score: 90, bombs: 0 },
+    ] as any);
+    const alice = result.find(e => e.name === "Alice")!;
+    const bob   = result.find(e => e.name === "Bob")!;
+    expect(alice.points).toBe(140);
+    expect(alice.wins).toBe(2);
+    expect(bob.points).toBe(140);
+    expect(bob.wins).toBe(2);
+  });
+
+  it("returns entries sorted by points descending", () => {
+    const result = applyMatchResultToRanking([], [
+      { id: "a", name: "Alice", score: 60,  bombs: 0 },
+      { id: "b", name: "Bob",   score: 160, bombs: 0 },
+    ] as any);
+    expect(result[0].name).toBe("Bob");
+    expect(result[1].name).toBe("Alice");
+  });
+
+  it("produces no duplicate entries for same-name winner", () => {
+    const existing: RankingEntry[] = [{ name: "Alice", points: 60, wins: 1 }];
+    const result = applyMatchResultToRanking(existing, [
+      { id: "a", name: "Alice", score: 60, bombs: 0 },
+    ] as any);
+    expect(result.filter(e => e.name === "Alice")).toHaveLength(1);
   });
 });

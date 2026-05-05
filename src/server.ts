@@ -608,7 +608,14 @@ export default class GameRoom implements Party.Server {
       this.state.currentPlayer = playerIndex === 0 ? 1 : 0;
       if (allSafeCellsRevealed(this.state)) {
         this.state.status = "finished";
-        if (this.state.mode === "coop") this.state.coopResult = "win";
+        if (this.state.mode === "coop") {
+          this.state.coopResult = "win";
+          const isAiGame = this.state.players[0]?.id === "ai" || this.state.players[1]?.id === "ai";
+          if (!isAiGame) {
+            const pts = POINTS_TABLE.coop[this.state.difficulty as keyof typeof POINTS_TABLE.coop] ?? 0;
+            for (const p of this.state.players) { if (p) p.score = pts; }
+          }
+        }
       }
     }
 
@@ -902,7 +909,10 @@ export default class GameRoom implements Party.Server {
       this.state.currentPlayer = 0;
       if (allSafeCellsRevealed(this.state)) {
         this.state.status = "finished";
-        if (this.state.mode === "coop") this.state.coopResult = "win";
+        if (this.state.mode === "coop") {
+          this.state.coopResult = "win";
+          // AI game — no ranking points (UI already warns about this).
+        }
       }
     }
 
@@ -933,6 +943,13 @@ export default class GameRoom implements Party.Server {
     if (!this.state || this.state.status !== "finished") return [];
     const [playerOne, playerTwo] = this.state.players;
     if (!playerOne || !playerTwo) return [];
+    // Coop win: both players are winners (scores were set equal on win).
+    if (this.state.mode === "coop") {
+      if (this.state.coopResult !== "win") return [];
+      const isAiGame = playerOne.id === "ai" || playerTwo.id === "ai";
+      if (isAiGame) return [];
+      return [playerOne, playerTwo];
+    }
     if (playerOne.score === playerTwo.score) return [];
     return playerOne.score > playerTwo.score ? [playerOne] : [playerTwo];
   }
