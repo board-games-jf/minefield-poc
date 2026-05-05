@@ -1917,14 +1917,6 @@
     <div class="screen" id="screen-game">
       <div class="reconnecting-bar" id="reconnecting-bar" data-i18n="reconnecting"></div>
       <div class="scoreboard">
-        <div id="coop-progress" style="display:none;">
-          <div style="font-size: 12px; color: var(--text-muted); text-align:center; margin-bottom: 4px;"
-            id="coop-progress-label"></div>
-          <div style="background: var(--border); border-radius: 4px; height: 4px; overflow: hidden;">
-            <div id="coop-progress-bar"
-              style="background: var(--teal); height: 100%; width: 0%; transition: width 0.3s;"></div>
-          </div>
-        </div>
         <div id="explosive-scoreboard" style="display:none;">
           <div style="display:flex; justify-content:center; gap: 24px; align-items:center;">
             <div id="explosive-dots-p1" style="display:flex; gap:6px;"></div>
@@ -3337,29 +3329,10 @@
       if (state.status === "finished") renderResult(state);
       else document.getElementById("result-area").innerHTML = "";
       function renderScoreboardExtras(state) {
-        const coopProgress = document.getElementById("coop-progress");
         const explosiveScoreboard = document.getElementById("explosive-scoreboard");
 
-        // Hide both by default
-        if (coopProgress) coopProgress.style.display = "none";
+        // Hide by default
         if (explosiveScoreboard) explosiveScoreboard.style.display = "none";
-
-        if (state.mode === "coop") {
-          // Count revealed safe cells
-          const { rows, cols } = { easy: { rows: 6, cols: 6 }, medium: { rows: 8, cols: 8 }, hard: { rows: 10, cols: 10 } }[state.difficulty];
-          const totalSafe = (rows * cols) - state.totalBombs;
-          let foundSafe = 0;
-          for (let r = 0; r < rows; r++)
-            for (let c = 0; c < cols; c++)
-              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
-
-          const pct = totalSafe > 0 ? Math.round((foundSafe / totalSafe) * 100) : 0;
-          if (coopProgress) {
-            coopProgress.style.display = "block";
-            document.getElementById("coop-progress-label").textContent = t.coop_cells_progress(foundSafe, totalSafe);
-            document.getElementById("coop-progress-bar").style.width = pct + "%";
-          }
-        }
 
         if (state.mode === "explosive" && state.explosiveSeries) {
           if (explosiveScoreboard) {
@@ -3494,10 +3467,7 @@
       if (state.mode === "coop") {
         if (state.coopResult === "win") {
           title = t.coop_won;
-          subtitle = t.coop_cells_progress(
-            (state.grid.flat().filter((v, i) => state.revealed[Math.floor(i / state.grid[0].length)][i % state.grid[0].length] && v !== -1).length),
-            (state.grid.length * state.grid[0].length) - state.totalBombs
-          );
+          subtitle = "";
         } else {
           title = t.coop_lost;
           subtitle = "";

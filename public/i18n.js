@@ -70,7 +70,6 @@ export const TRANSLATIONS = {
     result_won_series: (name) => `${name} ganhou o desafio, ma!`,
 
     // Coop
-    coop_cells_progress: (found, total) => `${found} de ${total} células abertas`,
     coop_won: "É isso aí ma! Cabra desenrolado.",
     coop_lost: "Vixe Maria! Papocou foi tudo.",
     coop_ai_no_points: "Não conta ponto não, viu!?",
@@ -189,7 +188,6 @@ export const TRANSLATIONS = {
     result_won_series: (name) => `${name} venceu a FT!`,
 
     // Coop
-    coop_cells_progress: (found, total) => `${found} de ${total} células abertas`,
     coop_won: "Missão cumprida! Nenhuma bomba encontrada.",
     coop_lost: "Explodiram juntos! Missão falhada.",
     coop_ai_no_points: "Jogar com NêmesisBot não conta pontos para o ranking.",
@@ -302,7 +300,6 @@ export const TRANSLATIONS = {
     result_won_series: (name) => `${name} won the FT!`,
 
     // Coop
-    coop_cells_progress: (found, total) => `${found} of ${total} cells opened`,
     coop_won: "Mission complete! Not a single mine hit.",
     coop_lost: "Boom! You both hit a mine.",
     coop_ai_no_points: "Playing with NêmesisBot doesn't count towards the ranking.",
