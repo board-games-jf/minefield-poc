@@ -157,6 +157,12 @@ export const TRANSLATIONS = {
     ranking_wins_label: (n) => `${n === 1 ? "vitória" : "vitórias"}`,
     ranking_close_label: "Fechar",
     ranking_empty: "Ainda não tem ranking.",
+
+    // Mode briefing preview captions
+    briefing_versus_caption: "Quem encontrar mais minas vence",
+    briefing_coop_caption: "Revelem tudo juntos sem pisar nas minas",
+    briefing_explosive_caption: "Primeira mina = perde a rodada",
+    briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
   },
 
   "pt-PT": {
@@ -282,6 +288,12 @@ export const TRANSLATIONS = {
     ranking_wins_label: (n) => `${n === 1 ? "vitória" : "vitórias"}`,
     ranking_close_label: "Fechar",
     ranking_empty: "Ainda não há ranking.",
+
+    // Mode briefing preview captions
+    briefing_versus_caption: "Quem encontrar mais bombas vence",
+    briefing_coop_caption: "Revelem tudo juntos sem carregar em nenhuma bomba",
+    briefing_explosive_caption: "Primeira bomba = perde a ronda",
+    briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
   },
 
   "en": {
@@ -407,5 +419,11 @@ export const TRANSLATIONS = {
     ranking_wins_label: (n) => `${n === 1 ? "win" : "wins"}`,
     ranking_close_label: "Close",
     ranking_empty: "No ranking yet.",
+
+    // Mode briefing preview captions
+    briefing_versus_caption: "Find more mines than your opponent to win",
+    briefing_coop_caption: "Reveal everything together without hitting a mine",
+    briefing_explosive_caption: "First mine = lose the round",
+    briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
   },
 };

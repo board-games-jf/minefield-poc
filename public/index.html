@@ -115,13 +115,103 @@
 
     .mode-briefing-close:hover { color: var(--text-muted); }
 
+    /* ── Mode briefing mini-grid ── */
+    .mode-preview {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .mode-preview-grid {
+      display: inline-grid;
+      grid-template-columns: repeat(4, 26px);
+      gap: 3px;
+    }
+
+    .mp-cell {
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      color: var(--text-muted);
+    }
+
+    .mp-cell.hidden {
+      background: var(--bg-secondary);
+      border-color: var(--border-strong);
+    }
+
+    .mp-cell.revealed {
+      background: rgba(255,255,255,0.04);
+      border-color: transparent;
+    }
+
+    /* number colours matching real minesweeper convention */
+    .mp-cell.n1 { color: #5b9bd5; }
+    .mp-cell.n2 { color: #4caf6e; }
+    .mp-cell.n3 { color: #e05c5c; }
+    .mp-cell.n4 { color: #9b59b6; }
+
+    .mp-cell.bomb-p1 {
+      background: rgba(29,158,117,0.2);
+      border-color: var(--teal);
+      color: var(--teal);
+    }
+
+    .mp-cell.bomb-p2 {
+      background: rgba(153,60,29,0.2);
+      border-color: var(--coral);
+      color: var(--coral);
+    }
+
+    .mp-cell.bomb-coop {
+      background: rgba(255,255,255,0.05);
+      border-color: var(--border);
+      color: var(--text-subtle);
+    }
+
+    .mp-cell.bomb-explosive {
+      background: rgba(153,60,29,0.25);
+      border-color: var(--coral);
+      color: var(--coral);
+      font-size: 14px;
+    }
+
+    .mp-cell.active-turn {
+      box-shadow: 0 0 0 1.5px var(--teal);
+    }
+
+    .mode-preview-caption {
+      font-size: 11px;
+      color: var(--text-subtle);
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .mode-preview-scores {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+    }
+
+    .mode-preview-scores .s1 { color: var(--teal); }
+    .mode-preview-scores .s2 { color: var(--coral); }
+
     #mode-briefing-wrap {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: calc(100% - 48px);
-      max-width: 360px;
+      width: calc(100% - 2rem);
+      max-width: 608px; /* 640px container - 2×1rem body padding */
       z-index: 200;
       pointer-events: none;
     }
@@ -2522,6 +2612,27 @@
       if (currentState) renderGame(currentState);
       try { syncRematchModalLocale(); } catch { }
       try { syncExplosiveOverlayLocale(); } catch { }
+
+      // Re-render briefing toast text if it's currently open
+      try {
+        const wrap = document.getElementById("mode-briefing-wrap");
+        const toast = wrap?.querySelector(".mode-briefing-toast");
+        if (toast && currentState) {
+          const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
+          const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
+          const nameEl = toast.querySelector(".mode-briefing-name");
+          const descEl = toast.querySelector(".mode-briefing-desc");
+          const captionEl = toast.querySelector(".mode-preview-caption");
+          if (nameEl) nameEl.textContent = t[MODE_NAME_KEYS[currentState.mode]] ?? currentState.mode;
+          if (descEl) descEl.textContent = t[MODE_DESC_KEYS[currentState.mode]] ?? "";
+          if (captionEl) {
+            const capKey = currentState.mode === "versus" ? "briefing_versus_caption"
+              : currentState.mode === "coop" ? "briefing_coop_caption"
+              : "briefing_explosive_caption";
+            captionEl.textContent = t[capKey] ?? "";
+          }
+        }
+      } catch { }
     }
 
     document.getElementById("locale-select").addEventListener("change", (e) => {
@@ -3827,22 +3938,77 @@
     function showModeBriefingToast(state, force = false) {
       const seenKey = "mf-mode-seen:" + roomId;
       if (!force && sessionStorage.getItem(seenKey)) return;
-      sessionStorage.setItem(seenKey, "1");
       const wrap = document.getElementById("mode-briefing-wrap");
       if (!wrap) return;
-      // If already open, dismiss and bail (toggle off)
-      if (wrap.querySelector(".mode-briefing-toast")) {
+      // Toggle off only when user explicitly clicks the pill button
+      if (force && wrap.querySelector(".mode-briefing-toast")) {
         const existing = wrap.querySelector(".mode-briefing-toast");
         existing.classList.add("hide");
         setTimeout(() => { try { existing.remove(); } catch {} }, 320);
         return;
       }
+      // If auto-show but toast already visible (rapid state updates), do nothing
+      if (!force && wrap.querySelector(".mode-briefing-toast")) return;
       const MODE_ICONS = { versus: "⚔️", coop: "🤝", explosive: "💥" };
       const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
       const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
       const icon = MODE_ICONS[state.mode] ?? "🎮";
       const name = t[MODE_NAME_KEYS[state.mode]] ?? state.mode;
       const desc = t[MODE_DESC_KEYS[state.mode]] ?? "";
+
+      // Build mini visual per mode
+      function cell(cls, content = "") {
+        return `<div class="mp-cell ${cls}">${content}</div>`;
+      }
+      const p1name = state.players[0]?.name ? state.players[0].name.split(" ")[0].substring(0, 6) : "P1";
+      const p2name = state.players[1]?.name ? state.players[1].name.split(" ")[0].substring(0, 6) : "P2";
+
+      let previewHTML = "";
+      if (state.mode === "versus") {
+        // 4x4: mix of revealed numbered cells in colors + 2 bombs owned by p1/p2, some hidden
+        const grid = [
+          cell("revealed n1","1"), cell("bomb-p1","💣"), cell("revealed n2","2"), cell("hidden"),
+          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n3","3"), cell("hidden"),
+          cell("revealed n1","1"), cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-p2","💣"),
+          cell("hidden"),         cell("hidden"),          cell("revealed n1","1"), cell("hidden"),
+        ];
+        previewHTML = `
+          <div class="mode-preview">
+            <div class="mode-preview-grid">${grid.join("")}</div>
+            <div class="mode-preview-scores">
+              <span class="s1">${p1name} 💣×1</span>
+              <span class="s2">${p2name} 💣×1</span>
+            </div>
+            <div class="mode-preview-caption">${t.briefing_versus_caption ?? ""}</div>
+          </div>`;
+      } else if (state.mode === "coop") {
+        // 4x4: most cells revealed, 2 bombs still hidden
+        const grid = [
+          cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),          cell("bomb-coop","?"),
+          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n2","2"), cell("hidden"),
+          cell("revealed n1","1"),cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-coop","?"),
+          cell("revealed n1","1"),cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),
+        ];
+        previewHTML = `
+          <div class="mode-preview">
+            <div class="mode-preview-grid">${grid.join("")}</div>
+            <div class="mode-preview-caption">${t.briefing_coop_caption ?? ""}</div>
+          </div>`;
+      } else if (state.mode === "explosive") {
+        // 4x4: sparse reveals, one bomb exposed, one cursor hovering
+        const grid = [
+          cell("revealed n1","1"), cell("hidden"),          cell("hidden"),          cell("hidden active-turn"),
+          cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),          cell("hidden"),
+          cell("revealed","·"),   cell("revealed n1","1"), cell("bomb-explosive","💣"), cell("hidden"),
+          cell("revealed n1","1"),cell("revealed n2","2"), cell("hidden"),          cell("hidden"),
+        ];
+        previewHTML = `
+          <div class="mode-preview">
+            <div class="mode-preview-grid">${grid.join("")}</div>
+            <div class="mode-preview-caption">${t.briefing_explosive_caption ?? ""}</div>
+          </div>`;
+      }
+
       const el = document.createElement("div");
       el.className = "mode-briefing-toast";
       el.innerHTML = `
@@ -3850,10 +4016,13 @@
         <div class="mode-briefing-body">
           <div class="mode-briefing-name">${name}</div>
           <div class="mode-briefing-desc">${desc}</div>
+          ${previewHTML}
         </div>
         <button class="mode-briefing-close" aria-label="Fechar" type="button">×</button>`;
       wrap.innerHTML = "";
       wrap.appendChild(el);
+      // Mark as seen only after successful render
+      sessionStorage.setItem(seenKey, "1");
       function dismiss() {
         el.classList.add("hide");
         setTimeout(() => { try { el.remove(); } catch {} }, 320);
