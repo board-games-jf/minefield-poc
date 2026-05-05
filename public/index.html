@@ -102,18 +102,23 @@
     }
 
     .mode-briefing-close {
-      background: none;
-      border: none;
-      color: var(--text-subtle);
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: 0.5px solid var(--border);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
       font-size: 16px;
       cursor: pointer;
-      padding: 0;
-      line-height: 1;
       flex-shrink: 0;
-      margin-top: -1px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
-    .mode-briefing-close:hover { color: var(--text-muted); }
+    .mode-briefing-close:hover {
+      border-color: var(--border-strong);
+    }
 
     /* ── Join screen mode card ── */
     .join-mode-card {
@@ -866,12 +871,13 @@
     .mode-status-pill {
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 3px 9px;
+      gap: 5px;
+      padding: 0 14px;
+      height: 38px;
       border-radius: 20px;
       border: 0.5px solid var(--border);
       background: var(--bg-secondary);
-      font-size: 11px;
+      font-size: 13px;
       color: var(--text-muted);
       cursor: pointer;
       user-select: none;
@@ -888,7 +894,7 @@
     .coop-mini-progress-row {
       display: none;
       width: 100%;
-      padding: 0 2px;
+      padding: 0;
       margin: 0;
       /* spacing handled by status-bar gap + board-row margin */
       justify-content: center;
@@ -901,13 +907,26 @@
     .coop-mini-progress {
       width: 100%;
       display: flex;
-      flex-wrap: wrap;
-      gap: 2px;
-      justify-content: flex-start;
+      align-items: flex-end;
+      gap: 6px;
       background: var(--bg-secondary);
       border: 0.5px solid var(--border);
       border-radius: var(--radius-lg);
       padding: 6px 8px;
+    }
+
+    .coop-mini-progress-cells {
+      flex: 1;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+    }
+
+    .coop-mini-progress-counter {
+      flex-shrink: 0;
+      font-size: 11px;
+      color: var(--text-subtle);
+      white-space: nowrap;
     }
 
     .coop-mini-cell {
@@ -1920,6 +1939,13 @@
       cursor: default;
     }
 
+    .cell.flagged {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .num-1 {
       color: #378ADD;
     }
@@ -2510,6 +2536,7 @@
             <button class="mode-status-pill" id="btn-mode-info" type="button">
               <span id="mode-status-icon"></span><span id="mode-status-name"></span>
             </button>
+            <span id="flags-counter" style="flex-shrink:0; font-size:11px; color:var(--text-subtle); display:none;"></span>
             <span id="bombs-remaining" style="flex-shrink:0;"></span>
           </div>
           <div class="status-actions">
@@ -3966,8 +3993,33 @@
     }
 
     // ── State ──────────────────────────────────────────────────────────────────
+    let _lastStatusForFlags = null;
+    let _lastBoardIdForFlags = null;
     function handleState(state) {
       currentState = state;
+
+      // Reset local flags on new board (rematch, new explosive round, first game)
+      // _lastStatusForFlags === null means first load/refresh — just restore, never clear.
+      const boardId = state.explosiveBoardId ?? null;
+      const isFirstLoad = _lastStatusForFlags === null;
+      const isNewBoard = !isFirstLoad && (
+        (state.status === "playing" && _lastStatusForFlags !== "playing")
+        || (boardId !== null && boardId !== _lastBoardIdForFlags)
+      );
+      if (isNewBoard) { clearLocalFlags(); _localFlagsLoaded = false; }
+      if (!_localFlagsLoaded && state.status === "playing") { loadLocalFlags(); _localFlagsLoaded = true; }
+      _lastStatusForFlags = state.status;
+      _lastBoardIdForFlags = boardId;
+
+      // Remove local flags from cells already revealed (e.g. opponent revealed while we were away)
+      // Must happen AFTER loadLocalFlags so restored flags are also cleaned up.
+      let _flagsChanged = false;
+      for (const key of Object.keys(localFlags)) {
+        if (!localFlags[key]) continue;
+        const [r, c] = key.split(",").map(Number);
+        if (state.revealed?.[r]?.[c]) { delete localFlags[key]; _flagsChanged = true; }
+      }
+      if (_flagsChanged) saveLocalFlags();
 
       let _forceExplosiveFtRerender = false;
 
@@ -4166,29 +4218,9 @@
     }
 
     function modeIconSvg(mode, size = 20) {
-      const s = size;
-      const icons = {
-        versus: `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="4" y1="4" x2="20" y2="20"/>
-          <polyline points="8,4 4,4 4,8"/>
-          <polyline points="16,20 20,20 20,16"/>
-          <line x1="20" y1="4" x2="4" y2="20"/>
-          <polyline points="16,4 20,4 20,8"/>
-          <polyline points="8,20 4,20 4,16"/>
-        </svg>`,
-        coop: `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="8" cy="6" r="3"/>
-          <circle cx="16" cy="6" r="3"/>
-          <path d="M2 21 C2 16 5 14 8 14 L8 11 L12 9 L16 11 L16 14 C19 14 22 16 22 21"/>
-        </svg>`,
-        explosive: `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="15" r="7"/>
-          <path d="M12 8 L12 5"/>
-          <path d="M12 5 Q15 2 16 4 L18 2"/>
-          <circle cx="9.5" cy="13.5" r="1.2" fill="currentColor" stroke="none"/>
-        </svg>`,
-      };
-      return icons[mode] ?? icons.versus;
+      const icons = { versus: "⚔️", coop: "🤝", explosive: "💥" };
+      const em = icons[mode] ?? "⚔️";
+      return `<span style="font-size:${size}px;line-height:1;">${em}</span>`;
     }
 
     function showModeBriefingToast(state, force = false) {
@@ -4467,7 +4499,7 @@
             }
           }
         }
-        document.getElementById("bombs-remaining").textContent = t.coop_safe_cells_progress(foundSafe, totalSafe);
+        document.getElementById("bombs-remaining").textContent = "";
         renderCoopMiniProgress(state, foundSafe, totalSafe);
         const ftRow = document.getElementById("explosive-ft-row");
         if (ftRow) { ftRow.classList.remove("visible"); ftRow.innerHTML = ""; ftRow.setAttribute("aria-hidden", "true"); }
@@ -4481,6 +4513,24 @@
         }
         const ftRow = document.getElementById("explosive-ft-row");
         if (ftRow) { ftRow.classList.remove("visible"); ftRow.innerHTML = ""; ftRow.setAttribute("aria-hidden", "true"); }
+      }
+
+      // ── Flags counter ───────────────────────────────────────────────────────
+      const flagsCounterEl = document.getElementById("flags-counter");
+      if (flagsCounterEl && state.status === "playing") {
+        const flagCount = state.mode === "coop"
+          ? (state.flags ? state.flags.flat().filter(Boolean).length : 0)
+          : Object.values(localFlags).filter(Boolean).length;
+        if (flagCount >= 0) {
+          const flagSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="currentColor"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="currentColor"/></svg>`;
+          flagsCounterEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:0 14px;height:38px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg-secondary);font-size:13px;color:var(--text-muted);">${flagSvg} ${flagCount}/${state.totalBombs}</span>`;
+          flagsCounterEl.style.display = "inline-flex";
+          flagsCounterEl.style.alignItems = "center";
+        } else {
+          flagsCounterEl.style.display = "none";
+        }
+      } else if (flagsCounterEl) {
+        flagsCounterEl.style.display = "none";
       }
 
       renderBoard(state);
@@ -4551,7 +4601,7 @@
         const cls = o === 0 ? "coop-mini-cell p1" : o === 1 ? "coop-mini-cell p2" : "coop-mini-cell";
         cells.push(`<span class="${cls}"></span>`);
       }
-      row.innerHTML = `<div class="coop-mini-progress" aria-hidden="true">${cells.join("")}</div>`;
+      row.innerHTML = `<div class="coop-mini-progress" aria-hidden="true"><div class="coop-mini-progress-cells">${cells.join("")}</div><span class="coop-mini-progress-counter">${foundSafe | 0}/${totalSafe}</span></div>`;
     }
 
     function renderExplosiveFtMeter(state) {
@@ -4616,6 +4666,14 @@
             cell.className = "cell";
             const row = r, col = c;
             cell.addEventListener("click", () => handleCellClick(row, col));
+            cell.addEventListener("contextmenu", (e) => { e.preventDefault(); handleCellFlag(row, col); });
+            // Long press for mobile
+            let _lpTimer = null;
+            cell.addEventListener("touchstart", (e) => {
+              _lpTimer = setTimeout(() => { _lpTimer = null; handleCellFlag(row, col); }, 400);
+            }, { passive: true });
+            cell.addEventListener("touchend",   () => { if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; } });
+            cell.addEventListener("touchmove",  () => { if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; } });
             boardEl.appendChild(cell);
           }
         }
@@ -4634,7 +4692,9 @@
         for (let c = 0; c < cols; c++) {
           const cell = boardEl.children[r * cols + c];
           cell.className = "cell";
-          cell.textContent = "";
+          cell.innerHTML = "";
+          cell.style.background = "";
+          cell.style.borderColor = "";
           // Restore highlight if this is the last clicked cell (from server)
           if (state.lastPlayerClicks?.length > 0) {
             const isInLastPlayerClicks = state.lastPlayerClicks.some(click => click.row === r && click.col === c);
@@ -4643,7 +4703,27 @@
               cell.classList.add(className);
             }
           }
-          if (!state.revealed[r][c]) continue;
+          if (!state.revealed[r][c]) {
+            // Show flag if present
+            const isFlagged = state.mode === "coop"
+              ? state.flags?.[r]?.[c]
+              : localFlags[`${r},${c}`];
+            if (isFlagged) {
+              const flagColor = state.mode === "coop"
+                ? "var(--text-muted)"
+                : (myPlayerIndex === 0 ? "var(--teal)" : "var(--coral)");
+              const flagBg = "";
+              const flagBorder = "rgba(200, 160, 0, 0.7)";
+              cell.classList.add("flagged");
+              cell.style.background = flagBg;
+              cell.style.borderColor = flagBorder;
+              cell.innerHTML = `<svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="${flagColor}"/>
+                <path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="${flagColor}"/>
+              </svg>`;
+            }
+            continue;
+          }
           if (state.grid[r][c] === -1) {
             const by = state.foundBy[r][c];
             cell.classList.add("revealed", by === 0 ? "bomb-p1" : by === 1 ? "bomb-p2" : "bomb-hidden");
@@ -4659,6 +4739,22 @@
 
     let _resizeRaf = 0;
     let lastClickedCell = null;
+    // Local flags for versus/explosive (keyed by "r,c"). Coop flags come from server state.
+    let localFlags = {};
+    let _localFlagsLoaded = false;
+    function _flagsKey() { return roomId ? `mf-flags:${roomId}` : null; }
+    function saveLocalFlags() {
+      const k = _flagsKey(); if (!k) return;
+      try { sessionStorage.setItem(k, JSON.stringify(localFlags)); } catch {}
+    }
+    function loadLocalFlags() {
+      const k = _flagsKey(); if (!k) return;
+      try { const raw = sessionStorage.getItem(k); if (raw) localFlags = JSON.parse(raw); } catch {}
+    }
+    function clearLocalFlags() {
+      localFlags = {};
+      const k = _flagsKey(); if (k) try { sessionStorage.removeItem(k); } catch {}
+    }
     window.addEventListener("resize", () => {
       if (!currentState) return;
       if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
@@ -4738,10 +4834,35 @@
       textEl.textContent = leftMs > 2000 ? (t.explosive_ready || "Ready") : (t.explosive_go || "Go!");
     }
 
+    function handleCellFlag(r, c) {
+      if (!currentState || currentState.status !== "playing") return;
+      if (currentState.revealed[r][c]) return;
+      if (navigator.vibrate) navigator.vibrate(30);
+      if (currentState.mode === "coop") {
+        // Server enforces limit and syncs to both players
+        socket.send(JSON.stringify({ type: "flag", row: r, col: c }));
+      } else {
+        // Local only — limit to totalBombs from server state
+        const key = `${r},${c}`;
+        if (!localFlags[key]) {
+          const flagCount = Object.values(localFlags).filter(Boolean).length;
+          if (flagCount >= currentState.totalBombs) return;
+        }
+        localFlags[key] = !localFlags[key];
+        saveLocalFlags();
+        renderBoard(currentState);
+      }
+    }
+
     function handleCellClick(r, c) {
       if (!currentState || currentState.status !== "playing") return;
       if (currentState.mode === "explosive" && currentState.explosiveCooldownUntil && Date.now() < currentState.explosiveCooldownUntil) return;
       if (currentState.revealed[r][c]) return;
+      // Block click on flagged cell
+      const isFlagged = currentState.mode === "coop"
+        ? currentState.flags?.[r]?.[c]
+        : localFlags[`${r},${c}`];
+      if (isFlagged) return;
       if (myPlayerIndex !== currentState.currentPlayer) return;
 
       if (currentState.grid[r][c] === -1) {
@@ -4991,6 +5112,8 @@
       myPlayerIndex = null;
       lastTurnPlayerIndex = null;
       currentState = null;
+      clearLocalFlags(); _lastStatusForFlags = null; _lastBoardIdForFlags = null;
+      _localFlagsLoaded = false;
       const prevRoomId = roomId;
       roomId = "";
       // Coop progress is server-driven; nothing to clear client-side.
@@ -5082,6 +5205,8 @@
       myPlayerIndex = null;
       lastTurnPlayerIndex = null;
       currentState = null;
+      clearLocalFlags(); _lastStatusForFlags = null; _lastBoardIdForFlags = null;
+      _localFlagsLoaded = false;
       const prevRoomId = roomId;
       // Coop progress is server-driven; nothing to clear client-side.
       location.hash = "";

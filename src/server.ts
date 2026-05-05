@@ -53,6 +53,7 @@ export interface GameState {
   explosiveBoardId?: number;
   coopResult?: "win" | "loss";
   rematchReady?: [boolean, boolean];
+  flags?: boolean[][];
 }
 
 export interface RankingEntry {
@@ -74,6 +75,7 @@ export interface RankingPayload {
 export type ClientMessage =
   | { type: "join"; name: string; difficulty?: Difficulty; mode?: GameMode; ft?: 2 | 3 | 5 | 10; ai?: { level: AiLevel } }
   | { type: "reveal"; row: number; col: number }
+  | { type: "flag"; row: number; col: number }
   | { type: "rematch" }
   | { type: "sticker"; id: string };
 
@@ -417,6 +419,7 @@ export default class GameRoom implements Party.Server {
     const msg = JSON.parse(message) as ClientMessage;
     if (msg.type === "join") await this.handleJoin(sender, msg.name, msg.difficulty, msg.mode, msg.ft, msg.ai);
     if (msg.type === "reveal") await this.handleReveal(sender, msg.row, msg.col);
+    if (msg.type === "flag") await this.handleFlag(sender, msg.row, msg.col);
     if (msg.type === "rematch") await this.handleRematch(sender);
     if (msg.type === "sticker") await this.handleSticker(sender, msg.id);
   }
@@ -590,6 +593,12 @@ export default class GameRoom implements Party.Server {
       return; // IMPORTANTE: retorna aqui
     } else {
       const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, row, col, rows, cols);
+      // Clear coop flags from any newly revealed cells so slots are returned to the player.
+      if (this.state.flags) {
+        for (const { row: r, col: c } of newlySafe) {
+          if (this.state.flags[r]?.[c]) this.state.flags[r][c] = false;
+        }
+      }
       // Record safe cell ownership for coop progress UI.
       if (this.state.safeRevealedBy) {
         for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(playerIndex);
@@ -610,6 +619,33 @@ export default class GameRoom implements Party.Server {
     if (this.state.status === "playing" && this.state.players[1]?.id === "ai" && this.state.currentPlayer === 1) {
       this.scheduleAiMove(this.aiLevel);
     }
+  }
+
+  private async handleFlag(conn: Party.Connection, row: number, col: number) {
+    if (!this.state) return;
+    if (this.state.status !== "playing") return;
+    if (this.state.mode !== "coop") return;
+
+    const rows = this.state.grid.length;
+    const cols = this.state.grid[0].length;
+    if (row < 0 || row >= rows || col < 0 || col >= cols) return;
+    if (this.state.revealed[row][col]) return;
+
+    // Initialise flags grid on first use
+    if (!this.state.flags) {
+      this.state.flags = Array.from({ length: rows }, () => Array(cols).fill(false));
+    }
+
+    const isCurrentlyFlagged = this.state.flags[row][col];
+    // Enforce limit: can't place more flags than total bombs
+    if (!isCurrentlyFlagged) {
+      const flagCount = this.state.flags.flat().filter(Boolean).length;
+      if (flagCount >= this.state.totalBombs) return;
+    }
+    this.state.flags[row][col] = !isCurrentlyFlagged;
+
+    await this.persist();
+    this.broadcast();
   }
 
   private async handleSticker(conn: Party.Connection, id: string) {
@@ -852,6 +888,12 @@ export default class GameRoom implements Party.Server {
       return; // Retorna aqui, não executa o resto
     } else {
       const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, row, col, rows, cols);
+      // Clear coop flags from any newly revealed cells so slots are returned to the player.
+      if (this.state.flags) {
+        for (const { row: r, col: c } of newlySafe) {
+          if (this.state.flags[r]?.[c]) this.state.flags[r][c] = false;
+        }
+      }
       if (this.state.safeRevealedBy) {
         for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(1);
       } else {
@@ -943,10 +985,12 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
   const frontierSet = new Set<string>();
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (!state.revealed[r][c] && !aiFlags[r][c]) unknown.push({ row: r, col: c });
+      const playerFlagged = state.flags?.[r]?.[c] ?? false;
+      if (!state.revealed[r][c] && !aiFlags[r][c] && !playerFlagged) unknown.push({ row: r, col: c });
       if (state.revealed[r][c] && state.grid[r][c] >= 0) {
         for (const n of neighbors(r, c, rows, cols)) {
-          if (!state.revealed[n.row][n.col] && !aiFlags[n.row][n.col]) {
+          const nPlayerFlagged = state.flags?.[n.row]?.[n.col] ?? false;
+          if (!state.revealed[n.row][n.col] && !aiFlags[n.row][n.col] && !nPlayerFlagged) {
             const k = `${n.row},${n.col}`;
             if (!frontierSet.has(k)) {
               frontierSet.add(k);
@@ -957,7 +1001,15 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
       }
     }
   }
-  if (unknown.length === 0) return null;
+  if (unknown.length === 0) {
+    // Fallback: all unrevealed cells are flagged by the player — ignore flags and pick any unrevealed cell.
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!state.revealed[r][c] && !aiFlags[r][c]) unknown.push({ row: r, col: c });
+      }
+    }
+    if (unknown.length === 0) return null;
+  }
 
   const isCoop = state.mode === "coop";
 
