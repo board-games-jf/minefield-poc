@@ -596,11 +596,11 @@
       justify-content: center;
     }
 
-	    .coop-mini-progress-row.visible {
-	      display: flex;
-	    }
+    .coop-mini-progress-row.visible {
+      display: flex;
+    }
 
-	    .coop-mini-progress {
+    .coop-mini-progress {
       width: 100%;
       display: flex;
       flex-wrap: wrap;
@@ -626,80 +626,91 @@
       box-shadow: 0 0 8px rgba(29, 158, 117, 0.35), inset 0 0 4px rgba(29, 158, 117, 0.18);
     }
 
-	    .coop-mini-cell.p2 {
-	      background: rgba(153, 60, 29, 0.75);
-	      border-color: var(--coral);
-	      box-shadow: 0 0 8px rgba(153, 60, 29, 0.35), inset 0 0 4px rgba(153, 60, 29, 0.18);
-	    }
+    .coop-mini-cell.p2 {
+      background: rgba(153, 60, 29, 0.75);
+      border-color: var(--coral);
+      box-shadow: 0 0 8px rgba(153, 60, 29, 0.35), inset 0 0 4px rgba(153, 60, 29, 0.18);
+    }
 
-	    .ft-meter {
-	      width: 100%;
-	      display: flex;
-	      align-items: center;
-	      justify-content: center;
-	      gap: 14px;
-	      background: transparent;
-	      border: none;
-	      border-radius: 0;
-	      padding: 0;
-	    }
+    .ft-meter {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+    }
 
-	    .ft-side {
-	      display: flex;
-	      align-items: center;
-	      gap: 10px;
-	      min-width: 0;
-	    }
+    .ft-side {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
 
-	    .ft-cells {
-	      display: flex;
-	      gap: 10px;
-	    }
+    .ft-cells {
+      display: flex;
+      gap: 10px;
+    }
 
-	    .ft-divider {
-	      width: 1px;
-	      height: 22px;
-	      background: rgba(255, 255, 255, 0.08);
-	      flex-shrink: 0;
-	    }
+    .ft-divider {
+      width: 1px;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.08);
+      flex-shrink: 0;
+    }
 
-	    .ft-cell {
-	      width: 16px;
-	      height: 16px;
-	      border-radius: 4px;
-	      background: rgba(255, 255, 255, 0.03);
-	      border: 1px solid rgba(255, 255, 255, 0.12);
-	    }
+    .ft-cell {
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
 
-	    .ft-cell.p1 {
-	      border-color: rgba(29, 158, 117, 0.85);
-	    }
+    .ft-cell.p1 {
+      border-color: rgba(29, 158, 117, 0.85);
+    }
 
-	    .ft-cell.p2 {
-	      border-color: rgba(153, 60, 29, 0.85);
-	    }
+    .ft-cell.p2 {
+      border-color: rgba(153, 60, 29, 0.85);
+    }
 
-	    .ft-cell.filled.p1 {
-	      background: rgba(29, 158, 117, 0.92);
-	      border-color: var(--teal);
-	      box-shadow: 0 0 14px rgba(29, 158, 117, 0.65), inset 0 0 6px rgba(29, 158, 117, 0.22);
-	    }
+    .ft-cell.filled.p1 {
+      background: rgba(29, 158, 117, 0.92);
+      border-color: var(--teal);
+      box-shadow: 0 0 14px rgba(29, 158, 117, 0.65), inset 0 0 6px rgba(29, 158, 117, 0.22);
+    }
 
-	    .ft-cell.filled.p2 {
-	      background: rgba(153, 60, 29, 0.92);
-	      border-color: var(--coral);
-	      box-shadow: 0 0 14px rgba(153, 60, 29, 0.65), inset 0 0 6px rgba(153, 60, 29, 0.22);
-	    }
+    .ft-cell.filled.p2 {
+      background: rgba(153, 60, 29, 0.92);
+      border-color: var(--coral);
+      box-shadow: 0 0 14px rgba(153, 60, 29, 0.65), inset 0 0 6px rgba(153, 60, 29, 0.22);
+    }
 
-	    .ft-cell.flash {
-	      animation: ftFlash 600ms ease-in-out infinite;
-	    }
+    .ft-cell.flash {
+      animation: ftFlash 600ms ease-in-out infinite;
+    }
 
-	    @keyframes ftFlash {
-	      0% { transform: scale(1); filter: brightness(1); }
-	      50% { transform: scale(1.12); filter: brightness(1.18); }
-	      100% { transform: scale(1); filter: brightness(1); }
-	    }
+    @keyframes ftFlash {
+      0% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+
+      50% {
+        transform: scale(1.12);
+        filter: brightness(1.18);
+      }
+
+      100% {
+        transform: scale(1);
+        filter: brightness(1);
+      }
+    }
 
     .status-actions {
       display: flex;
@@ -745,56 +756,110 @@
       line-height: 1;
     }
 
-	    .board-wrap {
-	      width: 100%;
-	      max-width: 100%;
-	      margin: 0;
-	      background: var(--bg-secondary);
-	      border-radius: var(--radius-lg);
-	      padding: 14px;
-	      border: 0.5px solid var(--border);
-	      position: relative;
-	      overflow-x: auto;
-	      overflow-y: auto;
+    .board-wrap {
+      width: 100%;
+      max-width: 100%;
+      margin: 0;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      padding: 14px;
+      border: 0.5px solid var(--border);
+      position: relative;
+      overflow-x: auto;
+      overflow-y: auto;
       scrollbar-width: thin;
       scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
       max-height: 70vh;
-	      flex-shrink: 0;
-	    }
+      flex-shrink: 0;
+    }
 
-	    .board-wrap.round-wipe {
-	      animation: roundWipe 260ms ease-out;
-	    }
+    .board-wrap.round-wipe {
+      animation: roundWipe 260ms ease-out;
+    }
 
-	    @keyframes roundWipe {
-	      0% { opacity: 0.55; transform: scale(0.992); filter: saturate(0.92); }
-	      100% { opacity: 1; transform: scale(1); filter: saturate(1); }
-	    }
+    @keyframes roundWipe {
+      0% {
+        opacity: 0.55;
+        transform: scale(0.992);
+        filter: saturate(0.92);
+      }
 
-		    .round-overlay {
-		      position: absolute;
-		      inset: 0;
-		      display: none;
-		      align-items: center;
-		      justify-content: center;
-		      pointer-events: none;
-		      z-index: 30;
-		      border-radius: var(--radius-lg);
-		      background: radial-gradient(circle at 50% 45%, rgba(0,0,0,0.32), rgba(0,0,0,0) 62%);
-		    }
+      100% {
+        opacity: 1;
+        transform: scale(1);
+        filter: saturate(1);
+      }
+    }
 
-		    .round-overlay.visible {
-		      display: flex;
-		    }
+    .round-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 30;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.32), rgba(0, 0, 0, 0) 62%);
+    }
 
-		    .round-overlay-text {
-		      font-weight: 800;
-		      letter-spacing: 0.6px;
-		      font-size: 28px;
-		      color: var(--text);
-		      text-shadow: 0 14px 28px rgba(0,0,0,0.45);
-		      transform: translateY(-4px);
-		    }
+    .round-overlay.visible {
+      display: flex;
+    }
+
+    .round-overlay-text {
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      font-size: 28px;
+      color: var(--text);
+      text-shadow: 0 14px 28px rgba(0, 0, 0, 0.45);
+      transform: translateY(-4px);
+    }
+
+    .board-wrap.cooldown-on .board {
+      filter: saturate(0.9) brightness(0.9);
+    }
+
+    /* Papoco: make the Ready/Go indicator impossible to miss */
+    .explosive-global-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 9999;
+      background: radial-gradient(circle at 50% 45%, rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0) 62%);
+    }
+
+    .explosive-global-overlay.visible {
+      display: flex;
+    }
+
+    .explosive-global-overlay .explosive-global-text {
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      font-size: 34px;
+      color: var(--text);
+      text-shadow: 0 18px 38px rgba(0, 0, 0, 0.55);
+      transform: translateY(-10px);
+    }
+
+    /* Debug badge (kept subtle but visible); removed automatically when not in cooldown */
+    .explosive-global-overlay .explosive-debug-badge {
+      position: fixed;
+      top: 10px;
+      left: 10px;
+      padding: 6px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      border-radius: 10px;
+      background: rgba(255, 0, 0, 0.18);
+      border: 1px solid rgba(255, 0, 0, 0.35);
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 10px 18px rgba(0, 0, 0, 0.55);
+    }
 
     .board-row {
       width: 100%;
@@ -2134,10 +2199,10 @@
           <div class="player-bombs-val" id="p2-bombs"></div>
         </div>
       </div>
-	    <div class="status-bar">
-	        <div class="status-line">
-	          <span id="bombs-remaining"></span>
-	          <div class="status-actions">
+      <div class="status-bar">
+        <div class="status-line">
+          <span id="bombs-remaining"></span>
+          <div class="status-actions">
             <div class="sticker-launcher-wrap">
               <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false"
                 aria-controls="sticker-palette">
@@ -2163,11 +2228,11 @@
             <button class="icon-toggle" id="btn-leave" type="button">
               <span class="icon-toggle-text" data-i18n="btn_leave"></span>
             </button>
-	          </div>
-	        </div>
-	        <div class="coop-mini-progress-row" id="coop-mini-progress-row" aria-hidden="true"></div>
-	        <div class="coop-mini-progress-row" id="explosive-ft-row" aria-hidden="true"></div>
-	      </div>
+          </div>
+        </div>
+        <div class="coop-mini-progress-row" id="coop-mini-progress-row" aria-hidden="true"></div>
+        <div class="coop-mini-progress-row" id="explosive-ft-row" aria-hidden="true"></div>
+      </div>
       <div class="board-row">
         <div class="board-wrap">
           <div class="board-scroll">
@@ -2342,6 +2407,8 @@
 
       // Re-render dynamic content if game is active
       if (currentState) renderGame(currentState);
+      try { syncRematchModalLocale(); } catch { }
+      try { syncExplosiveOverlayLocale(); } catch { }
     }
 
     document.getElementById("locale-select").addEventListener("change", (e) => {
@@ -2363,14 +2430,14 @@
     let audioUnlocked = false;
     let lastNotifiedTurnKey = "";
     let lastTurnPlayerIndex = null;
-	    let lastFinishedKey = "";
-	    let lastRematchPromptKey = "";
-	    let lastRematchDismissedKey = "";
-		    let lastExplosiveRound = null;
-		    let lastExplosiveWins = [0, 0];
-		    let ftFlash = { side: null, index: -1, until: 0 };
-		    let explosiveOverlayTimer = 0;
-		    let ftFlashTimer = 0;
+    let lastFinishedKey = "";
+    let lastRematchPromptKey = "";
+    let lastRematchDismissedKey = "";
+    let lastExplosiveRound = null;
+    let lastExplosiveWins = [0, 0];
+    let ftFlash = { side: null, index: -1, until: 0 };
+    let explosiveOverlayTimer = 0;
+    let ftFlashTimer = 0;
     // Coop mini progress is server-driven via `state.safeRevealedBy` (so refresh/other browsers are consistent).
     let fireStickerAudio = null;
     let fireStickerStopTimer = 0;
@@ -3437,69 +3504,71 @@
       }
     }
 
-	    // ── State ──────────────────────────────────────────────────────────────────
-		    function handleState(state) {
-		      currentState = state;
+    // ── State ──────────────────────────────────────────────────────────────────
+    function handleState(state) {
+      currentState = state;
 
-		      let _forceExplosiveFtRerender = false;
+      let _forceExplosiveFtRerender = false;
 
-		      // Keep explosive FT flash state in sync before any render (renderGame reads `ftFlash`).
-			      if (state.mode === "explosive" && state.explosiveSeries) {
-			        const w1 = state.explosiveSeries.wins?.[0] ?? 0;
-			        const w2 = state.explosiveSeries.wins?.[1] ?? 0;
-			        if (w1 !== lastExplosiveWins[0] || w2 !== lastExplosiveWins[1]) {
-			          if (w1 > lastExplosiveWins[0]) ftFlash = { side: 0, index: w1 - 1, until: Date.now() + 3000 };
-			          else if (w2 > lastExplosiveWins[1]) ftFlash = { side: 1, index: w2 - 1, until: Date.now() + 3000 };
-			          lastExplosiveWins = [w1, w2];
-			          _forceExplosiveFtRerender = true;
+      // Keep explosive FT flash state in sync before any render (renderGame reads `ftFlash`).
+      if (state.mode === "explosive" && state.explosiveSeries) {
+        const w1 = state.explosiveSeries.wins?.[0] ?? 0;
+        const w2 = state.explosiveSeries.wins?.[1] ?? 0;
+        if (w1 !== lastExplosiveWins[0] || w2 !== lastExplosiveWins[1]) {
+          if (w1 > lastExplosiveWins[0]) ftFlash = { side: 0, index: w1 - 1, until: Date.now() + 3000 };
+          else if (w2 > lastExplosiveWins[1]) ftFlash = { side: 1, index: w2 - 1, until: Date.now() + 3000 };
+          lastExplosiveWins = [w1, w2];
+          _forceExplosiveFtRerender = true;
 
-			          // Ensure the flash stops even if no further server state updates arrive (e.g. after refresh).
-			          if (ftFlashTimer) { clearTimeout(ftFlashTimer); ftFlashTimer = 0; }
-			          const delay = Math.max(0, (ftFlash.until ?? 0) - Date.now()) + 30;
-			          ftFlashTimer = setTimeout(() => {
-			            try {
-			              if (currentState?.mode === "explosive" && currentState.explosiveSeries) {
-			                renderExplosiveFtMeter(currentState);
-			              }
-			            } catch { }
-			            ftFlashTimer = 0;
-			          }, delay);
-			        }
-			      } else {
-			        lastExplosiveWins = [0, 0];
-			        ftFlash = { side: null, index: -1, until: 0 };
-			        if (ftFlashTimer) { clearTimeout(ftFlashTimer); ftFlashTimer = 0; }
-			      }
+          // Ensure the flash stops even if no further server state updates arrive (e.g. after refresh).
+          if (ftFlashTimer) { clearTimeout(ftFlashTimer); ftFlashTimer = 0; }
+          const delay = Math.max(0, (ftFlash.until ?? 0) - Date.now()) + 30;
+          ftFlashTimer = setTimeout(() => {
+            try {
+              if (currentState?.mode === "explosive" && currentState.explosiveSeries) {
+                renderExplosiveFtMeter(currentState);
+              }
+            } catch { }
+            ftFlashTimer = 0;
+          }, delay);
+        }
+      } else {
+        lastExplosiveWins = [0, 0];
+        ftFlash = { side: null, index: -1, until: 0 };
+        if (ftFlashTimer) { clearTimeout(ftFlashTimer); ftFlashTimer = 0; }
+      }
 
-	      function updateExplosiveRoundUi(state) {
-	        if (state.mode !== "explosive" || !state.explosiveSeries) {
-	          lastExplosiveRound = null;
-	          if (explosiveOverlayTimer) { clearInterval(explosiveOverlayTimer); explosiveOverlayTimer = 0; }
-	          return;
-	        }
+      function updateExplosiveRoundUi(state) {
+        if (state.mode !== "explosive" || !state.explosiveSeries) {
+          lastExplosiveRound = null;
+          if (explosiveOverlayTimer) { clearInterval(explosiveOverlayTimer); explosiveOverlayTimer = 0; }
+          return;
+        }
 
-	        // When the server regenerates the board (explosiveBoardId changes), play a quick wipe.
-	        const boardId = (state.explosiveBoardId ?? 0) | 0;
-	        if (lastExplosiveRound !== null && boardId !== (lastExplosiveRound | 0)) {
-	          playExplosiveRoundIntro();
-	        }
-	        lastExplosiveRound = boardId;
+        // When the server regenerates the board (explosiveBoardId changes), play a quick wipe.
+        const boardId = (state.explosiveBoardId ?? 0) | 0;
+        if (lastExplosiveRound !== null && boardId !== (lastExplosiveRound | 0)) {
+          playExplosiveRoundIntro();
+        }
+        lastExplosiveRound = boardId;
 
-	        // During the post-bomb cooldown, block interaction + show Ready/Go overlay.
-	        if (state.explosiveCooldownUntil && Date.now() < state.explosiveCooldownUntil) {
-	          showExplosiveCooldownCountdown(state);
-	        } else {
-	          const wrap = document.querySelector("#screen-game .board-wrap");
-	          const overlay = wrap?.querySelector?.(".round-overlay");
-	          if (overlay) overlay.classList.remove("visible");
-	          if (explosiveOverlayTimer) { clearInterval(explosiveOverlayTimer); explosiveOverlayTimer = 0; }
-	        }
-	      }
+        // During the post-bomb cooldown, block interaction + show Ready/Go overlay.
+        if (state.explosiveCooldownUntil && Date.now() < state.explosiveCooldownUntil) {
+          try { document.querySelector("#screen-game .board-wrap")?.classList?.add("cooldown-on"); } catch { }
+          showExplosiveCooldownCountdown(state);
+        } else {
+          const wrap = document.querySelector("#screen-game .board-wrap");
+          if (wrap) wrap.classList.remove("cooldown-on");
+          const globalOverlay = document.getElementById("explosive-global-overlay");
+          if (globalOverlay) { globalOverlay.classList.remove("visible"); globalOverlay.style.display = "none"; }
+          if (explosiveOverlayTimer) { clearInterval(explosiveOverlayTimer); explosiveOverlayTimer = 0; }
+        }
+      }
 
-	      if (myPlayerIndex === null) {
-	        if (state.players[0]?.name === myName) myPlayerIndex = 0;
-	        else if (state.players[1]?.name === myName) myPlayerIndex = 1;
-	      }
+      if (myPlayerIndex === null) {
+        if (state.players[0]?.name === myName) myPlayerIndex = 0;
+        else if (state.players[1]?.name === myName) myPlayerIndex = 1;
+      }
 
       if (state.status === "waiting") {
         showScreen("screen-waiting");
@@ -3524,33 +3593,33 @@
           // On refresh, `myPlayerIndex` may still be null for a moment. In that case, do NOT
           // route to the requester waiting screen (it can misclassify the player). Keep them
           // on game + show the prompt instead.
-	          if (myPlayerIndex === null) {
-	            tryPromptRematchModal(state, readyCount);
-		      showScreen("screen-game");
-		      renderGame(state);
-		      if (_forceExplosiveFtRerender && state.mode === "explosive") {
-		        // Defensive: ensure the flash class is present even if the first render happened
-		        // before the DOM node existed (e.g. during fast screen transitions).
-		        try { renderExplosiveFtMeter(state); } catch { }
-		      }
-		      updateExplosiveRoundUi(state);
-	            notifyTurnIfNeeded(state);
-	            notifyFinishedIfNeeded(state);
-	            return;
-	          }
+          if (myPlayerIndex === null) {
+            tryPromptRematchModal(state, readyCount);
+            showScreen("screen-game");
+            renderGame(state);
+            if (_forceExplosiveFtRerender && state.mode === "explosive") {
+              // Defensive: ensure the flash class is present even if the first render happened
+              // before the DOM node existed (e.g. during fast screen transitions).
+              try { renderExplosiveFtMeter(state); } catch { }
+            }
+            updateExplosiveRoundUi(state);
+            notifyTurnIfNeeded(state);
+            notifyFinishedIfNeeded(state);
+            return;
+          }
 
           const requesterIndex = rematchReady ? (rematchReady[0] ? 0 : rematchReady[1] ? 1 : null) : null;
           const iAmRequester = requesterIndex !== null && myPlayerIndex === requesterIndex;
           // Requester (already ready) goes to waiting screen; the other player gets a popup.
-	          if (!iAmRequester) {
-	            tryPromptRematchModal(state, readyCount);
-	            showScreen("screen-game");
-	            renderGame(state);
-	            updateExplosiveRoundUi(state);
-	            notifyTurnIfNeeded(state);
-	            notifyFinishedIfNeeded(state);
-	            return;
-	          }
+          if (!iAmRequester) {
+            tryPromptRematchModal(state, readyCount);
+            showScreen("screen-game");
+            renderGame(state);
+            updateExplosiveRoundUi(state);
+            notifyTurnIfNeeded(state);
+            notifyFinishedIfNeeded(state);
+            return;
+          }
           showScreen("screen-waiting");
           const url = `${location.origin}${location.pathname}#${roomId}`;
           document.getElementById("invite-url").textContent = url;
@@ -3572,16 +3641,16 @@
         }
       }
 
-	      showScreen("screen-game");
-	      renderGame(state);
-	      if (_forceExplosiveFtRerender && state.mode === "explosive") {
-	        try { renderExplosiveFtMeter(state); } catch { }
-	      }
-	      updateExplosiveRoundUi(state);
+      showScreen("screen-game");
+      renderGame(state);
+      if (_forceExplosiveFtRerender && state.mode === "explosive") {
+        try { renderExplosiveFtMeter(state); } catch { }
+      }
+      updateExplosiveRoundUi(state);
 
-	      if (state.lastClickedCell) {
-	        lastClickedCell = state.lastClickedCell;
-	      }
+      if (state.lastClickedCell) {
+        lastClickedCell = state.lastClickedCell;
+      }
 
       notifyTurnIfNeeded(state);
       notifyFinishedIfNeeded(state);
@@ -3735,8 +3804,8 @@
       const p1BombsEl = document.getElementById("p1-bombs");
       const p2BombsEl = document.getElementById("p2-bombs");
 
-	      // Coop and Explosive: keep the same layout, but don't show competitive numbers.
-	      const hideNumbers = state.mode === "coop" || state.mode === "explosive";
+      // Coop and Explosive: keep the same layout, but don't show competitive numbers.
+      const hideNumbers = state.mode === "coop" || state.mode === "explosive";
       if (p1ScoreEl) {
         p1ScoreEl.textContent = hideNumbers ? "" : String(p1?.score ?? 0);
         p1ScoreEl.style.display = hideNumbers ? "none" : "";
@@ -3797,44 +3866,44 @@
       document.getElementById("turn-name").textContent = turnName;
       document.getElementById("turn-suffix").textContent = turnSuffix;
 
-	      const found = (p1?.bombs ?? 0) + (p2?.bombs ?? 0);
-	      if (state.mode === "explosive" && state.explosiveSeries) {
-	        document.getElementById("bombs-remaining").textContent = `FT${state.explosiveSeries.target}`;
-	        // Ensure coop progress is hidden.
-	        const coopRow = document.getElementById("coop-mini-progress-row");
-	        if (coopRow) { coopRow.classList.remove("visible"); coopRow.innerHTML = ""; coopRow.setAttribute("aria-hidden", "true"); }
-	        renderExplosiveFtMeter(state);
-	      } else if (state.mode === "coop" && typeof t.coop_safe_cells_progress === "function") {
-	        // Coop goal: reveal all safe cells (bombs stay hidden).
-	        const totalSafe = (state.grid.length * (state.grid[0]?.length ?? 0)) - state.totalBombs;
-	        let foundSafe = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy.length : 0;
-	        if (!foundSafe) {
-	          for (let r = 0; r < state.grid.length; r++) {
-	            for (let c = 0; c < (state.grid[0]?.length ?? 0); c++) {
-	              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
-	            }
-	          }
-	        }
-	        document.getElementById("bombs-remaining").textContent = t.coop_safe_cells_progress(foundSafe, totalSafe);
-	        renderCoopMiniProgress(state, foundSafe, totalSafe);
-	        const ftRow = document.getElementById("explosive-ft-row");
-	        if (ftRow) { ftRow.classList.remove("visible"); ftRow.innerHTML = ""; ftRow.setAttribute("aria-hidden", "true"); }
-	      } else {
-	        document.getElementById("bombs-remaining").textContent = t.bombs_remaining(state.totalBombs - found);
-	        const row = document.getElementById("coop-mini-progress-row");
-	        if (row) {
-	          row.classList.remove("visible");
-	          row.innerHTML = "";
-	          row.setAttribute("aria-hidden", "true");
-	        }
-	        const ftRow = document.getElementById("explosive-ft-row");
-	        if (ftRow) { ftRow.classList.remove("visible"); ftRow.innerHTML = ""; ftRow.setAttribute("aria-hidden", "true"); }
-	      }
+      const found = (p1?.bombs ?? 0) + (p2?.bombs ?? 0);
+      if (state.mode === "explosive" && state.explosiveSeries) {
+        document.getElementById("bombs-remaining").textContent = `FT${state.explosiveSeries.target}`;
+        // Ensure coop progress is hidden.
+        const coopRow = document.getElementById("coop-mini-progress-row");
+        if (coopRow) { coopRow.classList.remove("visible"); coopRow.innerHTML = ""; coopRow.setAttribute("aria-hidden", "true"); }
+        renderExplosiveFtMeter(state);
+      } else if (state.mode === "coop" && typeof t.coop_safe_cells_progress === "function") {
+        // Coop goal: reveal all safe cells (bombs stay hidden).
+        const totalSafe = (state.grid.length * (state.grid[0]?.length ?? 0)) - state.totalBombs;
+        let foundSafe = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy.length : 0;
+        if (!foundSafe) {
+          for (let r = 0; r < state.grid.length; r++) {
+            for (let c = 0; c < (state.grid[0]?.length ?? 0); c++) {
+              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
+            }
+          }
+        }
+        document.getElementById("bombs-remaining").textContent = t.coop_safe_cells_progress(foundSafe, totalSafe);
+        renderCoopMiniProgress(state, foundSafe, totalSafe);
+        const ftRow = document.getElementById("explosive-ft-row");
+        if (ftRow) { ftRow.classList.remove("visible"); ftRow.innerHTML = ""; ftRow.setAttribute("aria-hidden", "true"); }
+      } else {
+        document.getElementById("bombs-remaining").textContent = t.bombs_remaining(state.totalBombs - found);
+        const row = document.getElementById("coop-mini-progress-row");
+        if (row) {
+          row.classList.remove("visible");
+          row.innerHTML = "";
+          row.setAttribute("aria-hidden", "true");
+        }
+        const ftRow = document.getElementById("explosive-ft-row");
+        if (ftRow) { ftRow.classList.remove("visible"); ftRow.innerHTML = ""; ftRow.setAttribute("aria-hidden", "true"); }
+      }
 
-	      renderBoard(state);
-	      // Explosive FT meter is rendered in the status-bar; keep the old explosive scoreboard hidden.
-	      if (state.mode !== "explosive") renderScoreboardExtras(state);
-	      if (state.status === "finished") renderResult(state);
+      renderBoard(state);
+      // Explosive FT meter is rendered in the status-bar; keep the old explosive scoreboard hidden.
+      if (state.mode !== "explosive") renderScoreboardExtras(state);
+      if (state.status === "finished") renderResult(state);
       else document.getElementById("result-area").innerHTML = "";
       function renderScoreboardExtras(state) {
         const explosiveScoreboard = document.getElementById("explosive-scoreboard");
@@ -3871,9 +3940,9 @@
       }
     }
 
-	    function renderCoopMiniProgress(state, foundSafe, totalSafe) {
-	      const row = document.getElementById("coop-mini-progress-row");
-	      if (!row) return;
+    function renderCoopMiniProgress(state, foundSafe, totalSafe) {
+      const row = document.getElementById("coop-mini-progress-row");
+      if (!row) return;
 
       row.classList.toggle("visible", state.mode === "coop");
       row.setAttribute("aria-hidden", state.mode === "coop" ? "false" : "true");
@@ -3886,33 +3955,33 @@
         const cls = o === 0 ? "coop-mini-cell p1" : o === 1 ? "coop-mini-cell p2" : "coop-mini-cell";
         cells.push(`<span class="${cls}"></span>`);
       }
-	      row.innerHTML = `<div class="coop-mini-progress" aria-hidden="true">${cells.join("")}</div>`;
-	    }
+      row.innerHTML = `<div class="coop-mini-progress" aria-hidden="true">${cells.join("")}</div>`;
+    }
 
-	    function renderExplosiveFtMeter(state) {
-	      const row = document.getElementById("explosive-ft-row");
-	      if (!row) return;
-	      const series = state.explosiveSeries;
-	      const visible = state.mode === "explosive" && !!series;
-	      row.classList.toggle("visible", visible);
-	      row.setAttribute("aria-hidden", visible ? "false" : "true");
-	      if (!visible) { row.innerHTML = ""; return; }
+    function renderExplosiveFtMeter(state) {
+      const row = document.getElementById("explosive-ft-row");
+      if (!row) return;
+      const series = state.explosiveSeries;
+      const visible = state.mode === "explosive" && !!series;
+      row.classList.toggle("visible", visible);
+      row.setAttribute("aria-hidden", visible ? "false" : "true");
+      if (!visible) { row.innerHTML = ""; return; }
 
-	      const target = series.target | 0;
-	      const w1 = series.wins?.[0] ?? 0;
-	      const w2 = series.wins?.[1] ?? 0;
-	      const now = Date.now();
-	      const mkCells = (wins, cls, side) => {
-	        const out = [];
-	        for (let i = 0; i < target; i++) {
-	          const filled = i < wins ? " filled" : "";
-	          const flashing = (now < ftFlash.until && ftFlash.side === side && ftFlash.index === i) ? " flash" : "";
-	          out.push(`<span class="ft-cell${filled}${flashing} ${cls}"></span>`);
-	        }
-	        return out.join("");
-	      };
+      const target = series.target | 0;
+      const w1 = series.wins?.[0] ?? 0;
+      const w2 = series.wins?.[1] ?? 0;
+      const now = Date.now();
+      const mkCells = (wins, cls, side) => {
+        const out = [];
+        for (let i = 0; i < target; i++) {
+          const filled = i < wins ? " filled" : "";
+          const flashing = (now < ftFlash.until && ftFlash.side === side && ftFlash.index === i) ? " flash" : "";
+          out.push(`<span class="ft-cell${filled}${flashing} ${cls}"></span>`);
+        }
+        return out.join("");
+      };
 
-	      row.innerHTML = `
+      row.innerHTML = `
 	        <div class="ft-meter" aria-hidden="true">
 	          <div class="ft-side">
 	            <div class="ft-cells">${mkCells(w1, "p1", 0)}</div>
@@ -3922,7 +3991,7 @@
 	            <div class="ft-cells">${mkCells(w2, "p2", 1)}</div>
 	          </div>
 	        </div>`;
-	    }
+    }
 
     function renderBoard(state) {
       const cols = { easy: 6, medium: 8, hard: 10 }[state.difficulty];
@@ -4008,66 +4077,80 @@
       updateStickerPalettePosition();
     }, { passive: true });
 
-	    function handleCellClick(r, c) {
-	      if (!currentState || currentState.status !== "playing") return;
-	      if (currentState.mode === "explosive" && currentState.explosiveCooldownUntil && Date.now() < currentState.explosiveCooldownUntil) return;
-	      if (currentState.revealed[r][c]) return;
-	      if (myPlayerIndex !== currentState.currentPlayer) return;
+    function playExplosiveRoundIntro() {
+      const wrap = document.querySelector("#screen-game .board-wrap");
+      if (!wrap) return;
+
+      wrap.classList.remove("round-wipe");
+      void wrap.offsetWidth;
+      wrap.classList.add("round-wipe");
+    }
+
+    function showExplosiveCooldownCountdown(state) {
+      const until = state?.explosiveCooldownUntil;
+      if (!until) return;
+      // Use a global fixed overlay so it is visible even when the board is scrolled/overflowed.
+      let overlay = document.getElementById("explosive-global-overlay");
+      if (!overlay) {
+        overlay = document.createElement("div");
+        overlay.id = "explosive-global-overlay";
+        overlay.className = "explosive-global-overlay";
+        overlay.innerHTML = `<div class="explosive-global-text"></div>`;
+        document.body.appendChild(overlay);
+      }
+      const textEl = overlay.querySelector(".explosive-global-text");
+      if (!textEl) return;
+
+      const getReadyText = () => t.explosive_ready || "Ready";
+      const getGoText = () => t.explosive_go || "Go!";
+      overlay.classList.add("visible");
+      // Defensive: inline style to beat any unexpected CSS overrides.
+      overlay.style.display = "flex";
+      // Set immediately so it doesn't wait for the first interval tick.
+      const initialLeftMs = (until ?? 0) - Date.now();
+      textEl.textContent = initialLeftMs > 2000 ? getReadyText() : getGoText();
+
+      if (explosiveOverlayTimer) clearInterval(explosiveOverlayTimer);
+      explosiveOverlayTimer = setInterval(() => {
+        if (!currentState || currentState.mode !== "explosive") {
+          overlay.classList.remove("visible");
+          clearInterval(explosiveOverlayTimer);
+          explosiveOverlayTimer = 0;
+          return;
+        }
+        const leftMs = (currentState.explosiveCooldownUntil ?? 0) - Date.now();
+        if (leftMs <= 0) {
+          overlay.classList.remove("visible");
+          clearInterval(explosiveOverlayTimer);
+          explosiveOverlayTimer = 0;
+          return;
+        }
+        // Ready for first 3s, Go for last 2s.
+        textEl.textContent = leftMs > 2000 ? getReadyText() : getGoText();
+      }, 120);
+    }
+
+    function syncExplosiveOverlayLocale() {
+      const overlay = document.getElementById("explosive-global-overlay");
+      if (!overlay || !overlay.classList.contains("visible")) return;
+      const textEl = overlay.querySelector(".explosive-global-text");
+      if (!textEl) return;
+      if (!currentState || currentState.mode !== "explosive") return;
+      if (!currentState.explosiveCooldownUntil) return;
+      const leftMs = currentState.explosiveCooldownUntil - Date.now();
+      if (leftMs <= 0) return;
+      textEl.textContent = leftMs > 2000 ? (t.explosive_ready || "Ready") : (t.explosive_go || "Go!");
+    }
+
+    function handleCellClick(r, c) {
+      if (!currentState || currentState.status !== "playing") return;
+      if (currentState.mode === "explosive" && currentState.explosiveCooldownUntil && Date.now() < currentState.explosiveCooldownUntil) return;
+      if (currentState.revealed[r][c]) return;
+      if (myPlayerIndex !== currentState.currentPlayer) return;
 
       if (currentState.grid[r][c] === -1) {
         playBombSound();
-	    }
-
-	    function playExplosiveRoundIntro() {
-	      const wrap = document.querySelector("#screen-game .board-wrap");
-	      if (!wrap) return;
-
-	      wrap.classList.remove("round-wipe");
-	      void wrap.offsetWidth;
-	      wrap.classList.add("round-wipe");
-	    }
-
-		    function showExplosiveCooldownCountdown(state) {
-		      const until = state?.explosiveCooldownUntil;
-		      if (!until) return;
-		      const wrap = document.querySelector("#screen-game .board-wrap");
-		      if (!wrap) return;
-		      // Make sure the overlay is in view even if the user scrolled the board.
-		      try { wrap.scrollTop = 0; wrap.scrollLeft = 0; } catch { }
-
-		      let overlay = wrap.querySelector(".round-overlay");
-		      if (!overlay) {
-		        overlay = document.createElement("div");
-	        overlay.className = "round-overlay";
-	        overlay.innerHTML = `<div class="round-overlay-text"></div>`;
-	        wrap.appendChild(overlay);
-	      }
-	      const textEl = overlay.querySelector(".round-overlay-text");
-	      if (!textEl) return;
-
-	      const readyText = t.explosive_ready || "Ready";
-	      const goText = t.explosive_go || "Go!";
-	      overlay.classList.add("visible");
-
-	      if (explosiveOverlayTimer) clearInterval(explosiveOverlayTimer);
-	      explosiveOverlayTimer = setInterval(() => {
-	        if (!currentState || currentState.mode !== "explosive") {
-	          overlay.classList.remove("visible");
-	          clearInterval(explosiveOverlayTimer);
-	          explosiveOverlayTimer = 0;
-	          return;
-	        }
-	        const leftMs = (currentState.explosiveCooldownUntil ?? 0) - Date.now();
-	        if (leftMs <= 0) {
-	          overlay.classList.remove("visible");
-	          clearInterval(explosiveOverlayTimer);
-	          explosiveOverlayTimer = 0;
-	          return;
-	        }
-	        // Ready for first 3s, Go for last 2s.
-	        textEl.textContent = leftMs > 2000 ? readyText : goText;
-	      }, 120);
-	    }
+      }
 
       socket.send(JSON.stringify({ type: "reveal", row: r, col: c }));
     }
@@ -4326,6 +4409,37 @@
       if (!modal) return;
       modal.classList.toggle("open", open);
       modal.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
+    function syncRematchModalLocale() {
+      const modal = document.getElementById("rematch-modal");
+      if (!modal || !modal.classList.contains("open")) return;
+      if (!currentState) return;
+
+      const titleEl = document.getElementById("rematch-modal-title");
+      const descEl = document.getElementById("rematch-modal-desc");
+      const btnAccept = document.getElementById("btn-rematch-accept");
+      const btnNotNow = document.getElementById("btn-rematch-not-now");
+      if (!titleEl || !descEl || !btnAccept || !btnNotNow) return;
+
+      titleEl.textContent = t.rematch_prompt_title || "Rematch?";
+      descEl.textContent =
+        typeof t.rematch_prompt_desc === "function"
+          ? t.rematch_prompt_desc()
+          : (t.rematch_prompt_desc || "The other player wants a rematch.");
+
+      btnAccept.textContent = (currentState.mode === "coop"
+        ? (t.btn_play_again || t.btn_accept_rematch || t.btn_rematch)
+        : (t.btn_accept_rematch || t.btn_rematch));
+
+      btnNotNow.textContent = t.btn_not_now || "Not now";
+
+      const closeBtn = document.getElementById("btn-rematch-close");
+      if (closeBtn) {
+        const label = t.ranking_close_label || "Close";
+        closeBtn.setAttribute("aria-label", label);
+        closeBtn.setAttribute("title", label);
+      }
     }
 
     function tryPromptRematchModal(state, readyCount) {

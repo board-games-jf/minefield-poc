@@ -111,11 +111,11 @@ export const TRANSLATIONS = {
     sticker_taunt: "Risada",
     sticker_cry: "Nooo",
     sticker_clap: "Palmas",
-	    sticker_trophy: "GG EZ",
+    sticker_trophy: "GG EZ",
 
-	    // Explosive round intro
-	    explosive_ready: "Preparado?",
-	    explosive_go: "Valendo!",
+    // Explosive round intro
+    explosive_ready: "Se apruma aí, ma!",
+    explosive_go: "Vai!",
 
     // Result
     result_won: (name) => `${name} ganhô!`,
@@ -240,10 +240,10 @@ export const TRANSLATIONS = {
     sticker_taunt: "Riso",
     sticker_cry: "Nooo",
     sticker_clap: "Palmas",
-	    sticker_trophy: "GG EZ",
+    sticker_trophy: "GG EZ",
 
-	    explosive_ready: "Preparado?",
-	    explosive_go: "Já!",
+    explosive_ready: "Preparado?",
+    explosive_go: "Já!",
 
     result_won: (name) => `${name} venceu!`,
     result_won_suffix: "venceu",
@@ -365,10 +365,10 @@ export const TRANSLATIONS = {
     sticker_taunt: "Laugh",
     sticker_cry: "Nooo",
     sticker_clap: "Clap",
-	    sticker_trophy: "GG EZ",
+    sticker_trophy: "GG EZ",
 
-	    explosive_ready: "Ready",
-	    explosive_go: "Go!",
+    explosive_ready: "Ready",
+    explosive_go: "Go!",
 
     result_won: (name) => `${name} won!`,
     result_won_suffix: "won",
