@@ -345,7 +345,7 @@
       --coral-light: rgba(153, 60, 29, 0.15);
       --radius-sm: 6px;
       --radius-md: 10px;
-      --radius-lg: 14px;
+      --radius-lg: 12px;
       --cell-gap: 2px;
     }
 
@@ -395,7 +395,7 @@
       height: 30px;
       min-width: 30px;
       padding: 0 10px;
-      border-radius: 20px;
+      border-radius: 12px;
       border: 0.5px solid var(--border);
       background: var(--bg-secondary);
       color: var(--text);
@@ -411,7 +411,7 @@
     .locale-select {
       height: 30px;
       padding: 0 10px;
-      border-radius: 20px;
+      border-radius: 12px;
       border: 0.5px solid var(--border);
       background: var(--bg-secondary);
       color: var(--text);
@@ -874,7 +874,7 @@
       gap: 5px;
       padding: 0 14px;
       height: 38px;
-      border-radius: 20px;
+      border-radius: 12px;
       border: 0.5px solid var(--border);
       background: var(--bg-secondary);
       font-size: 13px;
@@ -1273,7 +1273,7 @@
       width: min(460px, calc(100vw - 40px - env(safe-area-inset-left) - env(safe-area-inset-right)));
       max-height: calc(100vh - var(--sticker-palette-top, 0px) - 24px);
       padding: 14px;
-      border-radius: 20px;
+      border-radius: 12px;
       border: 0.5px solid rgba(255, 255, 255, 0.08);
       background:
         linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)),
@@ -1430,7 +1430,7 @@
     .sticker-toast {
       width: 100%;
       padding: 13px 15px;
-      border-radius: 20px;
+      border-radius: 12px;
       border: 0.5px solid rgba(255, 255, 255, 0.10);
       background:
         radial-gradient(circle at top left, rgba(255, 255, 255, 0.08), transparent 38%),
@@ -2534,7 +2534,7 @@
         <div class="status-line">
           <div style="display:flex;align-items:center;gap:7px;min-width:0;">
             <button class="mode-status-pill" id="btn-mode-info" type="button">
-              <span id="mode-status-icon"></span><span id="mode-status-name"></span>
+              <span id="mode-status-icon"></span><span id="mode-status-name"></span><span id="mode-status-ft" style="display:none;align-items:center;"><span style="opacity:0.6;margin:0 6px;line-height:1;vertical-align:middle;">·</span><span id="mode-status-ft-val"></span></span>
             </button>
             <span id="flags-counter" style="flex-shrink:0; font-size:11px; color:var(--text-subtle); display:none;"></span>
             <span id="bombs-remaining" style="flex-shrink:0;"></span>
@@ -3699,7 +3699,6 @@
         const nextOn = !newToggle.classList.contains("on");
         newToggle.classList.toggle("on", nextOn);
         newToggle.setAttribute("aria-checked", nextOn ? "true" : "false");
-        syncAiLevelVisibility();
         persistCreatePrefs();
         updatePointsPreview();
       };
@@ -4390,6 +4389,22 @@
     }
 
     // ── Render ─────────────────────────────────────────────────────────────────
+    function updateFlagsCounter(state) {
+      const flagsCounterEl = document.getElementById("flags-counter");
+      if (!flagsCounterEl) return;
+      if (state && state.status === "playing") {
+        const flagCount = state.mode === "coop"
+          ? (state.flags ? state.flags.flat().filter(Boolean).length : 0)
+          : Object.values(localFlags).filter(Boolean).length;
+        const flagSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="currentColor"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="currentColor"/></svg>`;
+        flagsCounterEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:0 14px;height:38px;border-radius:12px;border:0.5px solid var(--border);background:var(--bg-secondary);font-size:13px;color:var(--text-muted);">${flagSvg} ${flagCount}/${state.totalBombs}</span>`;
+        flagsCounterEl.style.display = "inline-flex";
+        flagsCounterEl.style.alignItems = "center";
+      } else {
+        flagsCounterEl.style.display = "none";
+      }
+    }
+
     function renderGame(state) {
       const p1 = state.players[0];
       const p2 = state.players[1];
@@ -4483,7 +4498,7 @@
 
       const found = (p1?.bombs ?? 0) + (p2?.bombs ?? 0);
       if (state.mode === "explosive" && state.explosiveSeries) {
-        document.getElementById("bombs-remaining").textContent = `FT${state.explosiveSeries.target}`;
+        document.getElementById("bombs-remaining").textContent = "";
         // Ensure coop progress is hidden.
         const coopRow = document.getElementById("coop-mini-progress-row");
         if (coopRow) { coopRow.classList.remove("visible"); coopRow.innerHTML = ""; coopRow.setAttribute("aria-hidden", "true"); }
@@ -4516,22 +4531,7 @@
       }
 
       // ── Flags counter ───────────────────────────────────────────────────────
-      const flagsCounterEl = document.getElementById("flags-counter");
-      if (flagsCounterEl && state.status === "playing") {
-        const flagCount = state.mode === "coop"
-          ? (state.flags ? state.flags.flat().filter(Boolean).length : 0)
-          : Object.values(localFlags).filter(Boolean).length;
-        if (flagCount >= 0) {
-          const flagSvg = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="currentColor"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="currentColor"/></svg>`;
-          flagsCounterEl.innerHTML = `<span style="display:inline-flex;align-items:center;gap:5px;padding:0 14px;height:38px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg-secondary);font-size:13px;color:var(--text-muted);">${flagSvg} ${flagCount}/${state.totalBombs}</span>`;
-          flagsCounterEl.style.display = "inline-flex";
-          flagsCounterEl.style.alignItems = "center";
-        } else {
-          flagsCounterEl.style.display = "none";
-        }
-      } else if (flagsCounterEl) {
-        flagsCounterEl.style.display = "none";
-      }
+      updateFlagsCounter(state);
 
       renderBoard(state);
 
@@ -4542,6 +4542,17 @@
       const MODE_NAME_KEYS_BTN = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
       if (modeStatusIcon) modeStatusIcon.innerHTML = modeIconSvg(state.mode, 13);
       if (modeStatusName) modeStatusName.textContent = t[MODE_NAME_KEYS_BTN[state.mode]] ?? state.mode;
+      const modeStatusFt = document.getElementById("mode-status-ft");
+      const modeStatusFtVal = document.getElementById("mode-status-ft-val");
+      if (modeStatusFt && modeStatusFtVal) {
+        const series = state.mode === "explosive" && state.explosiveSeries;
+        if (series) {
+          modeStatusFtVal.textContent = `FT${series.target | 0}`;
+          modeStatusFt.style.display = "inline-flex";
+        } else {
+          modeStatusFt.style.display = "none";
+        }
+      }
       if (btnModeInfo && !btnModeInfo.dataset.listenerAttached) {
         btnModeInfo.dataset.listenerAttached = "1";
         btnModeInfo.addEventListener("click", () => { if (currentState) showModeBriefingToast(currentState, true); });
@@ -4851,6 +4862,7 @@
         localFlags[key] = !localFlags[key];
         saveLocalFlags();
         renderBoard(currentState);
+        updateFlagsCounter(currentState);
       }
     }
 
