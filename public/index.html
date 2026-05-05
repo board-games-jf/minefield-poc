@@ -48,6 +48,91 @@
       background: var(--coral);
     }
 
+    /* ── Mode briefing toast ── */
+    .mode-briefing-toast {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      animation: mode-toast-in 0.25s ease forwards;
+      position: relative;
+    }
+
+    @keyframes mode-toast-in {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .mode-briefing-toast.hide {
+      animation: mode-toast-out 0.3s ease forwards;
+    }
+
+    @keyframes mode-toast-out {
+      to { opacity: 0; transform: translateY(-6px); }
+    }
+
+    .mode-briefing-icon {
+      font-size: 22px;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .mode-briefing-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .mode-briefing-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .mode-briefing-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .mode-briefing-close {
+      background: none;
+      border: none;
+      color: var(--text-subtle);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0;
+      line-height: 1;
+      flex-shrink: 0;
+      margin-top: -1px;
+    }
+
+    .mode-briefing-close:hover { color: var(--text-muted); }
+
+    #mode-briefing-wrap {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: calc(100% - 48px);
+      max-width: 360px;
+      z-index: 200;
+      pointer-events: none;
+    }
+
+    #mode-briefing-wrap .mode-briefing-toast {
+      pointer-events: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    }
+
+
+
     *,
     *::before,
     *::after {
@@ -585,6 +670,28 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+    }
+
+    .mode-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 0.5px solid var(--border);
+      background: var(--bg-secondary);
+      font-size: 11px;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .mode-status-pill:hover {
+      border-color: var(--border-strong);
+      color: var(--text);
     }
 
     .coop-mini-progress-row {
@@ -2201,7 +2308,12 @@
       </div>
       <div class="status-bar">
         <div class="status-line">
-          <span id="bombs-remaining"></span>
+          <div style="display:flex;align-items:center;gap:7px;min-width:0;">
+            <button class="mode-status-pill" id="btn-mode-info" type="button">
+              <span id="mode-status-icon"></span><span id="mode-status-name"></span>
+            </button>
+            <span id="bombs-remaining" style="flex-shrink:0;"></span>
+          </div>
           <div class="status-actions">
             <div class="sticker-launcher-wrap">
               <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false"
@@ -2235,6 +2347,7 @@
       </div>
       <div class="board-row">
         <div class="board-wrap">
+          <div id="mode-briefing-wrap"></div>
           <div class="board-scroll">
             <div class="board" id="board"></div>
           </div>
@@ -3209,8 +3322,10 @@
       const modeSelect = document.getElementById("mode-select");
       if (!modeSelect) return;
       const labels = { versus: t.mode_versus, coop: t.mode_coop, explosive: t.mode_explosive };
+      const icons = { versus: "⚔️", coop: "🤝", explosive: "💥" };
       Array.from(modeSelect.options).forEach(option => {
-        option.textContent = labels[option.value] || option.value;
+        const icon = icons[option.value] ? icons[option.value] + " " : "";
+        option.textContent = icon + (labels[option.value] || option.value);
       });
     }
 
@@ -3396,9 +3511,14 @@
               medium: t.diff_medium_desc,
               hard: t.diff_hard_desc,
             };
+            const MODE_ICONS = { versus: "⚔️", coop: "🤝", explosive: "💥" };
+            const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
+            const modeIcon = MODE_ICONS[state.mode] ?? "🎮";
+            const modeName = t[MODE_NAME_KEYS[state.mode]] ?? state.mode;
             document.getElementById("join-info").innerHTML =
               `${t.invited_by} <strong style="color:var(--text)">${state.players[0].name}</strong><br>
-           <span style="font-size:12px;">${diffDesc[state.difficulty]}</span>`;
+           <span style="font-size:12px;">${diffDesc[state.difficulty]}</span><br>
+           <span style="display:inline-flex;align-items:center;gap:4px;margin-top:4px;font-size:12px;padding:3px 8px;border-radius:20px;border:0.5px solid var(--border);background:var(--bg-secondary);color:var(--text-muted);">${modeIcon} ${modeName}</span>`;
           }
         }
         if (msg.type === "error") {
@@ -3571,6 +3691,7 @@
       }
 
       if (state.status === "waiting") {
+        sessionStorage.removeItem("mf-mode-seen:" + roomId);
         showScreen("screen-waiting");
         const url = `${location.origin}${location.pathname}#${roomId}`;
         document.getElementById("invite-url").textContent = url;
@@ -3647,6 +3768,7 @@
         try { renderExplosiveFtMeter(state); } catch { }
       }
       updateExplosiveRoundUi(state);
+      if (state.status === "playing") showModeBriefingToast(state);
 
       if (state.lastClickedCell) {
         lastClickedCell = state.lastClickedCell;
@@ -3700,6 +3822,43 @@
       stickerLockedUntil = Math.max(stickerLockedUntil, now + STICKER_DISPLAY_MS);
       socket.send(JSON.stringify({ type: "sticker", id }));
       closeStickerPalette();
+    }
+
+    function showModeBriefingToast(state, force = false) {
+      const seenKey = "mf-mode-seen:" + roomId;
+      if (!force && sessionStorage.getItem(seenKey)) return;
+      sessionStorage.setItem(seenKey, "1");
+      const wrap = document.getElementById("mode-briefing-wrap");
+      if (!wrap) return;
+      // If already open, dismiss and bail (toggle off)
+      if (wrap.querySelector(".mode-briefing-toast")) {
+        const existing = wrap.querySelector(".mode-briefing-toast");
+        existing.classList.add("hide");
+        setTimeout(() => { try { existing.remove(); } catch {} }, 320);
+        return;
+      }
+      const MODE_ICONS = { versus: "⚔️", coop: "🤝", explosive: "💥" };
+      const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
+      const MODE_DESC_KEYS = { versus: "mode_versus_desc", coop: "mode_coop_desc", explosive: "mode_explosive_desc" };
+      const icon = MODE_ICONS[state.mode] ?? "🎮";
+      const name = t[MODE_NAME_KEYS[state.mode]] ?? state.mode;
+      const desc = t[MODE_DESC_KEYS[state.mode]] ?? "";
+      const el = document.createElement("div");
+      el.className = "mode-briefing-toast";
+      el.innerHTML = `
+        <div class="mode-briefing-icon" aria-hidden="true">${icon}</div>
+        <div class="mode-briefing-body">
+          <div class="mode-briefing-name">${name}</div>
+          <div class="mode-briefing-desc">${desc}</div>
+        </div>
+        <button class="mode-briefing-close" aria-label="Fechar" type="button">×</button>`;
+      wrap.innerHTML = "";
+      wrap.appendChild(el);
+      function dismiss() {
+        el.classList.add("hide");
+        setTimeout(() => { try { el.remove(); } catch {} }, 320);
+      }
+      el.querySelector(".mode-briefing-close").addEventListener("click", dismiss);
     }
 
     function showStickerToast(from, id) {
@@ -3901,6 +4060,20 @@
       }
 
       renderBoard(state);
+
+      // ── Mode info button ────────────────────────────────────────────────────
+      const btnModeInfo = document.getElementById("btn-mode-info");
+      const modeStatusIcon = document.getElementById("mode-status-icon");
+      const modeStatusName = document.getElementById("mode-status-name");
+      const MODE_ICONS_BTN = { versus: "⚔️", coop: "🤝", explosive: "💥" };
+      const MODE_NAME_KEYS_BTN = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
+      if (modeStatusIcon) modeStatusIcon.textContent = MODE_ICONS_BTN[state.mode] ?? "🎮";
+      if (modeStatusName) modeStatusName.textContent = t[MODE_NAME_KEYS_BTN[state.mode]] ?? state.mode;
+      if (btnModeInfo && !btnModeInfo.dataset.listenerAttached) {
+        btnModeInfo.dataset.listenerAttached = "1";
+        btnModeInfo.addEventListener("click", () => { if (currentState) showModeBriefingToast(currentState, true); });
+      }
+
       // Explosive FT meter is rendered in the status-bar; keep the old explosive scoreboard hidden.
       if (state.mode !== "explosive") renderScoreboardExtras(state);
       if (state.status === "finished") renderResult(state);
