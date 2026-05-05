@@ -75,21 +75,30 @@
       --cell-gap: 2px;
     }
 
+    html {
+      overflow-y: auto;
+    }
+
     body {
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       padding: 1rem;
       overflow-x: hidden;
+      overflow-y: visible;
     }
 
     .container {
       width: 100%;
       max-width: 640px;
+      margin: 0 auto;
+      /* Keep content centered vertically when it fits, but allow scrolling when it doesn't. */
+      min-height: calc(100vh - 2rem);
+      min-height: calc(100dvh - 2rem);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
     }
 
     /* ── Locale selector ── */
@@ -665,7 +674,7 @@
       line-height: 1;
     }
 
-    .board-wrap {
+	    .board-wrap {
       width: 100%;
       max-width: 100%;
       margin: 0;
@@ -673,13 +682,13 @@
       border-radius: var(--radius-lg);
       padding: 14px;
       border: 0.5px solid var(--border);
-      overflow-x: auto;
-      overflow-y: hidden;
-      scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-      max-height: 70vh;
-      flex-shrink: 0;
-    }
+	      overflow-x: auto;
+	      overflow-y: auto;
+	      scrollbar-width: thin;
+	      scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+	      max-height: 70vh;
+	      flex-shrink: 0;
+	    }
 
 	    .board-row {
 	      width: 100%;
@@ -1541,9 +1550,11 @@
       margin-top: 4px;
     }
 
-    .result-actions .btn {
-      flex: 1;
-    }
+	    .result-actions .btn {
+	      flex: 1;
+	    }
+
+    /* Rematch waiting block reuses existing "waiting" styles (dots + invite box). */
 
     .reconnecting-bar {
       background: rgba(239, 159, 39, 0.15);
@@ -1819,6 +1830,12 @@
     }
 
     @media (max-width: 720px) {
+      /* On mobile, avoid vertical centering which can interact badly with dynamic viewport height and kill scroll. */
+      .container {
+        min-height: auto;
+        justify-content: flex-start;
+      }
+
       .board-wrap {
         align-self: stretch;
         margin: 0;
@@ -1941,20 +1958,28 @@
     </div>
 
     <!-- Screen: Waiting -->
-    <div class="screen" id="screen-waiting">
-      <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
-      <div class="card">
-        <div class="card-title" data-i18n="waiting_title"></div>
-        <div class="waiting-dots"><span></span><span></span><span></span></div>
-        <div class="field">
-          <label data-i18n="invite_label"></label>
-          <div class="invite-box">
-            <div class="invite-url" id="invite-url"></div>
-            <button class="btn btn-secondary invite-copy" id="btn-copy" data-i18n="btn_copy"></button>
-          </div>
-        </div>
-      </div>
-    </div>
+	    <div class="screen" id="screen-waiting">
+	      <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
+	      <div class="card">
+	        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+	          <div class="card-title" data-i18n="waiting_title" style="margin:0;"></div>
+	          <button class="ranking-close" id="btn-waiting-close" type="button" aria-label="Close">×</button>
+	        </div>
+	        <div class="waiting-dots"><span></span><span></span><span></span></div>
+	        <div class="field">
+	          <label data-i18n="invite_label"></label>
+	          <div class="invite-box">
+	            <div class="invite-url" id="invite-url"></div>
+	            <button class="btn btn-secondary invite-copy" id="btn-copy" data-i18n="btn_copy"></button>
+	          </div>
+	        </div>
+	        <div class="result-actions" id="waiting-actions" style="display:none;">
+	          <button class="btn btn-primary" id="btn-waiting-rematch" type="button"></button>
+	          <button class="btn btn-secondary" id="btn-waiting-not-now" type="button"></button>
+	          <button class="btn btn-secondary" id="btn-waiting-new-game" type="button"></button>
+	        </div>
+	      </div>
+	    </div>
 
     <!-- Screen: Join -->
     <div class="screen" id="screen-join">
@@ -2067,6 +2092,20 @@
         <div class="ranking-list" id="ranking-modal-list"></div>
         <div class="ranking-divider" id="ranking-modal-divider" style="display:none;"></div>
         <div id="ranking-modal-player"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ranking-modal" id="rematch-modal" aria-hidden="true">
+    <div class="ranking-modal-card">
+      <div class="ranking-modal-head">
+        <div class="ranking-title" id="rematch-modal-title"></div>
+        <button class="ranking-close" id="btn-rematch-close" type="button" aria-label="Close">×</button>
+      </div>
+      <div style="font-size:13px; color:var(--text-muted); line-height:1.4;" id="rematch-modal-desc"></div>
+      <div class="result-actions" style="margin-top:10px;">
+        <button class="btn btn-primary" id="btn-rematch-accept" type="button"></button>
+        <button class="btn btn-secondary" id="btn-rematch-not-now" type="button"></button>
       </div>
     </div>
   </div>
@@ -2213,9 +2252,11 @@
     let pendingStickerCount = 0;
     let audioCtx = null;
     let audioUnlocked = false;
-    let lastNotifiedTurnKey = "";
-    let lastTurnPlayerIndex = null;
-    let lastFinishedKey = "";
+	    let lastNotifiedTurnKey = "";
+	    let lastTurnPlayerIndex = null;
+	    let lastFinishedKey = "";
+	    let lastRematchPromptKey = "";
+	    let lastRematchDismissedKey = "";
     // Coop mini progress is server-driven via `state.safeRevealedBy` (so refresh/other browsers are consistent).
     let fireStickerAudio = null;
     let fireStickerStopTimer = 0;
@@ -3137,19 +3178,37 @@
       const tempSocket = new PartySocket({ host: PARTYKIT_HOST, room: id });
       tempSocket.addEventListener("message", (ev) => {
         const msg = JSON.parse(ev.data);
-        if (msg.type === "state") {
-          const state = msg.state;
-          tempSocket.close();
-          if (state.status === "finished") {
-            showScreen("screen-error");
-            setErrorScreen("error_title_finished", "error_room_finished");
-            return;
-          }
-          if (savedName && (state.players[0]?.name === savedName || state.players[1]?.name === savedName)) {
-            myName = savedName;
-            connectToRoom(id, savedName, null);
-            return;
-          }
+	        if (msg.type === "state") {
+	          const state = msg.state;
+	          tempSocket.close();
+	          if (state.status === "finished") {
+	            // If a rematch is pending, allow joining/reconnecting to accept it.
+	            const rr = Array.isArray(state.rematchReady) ? state.rematchReady : null;
+	            const pendingRematch = rr && ((rr[0] || rr[1]) && !(rr[0] && rr[1]));
+	            if (!pendingRematch) {
+	              showScreen("screen-error");
+	              setErrorScreen("error_title_finished", "error_room_finished");
+	              return;
+	            }
+	          }
+	          if (savedName && (state.players[0]?.name === savedName || state.players[1]?.name === savedName)) {
+	            myName = savedName;
+	            connectToRoom(id, savedName, null);
+	            // If a rematch is pending and this player isn't the requester, show the prompt after reconnect.
+	            try {
+	              const rr = Array.isArray(state.rematchReady) ? state.rematchReady : null;
+	              const pendingRematch = rr && ((rr[0] || rr[1]) && !(rr[0] && rr[1]));
+	              if (pendingRematch) {
+	                const requesterIndex = rr[0] ? 0 : rr[1] ? 1 : null;
+	                const myIdx = state.players[0]?.name === savedName ? 0 : state.players[1]?.name === savedName ? 1 : null;
+	                if (requesterIndex !== null && myIdx !== null && myIdx !== requesterIndex) {
+	                  // Defer until the UI is in game screen; handleState will also prompt, but this makes refresh more reliable.
+	                  setTimeout(() => { try { if (currentState) tryPromptRematchModal(currentState, 1); } catch { } }, 0);
+	                }
+	              }
+	            } catch { }
+	            return;
+	          }
           if (state.players[0]) {
             const diffDesc = {
               easy: t.diff_easy_desc,
@@ -3265,8 +3324,8 @@
     }
 
     // ── State ──────────────────────────────────────────────────────────────────
-    function handleState(state) {
-      currentState = state;
+	    function handleState(state) {
+	      currentState = state;
 
       if (myPlayerIndex === null) {
         if (state.players[0]?.name === myName) myPlayerIndex = 0;
@@ -3278,8 +3337,64 @@
         const url = `${location.origin}${location.pathname}#${roomId}`;
         document.getElementById("invite-url").textContent = url;
         setupCopyButton(url);
+        // Ensure waiting screen always shows its default copy.
+        const titleEl = document.querySelector("#screen-waiting [data-i18n='waiting_title']");
+        if (titleEl) titleEl.textContent = t.waiting_title || titleEl.textContent;
+        const actions = document.getElementById("waiting-actions");
+        if (actions) actions.style.display = "none";
         return;
       }
+
+	      // If a rematch is pending (one player ready, waiting for the other), reuse the waiting screen.
+	      if (state.status === "finished") {
+	        const rematchReady = Array.isArray(state.rematchReady) ? state.rematchReady : null;
+	        const isTwoHumans = state.players[0]?.id !== "ai" && state.players[1]?.id !== "ai";
+	        const readyCount = rematchReady ? (rematchReady[0] ? 1 : 0) + (rematchReady[1] ? 1 : 0) : 0;
+	        const waitingRematch = isTwoHumans && readyCount > 0 && readyCount < 2;
+	        if (waitingRematch) {
+	          // On refresh, `myPlayerIndex` may still be null for a moment. In that case, do NOT
+	          // route to the requester waiting screen (it can misclassify the player). Keep them
+	          // on game + show the prompt instead.
+	          if (myPlayerIndex === null) {
+	            tryPromptRematchModal(state, readyCount);
+	            showScreen("screen-game");
+	            renderGame(state);
+	            notifyTurnIfNeeded(state);
+	            notifyFinishedIfNeeded(state);
+	            return;
+	          }
+
+	          const requesterIndex = rematchReady ? (rematchReady[0] ? 0 : rematchReady[1] ? 1 : null) : null;
+	          const iAmRequester = requesterIndex !== null && myPlayerIndex === requesterIndex;
+	          // Requester (already ready) goes to waiting screen; the other player gets a popup.
+	          if (!iAmRequester) {
+	            tryPromptRematchModal(state, readyCount);
+	            showScreen("screen-game");
+	            renderGame(state);
+	            notifyTurnIfNeeded(state);
+	            notifyFinishedIfNeeded(state);
+	            return;
+	          }
+	          showScreen("screen-waiting");
+	          const url = `${location.origin}${location.pathname}#${roomId}`;
+	          document.getElementById("invite-url").textContent = url;
+	          setupCopyButton(url);
+	          // Keep the exact same waiting screen copy as the first-time waiting experience.
+	          const titleEl = document.querySelector("#screen-waiting [data-i18n='waiting_title']");
+	          if (titleEl) titleEl.textContent = t.waiting_title || titleEl.textContent;
+
+		          // Show accept/decline actions for the player who hasn't confirmed yet.
+		          const actions = document.getElementById("waiting-actions");
+		          const btnYes = document.getElementById("btn-waiting-rematch");
+		          const btnNotNow = document.getElementById("btn-waiting-not-now");
+		          const btnNo = document.getElementById("btn-waiting-new-game");
+		          if (actions && btnYes && btnNotNow && btnNo) {
+		            // Requester should see the same waiting screen as the initial room creation: no extra CTAs.
+		            actions.style.display = "none";
+	          }
+		          return;
+		        }
+		      }
 
       showScreen("screen-game");
       renderGame(state);
@@ -3722,21 +3837,44 @@
         ? `<div style="font-size:12px; color:var(--text-muted); text-align:center; padding: 4px 0;">${t.coop_ai_no_points}</div>`
         : "";
 
-      document.getElementById("result-area").innerHTML = `
-    <div class="result-card">
-      <div class="result-title">${title}</div>
-      <div class="result-subtitle">${subtitle}</div>
-      <div id="result-ranking"></div>
-      ${coopAiWarning}
-      <div class="result-actions">
-        <button class="btn btn-primary" id="btn-rematch">${t.btn_rematch}</button>
-        <button class="btn btn-secondary" id="btn-new-game">${t.btn_new_game}</button>
-      </div>
-    </div>`;
+      const rematchReady = Array.isArray(state.rematchReady) ? state.rematchReady : null;
+      const isTwoHumans = state.players[0]?.id !== "ai" && state.players[1]?.id !== "ai";
+      const readyCount = rematchReady ? (rematchReady[0] ? 1 : 0) + (rematchReady[1] ? 1 : 0) : 0;
+      const totalCount = (state.players[0] && state.players[1] && isTwoHumans) ? 2 : 0;
+      const waitingRematch = totalCount === 2 && readyCount > 0 && readyCount < 2;
 
-      document.getElementById("btn-rematch").onclick = rematch;
-      document.getElementById("btn-new-game").onclick = newRoom;
-      renderResultRankingSummary();
+      const shareUrl = `${location.origin}${location.pathname}#${roomId}`;
+      const waitingHtml = "";
+
+	      const rematchLabel = state.mode === "coop" ? (t.btn_play_again || t.btn_rematch) : t.btn_rematch;
+	      const acceptLabel = state.mode === "coop" ? (t.btn_play_again || t.btn_accept_rematch || t.btn_rematch) : (t.btn_accept_rematch || t.btn_rematch);
+
+	      document.getElementById("result-area").innerHTML = `
+	    <div class="result-card">
+	      <div class="result-title">${title}</div>
+	      <div class="result-subtitle">${subtitle}</div>
+	      <div id="result-ranking"></div>
+	      ${coopAiWarning}
+	      ${waitingHtml}
+	      <div class="result-actions">
+	        <button class="btn btn-primary" id="btn-rematch">${rematchLabel}</button>
+	        <button class="btn btn-secondary" id="btn-new-game">${t.btn_new_game}</button>
+	      </div>
+	    </div>`;
+
+	      const btnRematch = document.getElementById("btn-rematch");
+	      if (btnRematch) {
+	        const meReady = (myPlayerIndex === 0 || myPlayerIndex === 1) && !!rematchReady?.[myPlayerIndex];
+	        // If the other player requested a rematch (pending) and I haven't accepted yet, make the CTA explicit.
+	        if (waitingRematch && !meReady) {
+	          btnRematch.textContent = acceptLabel || "Aceitar revanche";
+	        }
+	        btnRematch.onclick = rematch;
+	      }
+	      document.getElementById("btn-new-game").onclick = newRoom;
+	      renderResultRankingSummary();
+
+      // If a rematch is pending, we reuse the waiting screen instead of showing it inside the result card.
 
       // Bring the end-of-game summary into view (especially on mobile).
       try {
@@ -3882,13 +4020,8 @@
     }
 
     function rematch() {
-      if (socket) { intentionallyClosedSockets.add(socket); socket.close(); }
-      myPlayerIndex = null;
-      const prevDiff = currentState?.difficulty ?? getSelectedDifficulty();
-      currentState = null;
-      const id = generateRoomId();
-      setRoomIdInUrl(id);
-      connectToRoom(id, myName, prevDiff);
+      if (!socket || !currentState || currentState.status !== "finished") return;
+      socket.send(JSON.stringify({ type: "rematch" }));
     }
 
 	    function leaveRoom() {
@@ -3908,6 +4041,47 @@
 	      location.hash = "";
 	      showScreen("screen-create");
 	      setupCreateScreen();
+	    }
+
+	    function setRematchModalOpen(open) {
+	      const modal = document.getElementById("rematch-modal");
+	      if (!modal) return;
+	      modal.classList.toggle("open", open);
+	      modal.setAttribute("aria-hidden", open ? "false" : "true");
+	    }
+
+	    function tryPromptRematchModal(state, readyCount) {
+	      const key = `${roomId}:${lastFinishedKey}:rematch:${readyCount}`;
+	      if (key === lastRematchPromptKey) return;
+	      lastRematchPromptKey = key;
+
+	      const titleEl = document.getElementById("rematch-modal-title");
+	      const descEl = document.getElementById("rematch-modal-desc");
+	      const btnAccept = document.getElementById("btn-rematch-accept");
+	      const btnNotNow = document.getElementById("btn-rematch-not-now");
+	      if (!titleEl || !descEl || !btnAccept || !btnNotNow) return;
+
+	      titleEl.textContent = t.rematch_prompt_title || "Revanche?";
+	      descEl.textContent =
+	        typeof t.rematch_prompt_desc === "function"
+	          ? t.rematch_prompt_desc()
+	          : (t.rematch_prompt_desc || "O outro jogador pediu revanche.");
+
+	      // This popup only appears when a rematch request is pending.
+	      btnAccept.textContent = (state.mode === "coop" ? (t.btn_play_again || t.btn_accept_rematch || t.btn_rematch) : (t.btn_accept_rematch || t.btn_rematch));
+	      btnAccept.disabled = false;
+	      btnAccept.onclick = () => { setRematchModalOpen(false); rematch(); };
+
+	      btnNotNow.textContent = t.btn_not_now || "Agora não";
+	      btnNotNow.disabled = false;
+	      btnNotNow.onclick = () => {
+	        lastRematchDismissedKey = lastRematchPromptKey;
+	        setRematchModalOpen(false);
+	        // Update UI so the result button reflects there's a pending rematch to accept.
+	        if (currentState) renderGame(currentState);
+	      };
+
+	      setRematchModalOpen(true);
 	    }
 
 	    function newRoom() {
@@ -3933,6 +4107,14 @@
     document.getElementById("ranking-modal").addEventListener("click", (e) => {
       if (e.target.id === "ranking-modal") closeRankingModal();
     });
+
+    document.getElementById("rematch-modal").addEventListener("click", (e) => {
+      if (e.target.id === "rematch-modal") setRematchModalOpen(false);
+    });
+    document.getElementById("btn-rematch-close").addEventListener("click", () => setRematchModalOpen(false));
+
+    const waitingCloseBtn = document.getElementById("btn-waiting-close");
+    if (waitingCloseBtn) waitingCloseBtn.addEventListener("click", leaveRoom);
     document.addEventListener("keydown", (e) => {
       if (e.key !== "Escape") return;
       const modal = document.getElementById("ranking-modal");

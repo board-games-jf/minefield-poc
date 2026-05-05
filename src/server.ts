@@ -44,6 +44,7 @@ export interface GameState {
   lastPlayerClicks: { row: number; col: number; playerIndex: 0 | 1 }[];
   explosiveSeries?: { target: 2 | 3 | 5 | 10; wins: [number, number]; round: number };
   coopResult?: "win" | "loss";
+  rematchReady?: [boolean, boolean];
 }
 
 export interface RankingEntry {
@@ -65,6 +66,7 @@ export interface RankingPayload {
 export type ClientMessage =
   | { type: "join"; name: string; difficulty?: Difficulty; mode?: GameMode; ft?: 2 | 3 | 5 | 10; ai?: { level: AiLevel } }
   | { type: "reveal"; row: number; col: number }
+  | { type: "rematch" }
   | { type: "sticker"; id: string };
 
 // Server → Client
@@ -233,6 +235,7 @@ export function createInitialState(difficulty: Difficulty, mode: GameMode = "ver
     safeRevealedBy: [],
     totalBombs: bombs,
     lastPlayerClicks: [],
+    rematchReady: [false, false],
   };
 }
 
@@ -346,6 +349,9 @@ export default class GameRoom implements Party.Server {
     if (this.state && !this.state.safeRevealedBy) {
       this.state.safeRevealedBy = [];
     }
+    if (this.state && !this.state.rematchReady) {
+      this.state.rematchReady = [false, false];
+    }
   }
 
   async onRequest(req: Party.Request) {
@@ -386,6 +392,7 @@ export default class GameRoom implements Party.Server {
     const msg = JSON.parse(message) as ClientMessage;
     if (msg.type === "join") await this.handleJoin(sender, msg.name, msg.difficulty, msg.mode, msg.ft, msg.ai);
     if (msg.type === "reveal") await this.handleReveal(sender, msg.row, msg.col);
+    if (msg.type === "rematch") await this.handleRematch(sender);
     if (msg.type === "sticker") await this.handleSticker(sender, msg.id);
   }
 
@@ -552,6 +559,77 @@ export default class GameRoom implements Party.Server {
     this.lastStickerAt.set(conn.id, now);
 
     this.room.broadcast(JSON.stringify({ type: "sticker", id, from, at: now } satisfies ServerMessage));
+  }
+
+  private resetMatchStatePreservingPlayers() {
+    if (!this.state) return;
+
+    const prev = this.state;
+    const next = createInitialState(prev.difficulty, prev.mode);
+    // Preserve players and AI identity.
+    next.players = prev.players;
+    // Reset per-match player stats.
+    for (const p of next.players) {
+      if (!p) continue;
+      p.score = 0;
+      p.bombs = 0;
+    }
+    // Preserve explosive target (FT) but reset series progress.
+    if (prev.mode === "explosive") {
+      const target = prev.explosiveSeries?.target ?? 2;
+      next.explosiveSeries = { target, wins: [0, 0], round: 1 };
+    }
+    next.status = "playing";
+    next.currentPlayer = (Math.random() < 0.5 ? 0 : 1);
+    next.rematchReady = [false, false];
+    this.state = next;
+  }
+
+  private async handleRematch(conn: Party.Connection) {
+    if (!this.state) return;
+    if (this.state.status !== "finished") return;
+
+    const playerIndex = this.connectionToPlayer.get(conn.id);
+    if (playerIndex === undefined) return;
+
+    if (!this.state.rematchReady) this.state.rematchReady = [false, false];
+    this.state.rematchReady[playerIndex] = true;
+
+    const p1 = this.state.players[0];
+    const p2 = this.state.players[1];
+    const hasTwoPlayers = !!p1 && !!p2;
+    const p2IsAi = p2?.id === "ai";
+
+    // Solo + AI: rematch immediately. Two humans: wait for both.
+    const shouldRestart =
+      hasTwoPlayers && (p2IsAi || (this.state.rematchReady[0] && this.state.rematchReady[1]));
+
+    if (shouldRestart) {
+      this.rankingRecorded = false;
+      await this.room.storage.put("rankingRecorded", this.rankingRecorded);
+
+      this.resetMatchStatePreservingPlayers();
+
+      // New match: reset AI flags too.
+      if (this.state.players[1]?.id === "ai") {
+        this.ensureAiFlags();
+        await this.room.storage.put("aiFlags", this.aiFlags);
+      } else {
+        this.aiFlags = null;
+        await this.room.storage.delete("aiFlags");
+      }
+
+      await this.persist();
+      this.broadcast();
+
+      if (this.state.players[1]?.id === "ai" && this.state.currentPlayer === 1) {
+        this.scheduleAiMove(this.aiLevel);
+      }
+      return;
+    }
+
+    await this.persist();
+    this.broadcast();
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────

@@ -85,6 +85,7 @@ export const TRANSLATIONS = {
     invite_label: "Manda esse link pro teu parceiro",
     btn_copy: "Pega o link!",
     btn_copied: "Pegô!",
+    btn_not_now: "Agora não",
 
     // Join screen
     join_title: "Entrar na farra",
@@ -118,8 +119,14 @@ export const TRANSLATIONS = {
     result_draw: "Empatô, ma!",
     result_score: (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "mina" : "minas"} · ${l}: ${lb} ${lb === 1 ? "mina" : "minas"}`,
     result_draw_score: (n) => `Os dois acharam ${n} ${n === 1 ? "mina" : "minas"}`,
-    btn_rematch: "Duvido tu ir de novo",
-    btn_new_game: "Bora mais uma",
+	    btn_rematch: "Duvido tu ir de novo",
+	    btn_accept_rematch: "Aceitar a revanche",
+	    btn_play_again: "Bora de novo",
+    rematch_waiting: (ready, total) => `Pronto ${ready}/${total}`,
+    rematch_waiting_you_ready: "Aguardando o outro caba...",
+    rematch_prompt_title: "Duvido tu ir de novo, ó!",
+    rematch_prompt_desc: () => "O outro caba tá te chamando pro desafio. Bora?",
+    btn_new_game: "Bora outra",
 
     // Errors
     error_name_required: "Coloca teu nome, ma!",
@@ -205,6 +212,7 @@ export const TRANSLATIONS = {
     invite_label: "Partilha este link com o teu amigo",
     btn_copy: "Copiar link",
     btn_copied: "Copiado!",
+    btn_not_now: "Agora não",
 
     join_title: "Entrar na partida",
     invited_by: "Convidado por",
@@ -235,7 +243,13 @@ export const TRANSLATIONS = {
     result_draw: "Empate!",
     result_score: (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "bomba" : "bombas"} · ${l}: ${lb} ${lb === 1 ? "bomba" : "bombas"}`,
     result_draw_score: (n) => `Ambos encontraram ${n} ${n === 1 ? "bomba" : "bombas"}`,
-    btn_rematch: "Revanche",
+	    btn_rematch: "Desforra",
+	    btn_accept_rematch: "Aceitar a desforra",
+	    btn_play_again: "Jogar outra",
+    rematch_waiting: (ready, total) => `Pronto ${ready}/${total}`,
+    rematch_waiting_you_ready: "A aguardar o outro jogador...",
+    rematch_prompt_title: "Desforra?",
+    rematch_prompt_desc: () => "O outro jogador pediu desforra. Aceitas?",
     btn_new_game: "Nova partida",
 
     error_name_required: "Insere o teu nome para continuar.",
@@ -320,6 +334,7 @@ export const TRANSLATIONS = {
     invite_label: "Share this link with your friend",
     btn_copy: "Copy link",
     btn_copied: "Copied!",
+    btn_not_now: "Not now",
 
     join_title: "Join game",
     invited_by: "Invited by",
@@ -350,7 +365,13 @@ export const TRANSLATIONS = {
     result_draw: "Draw!",
     result_score: (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "mine" : "mines"} · ${l}: ${lb} ${lb === 1 ? "mine" : "mines"}`,
     result_draw_score: (n) => `Both found ${n} ${n === 1 ? "mine" : "mines"}`,
-    btn_rematch: "Rematch",
+	    btn_rematch: "Rematch",
+	    btn_accept_rematch: "Accept rematch",
+	    btn_play_again: "Play again",
+    rematch_waiting: (ready, total) => `Ready ${ready}/${total}`,
+    rematch_waiting_you_ready: "Waiting for the other player...",
+    rematch_prompt_title: "Rematch?",
+    rematch_prompt_desc: () => "The other player wants a rematch. Want to play again?",
     btn_new_game: "New game",
 
     error_name_required: "Please enter your name to continue.",
