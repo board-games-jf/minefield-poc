@@ -353,18 +353,19 @@
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       min-height: 100vh;
+      min-height: 100dvh;
       padding: 1rem;
       overflow-x: hidden;
       overflow-y: visible;
+      display: flex;
+      flex-direction: column;
     }
 
     .container {
       width: 100%;
       max-width: 640px;
       margin: 0 auto;
-      /* Keep content centered vertically when it fits, but allow scrolling when it doesn't. */
-      min-height: calc(100vh - 2rem);
-      min-height: calc(100dvh - 2rem);
+      flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
