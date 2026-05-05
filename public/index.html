@@ -570,29 +570,31 @@
       color: var(--text);
     }
 
-	    .status-bar {
-	      display: flex;
-	      flex-direction: column;
-	      align-items: stretch;
-	      font-size: 13px;
-	      color: var(--text-muted);
-	      gap: 4px; /* line1 ↔ progress */
-	    }
+    .status-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      font-size: 13px;
+      color: var(--text-muted);
+      gap: 4px;
+      /* line1 ↔ progress */
+    }
 
-	    .status-line {
-	      display: flex;
-	      align-items: center;
-	      justify-content: space-between;
-	      gap: 12px;
-	    }
+    .status-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
 
-	    .coop-mini-progress-row {
-	      display: none;
-	      width: 100%;
-	      padding: 0 2px;
-	      margin: 0; /* spacing handled by status-bar gap + board-row margin */
-	      justify-content: center;
-	    }
+    .coop-mini-progress-row {
+      display: none;
+      width: 100%;
+      padding: 0 2px;
+      margin: 0;
+      /* spacing handled by status-bar gap + board-row margin */
+      justify-content: center;
+    }
 
     .coop-mini-progress-row.visible {
       display: flex;
@@ -674,7 +676,7 @@
       line-height: 1;
     }
 
-	    .board-wrap {
+    .board-wrap {
       width: 100%;
       max-width: 100%;
       margin: 0;
@@ -682,18 +684,19 @@
       border-radius: var(--radius-lg);
       padding: 14px;
       border: 0.5px solid var(--border);
-	      overflow-x: auto;
-	      overflow-y: auto;
-	      scrollbar-width: thin;
-	      scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-	      max-height: 70vh;
-	      flex-shrink: 0;
-	    }
+      overflow-x: auto;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+      max-height: 70vh;
+      flex-shrink: 0;
+    }
 
-	    .board-row {
-	      width: 100%;
-	      margin-top: 4px; /* progress ↔ grid */
-	    }
+    .board-row {
+      width: 100%;
+      margin-top: 4px;
+      /* progress ↔ grid */
+    }
 
     .board-scroll {
       display: flex;
@@ -1550,9 +1553,9 @@
       margin-top: 4px;
     }
 
-	    .result-actions .btn {
-	      flex: 1;
-	    }
+    .result-actions .btn {
+      flex: 1;
+    }
 
     /* Rematch waiting block reuses existing "waiting" styles (dots + invite box). */
 
@@ -1830,6 +1833,7 @@
     }
 
     @media (max-width: 720px) {
+
       /* On mobile, avoid vertical centering which can interact badly with dynamic viewport height and kill scroll. */
       .container {
         min-height: auto;
@@ -1958,28 +1962,28 @@
     </div>
 
     <!-- Screen: Waiting -->
-	    <div class="screen" id="screen-waiting">
-	      <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
-	      <div class="card">
-	        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
-	          <div class="card-title" data-i18n="waiting_title" style="margin:0;"></div>
-	          <button class="ranking-close" id="btn-waiting-close" type="button" aria-label="Close">×</button>
-	        </div>
-	        <div class="waiting-dots"><span></span><span></span><span></span></div>
-	        <div class="field">
-	          <label data-i18n="invite_label"></label>
-	          <div class="invite-box">
-	            <div class="invite-url" id="invite-url"></div>
-	            <button class="btn btn-secondary invite-copy" id="btn-copy" data-i18n="btn_copy"></button>
-	          </div>
-	        </div>
-	        <div class="result-actions" id="waiting-actions" style="display:none;">
-	          <button class="btn btn-primary" id="btn-waiting-rematch" type="button"></button>
-	          <button class="btn btn-secondary" id="btn-waiting-not-now" type="button"></button>
-	          <button class="btn btn-secondary" id="btn-waiting-new-game" type="button"></button>
-	        </div>
-	      </div>
-	    </div>
+    <div class="screen" id="screen-waiting">
+      <div class="logo"><span class="logo-icon">💣</span> <span data-i18n="app_name">Minefield</span></div>
+      <div class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+          <div class="card-title" data-i18n="waiting_title" style="margin:0;"></div>
+          <button class="ranking-close" id="btn-waiting-close" type="button" aria-label="Close">×</button>
+        </div>
+        <div class="waiting-dots"><span></span><span></span><span></span></div>
+        <div class="field">
+          <label data-i18n="invite_label"></label>
+          <div class="invite-box">
+            <div class="invite-url" id="invite-url"></div>
+            <button class="btn btn-secondary invite-copy" id="btn-copy" data-i18n="btn_copy"></button>
+          </div>
+        </div>
+        <div class="result-actions" id="waiting-actions" style="display:none;">
+          <button class="btn btn-primary" id="btn-waiting-rematch" type="button"></button>
+          <button class="btn btn-secondary" id="btn-waiting-not-now" type="button"></button>
+          <button class="btn btn-secondary" id="btn-waiting-new-game" type="button"></button>
+        </div>
+      </div>
+    </div>
 
     <!-- Screen: Join -->
     <div class="screen" id="screen-join">
@@ -2026,46 +2030,46 @@
           <div class="player-bombs-val" id="p2-bombs"></div>
         </div>
       </div>
-	      <div class="status-bar">
-	        <div class="status-line">
-	          <span id="bombs-remaining"></span>
-	          <div class="status-actions">
-	          <div class="sticker-launcher-wrap">
-	            <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false"
-	              aria-controls="sticker-palette">
-	              <span class="sticker-launcher-icon" aria-hidden="true">💭</span>
-	            </button>
-	            <div class="sticker-badge" id="sticker-badge" aria-hidden="true"></div>
-	            <div class="sticker-palette" id="sticker-palette">
-	              <div class="sticker-palette-grid" id="sticker-bar" aria-label="Stickers">
-	                <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
-	                <button class="sticker-btn" data-sticker="thinking"><span class="sticker-btn-emoji">🤔</span></button>
-	                <button class="sticker-btn" data-sticker="oops"><span class="sticker-btn-emoji">😅</span></button>
-	                <button class="sticker-btn" data-sticker="boom"><span class="sticker-btn-emoji">💥</span></button>
-	                <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">🤣</span></button>
-	                <button class="sticker-btn" data-sticker="cry"><span class="sticker-btn-emoji">😭</span></button>
-	                <button class="sticker-btn" data-sticker="clap"><span class="sticker-btn-emoji">👏</span></button>
-	                <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
-	              </div>
-	            </div>
-	          </div>
-	          <button class="icon-toggle" id="sound-toggle" type="button">
-	            <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
-	          </button>
-	          <button class="icon-toggle" id="btn-leave" type="button">
-	            <span class="icon-toggle-text" data-i18n="btn_leave"></span>
-	          </button>
-	          </div>
-	        </div>
-	        <div class="coop-mini-progress-row" id="coop-mini-progress-row" aria-hidden="true"></div>
-	      </div>
-	      <div class="board-row">
-	        <div class="board-wrap">
-	          <div class="board-scroll">
-	            <div class="board" id="board"></div>
-	          </div>
-	        </div>
-	      </div>
+      <div class="status-bar">
+        <div class="status-line">
+          <span id="bombs-remaining"></span>
+          <div class="status-actions">
+            <div class="sticker-launcher-wrap">
+              <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false"
+                aria-controls="sticker-palette">
+                <span class="sticker-launcher-icon" aria-hidden="true">💭</span>
+              </button>
+              <div class="sticker-badge" id="sticker-badge" aria-hidden="true"></div>
+              <div class="sticker-palette" id="sticker-palette">
+                <div class="sticker-palette-grid" id="sticker-bar" aria-label="Stickers">
+                  <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
+                  <button class="sticker-btn" data-sticker="thinking"><span class="sticker-btn-emoji">🤔</span></button>
+                  <button class="sticker-btn" data-sticker="oops"><span class="sticker-btn-emoji">😅</span></button>
+                  <button class="sticker-btn" data-sticker="boom"><span class="sticker-btn-emoji">💥</span></button>
+                  <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">🤣</span></button>
+                  <button class="sticker-btn" data-sticker="cry"><span class="sticker-btn-emoji">😭</span></button>
+                  <button class="sticker-btn" data-sticker="clap"><span class="sticker-btn-emoji">👏</span></button>
+                  <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
+                </div>
+              </div>
+            </div>
+            <button class="icon-toggle" id="sound-toggle" type="button">
+              <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
+            </button>
+            <button class="icon-toggle" id="btn-leave" type="button">
+              <span class="icon-toggle-text" data-i18n="btn_leave"></span>
+            </button>
+          </div>
+        </div>
+        <div class="coop-mini-progress-row" id="coop-mini-progress-row" aria-hidden="true"></div>
+      </div>
+      <div class="board-row">
+        <div class="board-wrap">
+          <div class="board-scroll">
+            <div class="board" id="board"></div>
+          </div>
+        </div>
+      </div>
       <div id="result-area"></div>
     </div>
 
@@ -2252,11 +2256,11 @@
     let pendingStickerCount = 0;
     let audioCtx = null;
     let audioUnlocked = false;
-	    let lastNotifiedTurnKey = "";
-	    let lastTurnPlayerIndex = null;
-	    let lastFinishedKey = "";
-	    let lastRematchPromptKey = "";
-	    let lastRematchDismissedKey = "";
+    let lastNotifiedTurnKey = "";
+    let lastTurnPlayerIndex = null;
+    let lastFinishedKey = "";
+    let lastRematchPromptKey = "";
+    let lastRematchDismissedKey = "";
     // Coop mini progress is server-driven via `state.safeRevealedBy` (so refresh/other browsers are consistent).
     let fireStickerAudio = null;
     let fireStickerStopTimer = 0;
@@ -3178,37 +3182,37 @@
       const tempSocket = new PartySocket({ host: PARTYKIT_HOST, room: id });
       tempSocket.addEventListener("message", (ev) => {
         const msg = JSON.parse(ev.data);
-	        if (msg.type === "state") {
-	          const state = msg.state;
-	          tempSocket.close();
-	          if (state.status === "finished") {
-	            // If a rematch is pending, allow joining/reconnecting to accept it.
-	            const rr = Array.isArray(state.rematchReady) ? state.rematchReady : null;
-	            const pendingRematch = rr && ((rr[0] || rr[1]) && !(rr[0] && rr[1]));
-	            if (!pendingRematch) {
-	              showScreen("screen-error");
-	              setErrorScreen("error_title_finished", "error_room_finished");
-	              return;
-	            }
-	          }
-	          if (savedName && (state.players[0]?.name === savedName || state.players[1]?.name === savedName)) {
-	            myName = savedName;
-	            connectToRoom(id, savedName, null);
-	            // If a rematch is pending and this player isn't the requester, show the prompt after reconnect.
-	            try {
-	              const rr = Array.isArray(state.rematchReady) ? state.rematchReady : null;
-	              const pendingRematch = rr && ((rr[0] || rr[1]) && !(rr[0] && rr[1]));
-	              if (pendingRematch) {
-	                const requesterIndex = rr[0] ? 0 : rr[1] ? 1 : null;
-	                const myIdx = state.players[0]?.name === savedName ? 0 : state.players[1]?.name === savedName ? 1 : null;
-	                if (requesterIndex !== null && myIdx !== null && myIdx !== requesterIndex) {
-	                  // Defer until the UI is in game screen; handleState will also prompt, but this makes refresh more reliable.
-	                  setTimeout(() => { try { if (currentState) tryPromptRematchModal(currentState, 1); } catch { } }, 0);
-	                }
-	              }
-	            } catch { }
-	            return;
-	          }
+        if (msg.type === "state") {
+          const state = msg.state;
+          tempSocket.close();
+          if (state.status === "finished") {
+            // If a rematch is pending, allow joining/reconnecting to accept it.
+            const rr = Array.isArray(state.rematchReady) ? state.rematchReady : null;
+            const pendingRematch = rr && ((rr[0] || rr[1]) && !(rr[0] && rr[1]));
+            if (!pendingRematch) {
+              showScreen("screen-error");
+              setErrorScreen("error_title_finished", "error_room_finished");
+              return;
+            }
+          }
+          if (savedName && (state.players[0]?.name === savedName || state.players[1]?.name === savedName)) {
+            myName = savedName;
+            connectToRoom(id, savedName, null);
+            // If a rematch is pending and this player isn't the requester, show the prompt after reconnect.
+            try {
+              const rr = Array.isArray(state.rematchReady) ? state.rematchReady : null;
+              const pendingRematch = rr && ((rr[0] || rr[1]) && !(rr[0] && rr[1]));
+              if (pendingRematch) {
+                const requesterIndex = rr[0] ? 0 : rr[1] ? 1 : null;
+                const myIdx = state.players[0]?.name === savedName ? 0 : state.players[1]?.name === savedName ? 1 : null;
+                if (requesterIndex !== null && myIdx !== null && myIdx !== requesterIndex) {
+                  // Defer until the UI is in game screen; handleState will also prompt, but this makes refresh more reliable.
+                  setTimeout(() => { try { if (currentState) tryPromptRematchModal(currentState, 1); } catch { } }, 0);
+                }
+              }
+            } catch { }
+            return;
+          }
           if (state.players[0]) {
             const diffDesc = {
               easy: t.diff_easy_desc,
@@ -3324,8 +3328,8 @@
     }
 
     // ── State ──────────────────────────────────────────────────────────────────
-	    function handleState(state) {
-	      currentState = state;
+    function handleState(state) {
+      currentState = state;
 
       if (myPlayerIndex === null) {
         if (state.players[0]?.name === myName) myPlayerIndex = 0;
@@ -3345,56 +3349,56 @@
         return;
       }
 
-	      // If a rematch is pending (one player ready, waiting for the other), reuse the waiting screen.
-	      if (state.status === "finished") {
-	        const rematchReady = Array.isArray(state.rematchReady) ? state.rematchReady : null;
-	        const isTwoHumans = state.players[0]?.id !== "ai" && state.players[1]?.id !== "ai";
-	        const readyCount = rematchReady ? (rematchReady[0] ? 1 : 0) + (rematchReady[1] ? 1 : 0) : 0;
-	        const waitingRematch = isTwoHumans && readyCount > 0 && readyCount < 2;
-	        if (waitingRematch) {
-	          // On refresh, `myPlayerIndex` may still be null for a moment. In that case, do NOT
-	          // route to the requester waiting screen (it can misclassify the player). Keep them
-	          // on game + show the prompt instead.
-	          if (myPlayerIndex === null) {
-	            tryPromptRematchModal(state, readyCount);
-	            showScreen("screen-game");
-	            renderGame(state);
-	            notifyTurnIfNeeded(state);
-	            notifyFinishedIfNeeded(state);
-	            return;
-	          }
+      // If a rematch is pending (one player ready, waiting for the other), reuse the waiting screen.
+      if (state.status === "finished") {
+        const rematchReady = Array.isArray(state.rematchReady) ? state.rematchReady : null;
+        const isTwoHumans = state.players[0]?.id !== "ai" && state.players[1]?.id !== "ai";
+        const readyCount = rematchReady ? (rematchReady[0] ? 1 : 0) + (rematchReady[1] ? 1 : 0) : 0;
+        const waitingRematch = isTwoHumans && readyCount > 0 && readyCount < 2;
+        if (waitingRematch) {
+          // On refresh, `myPlayerIndex` may still be null for a moment. In that case, do NOT
+          // route to the requester waiting screen (it can misclassify the player). Keep them
+          // on game + show the prompt instead.
+          if (myPlayerIndex === null) {
+            tryPromptRematchModal(state, readyCount);
+            showScreen("screen-game");
+            renderGame(state);
+            notifyTurnIfNeeded(state);
+            notifyFinishedIfNeeded(state);
+            return;
+          }
 
-	          const requesterIndex = rematchReady ? (rematchReady[0] ? 0 : rematchReady[1] ? 1 : null) : null;
-	          const iAmRequester = requesterIndex !== null && myPlayerIndex === requesterIndex;
-	          // Requester (already ready) goes to waiting screen; the other player gets a popup.
-	          if (!iAmRequester) {
-	            tryPromptRematchModal(state, readyCount);
-	            showScreen("screen-game");
-	            renderGame(state);
-	            notifyTurnIfNeeded(state);
-	            notifyFinishedIfNeeded(state);
-	            return;
-	          }
-	          showScreen("screen-waiting");
-	          const url = `${location.origin}${location.pathname}#${roomId}`;
-	          document.getElementById("invite-url").textContent = url;
-	          setupCopyButton(url);
-	          // Keep the exact same waiting screen copy as the first-time waiting experience.
-	          const titleEl = document.querySelector("#screen-waiting [data-i18n='waiting_title']");
-	          if (titleEl) titleEl.textContent = t.waiting_title || titleEl.textContent;
+          const requesterIndex = rematchReady ? (rematchReady[0] ? 0 : rematchReady[1] ? 1 : null) : null;
+          const iAmRequester = requesterIndex !== null && myPlayerIndex === requesterIndex;
+          // Requester (already ready) goes to waiting screen; the other player gets a popup.
+          if (!iAmRequester) {
+            tryPromptRematchModal(state, readyCount);
+            showScreen("screen-game");
+            renderGame(state);
+            notifyTurnIfNeeded(state);
+            notifyFinishedIfNeeded(state);
+            return;
+          }
+          showScreen("screen-waiting");
+          const url = `${location.origin}${location.pathname}#${roomId}`;
+          document.getElementById("invite-url").textContent = url;
+          setupCopyButton(url);
+          // Keep the exact same waiting screen copy as the first-time waiting experience.
+          const titleEl = document.querySelector("#screen-waiting [data-i18n='waiting_title']");
+          if (titleEl) titleEl.textContent = t.waiting_title || titleEl.textContent;
 
-		          // Show accept/decline actions for the player who hasn't confirmed yet.
-		          const actions = document.getElementById("waiting-actions");
-		          const btnYes = document.getElementById("btn-waiting-rematch");
-		          const btnNotNow = document.getElementById("btn-waiting-not-now");
-		          const btnNo = document.getElementById("btn-waiting-new-game");
-		          if (actions && btnYes && btnNotNow && btnNo) {
-		            // Requester should see the same waiting screen as the initial room creation: no extra CTAs.
-		            actions.style.display = "none";
-	          }
-		          return;
-		        }
-		      }
+          // Show accept/decline actions for the player who hasn't confirmed yet.
+          const actions = document.getElementById("waiting-actions");
+          const btnYes = document.getElementById("btn-waiting-rematch");
+          const btnNotNow = document.getElementById("btn-waiting-not-now");
+          const btnNo = document.getElementById("btn-waiting-new-game");
+          if (actions && btnYes && btnNotNow && btnNo) {
+            // Requester should see the same waiting screen as the initial room creation: no extra CTAs.
+            actions.style.display = "none";
+          }
+          return;
+        }
+      }
 
       showScreen("screen-game");
       renderGame(state);
@@ -3619,19 +3623,19 @@
 
       const found = (p1?.bombs ?? 0) + (p2?.bombs ?? 0);
       if (state.mode === "coop" && typeof t.coop_safe_cells_progress === "function") {
-	        // Coop goal: reveal all safe cells (bombs stay hidden).
-	        const totalSafe = (state.grid.length * (state.grid[0]?.length ?? 0)) - state.totalBombs;
-	        let foundSafe = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy.length : 0;
-	        if (!foundSafe) {
-	          for (let r = 0; r < state.grid.length; r++) {
-	            for (let c = 0; c < (state.grid[0]?.length ?? 0); c++) {
-	              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
-	            }
-	          }
-	        }
-	        document.getElementById("bombs-remaining").textContent = t.coop_safe_cells_progress(foundSafe, totalSafe);
-	        renderCoopMiniProgress(state, foundSafe, totalSafe);
-	      } else {
+        // Coop goal: reveal all safe cells (bombs stay hidden).
+        const totalSafe = (state.grid.length * (state.grid[0]?.length ?? 0)) - state.totalBombs;
+        let foundSafe = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy.length : 0;
+        if (!foundSafe) {
+          for (let r = 0; r < state.grid.length; r++) {
+            for (let c = 0; c < (state.grid[0]?.length ?? 0); c++) {
+              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
+            }
+          }
+        }
+        document.getElementById("bombs-remaining").textContent = t.coop_safe_cells_progress(foundSafe, totalSafe);
+        renderCoopMiniProgress(state, foundSafe, totalSafe);
+      } else {
         document.getElementById("bombs-remaining").textContent = t.bombs_remaining(state.totalBombs - found);
         const row = document.getElementById("coop-mini-progress-row");
         if (row) {
@@ -3846,10 +3850,10 @@
       const shareUrl = `${location.origin}${location.pathname}#${roomId}`;
       const waitingHtml = "";
 
-	      const rematchLabel = state.mode === "coop" ? (t.btn_play_again || t.btn_rematch) : t.btn_rematch;
-	      const acceptLabel = state.mode === "coop" ? (t.btn_play_again || t.btn_accept_rematch || t.btn_rematch) : (t.btn_accept_rematch || t.btn_rematch);
+      const rematchLabel = state.mode === "coop" ? (t.btn_play_again || t.btn_rematch) : t.btn_rematch;
+      const acceptLabel = state.mode === "coop" ? (t.btn_play_again || t.btn_accept_rematch || t.btn_rematch) : (t.btn_accept_rematch || t.btn_rematch);
 
-	      document.getElementById("result-area").innerHTML = `
+      document.getElementById("result-area").innerHTML = `
 	    <div class="result-card">
 	      <div class="result-title">${title}</div>
 	      <div class="result-subtitle">${subtitle}</div>
@@ -3862,17 +3866,17 @@
 	      </div>
 	    </div>`;
 
-	      const btnRematch = document.getElementById("btn-rematch");
-	      if (btnRematch) {
-	        const meReady = (myPlayerIndex === 0 || myPlayerIndex === 1) && !!rematchReady?.[myPlayerIndex];
-	        // If the other player requested a rematch (pending) and I haven't accepted yet, make the CTA explicit.
-	        if (waitingRematch && !meReady) {
-	          btnRematch.textContent = acceptLabel || "Aceitar revanche";
-	        }
-	        btnRematch.onclick = rematch;
-	      }
-	      document.getElementById("btn-new-game").onclick = newRoom;
-	      renderResultRankingSummary();
+      const btnRematch = document.getElementById("btn-rematch");
+      if (btnRematch) {
+        const meReady = (myPlayerIndex === 0 || myPlayerIndex === 1) && !!rematchReady?.[myPlayerIndex];
+        // If the other player requested a rematch (pending) and I haven't accepted yet, make the CTA explicit.
+        if (waitingRematch && !meReady) {
+          btnRematch.textContent = acceptLabel || "Aceitar revanche";
+        }
+        btnRematch.onclick = rematch;
+      }
+      document.getElementById("btn-new-game").onclick = newRoom;
+      renderResultRankingSummary();
 
       // If a rematch is pending, we reuse the waiting screen instead of showing it inside the result card.
 
@@ -4024,82 +4028,82 @@
       socket.send(JSON.stringify({ type: "rematch" }));
     }
 
-	    function leaveRoom() {
-	      // Keep create selections; they are persisted in localStorage.
-	      if (socket) {
-	        intentionallyClosedSockets.add(socket);
-	        socket.close();
-	        socket = null;
-	      }
-	      myPlayerIndex = null;
-	      lastTurnPlayerIndex = null;
-	      currentState = null;
-	      const prevRoomId = roomId;
-	      roomId = "";
-	      // Coop progress is server-driven; nothing to clear client-side.
-	      document.getElementById("reconnecting-bar").classList.remove("visible");
-	      location.hash = "";
-	      showScreen("screen-create");
-	      setupCreateScreen();
-	    }
+    function leaveRoom() {
+      // Keep create selections; they are persisted in localStorage.
+      if (socket) {
+        intentionallyClosedSockets.add(socket);
+        socket.close();
+        socket = null;
+      }
+      myPlayerIndex = null;
+      lastTurnPlayerIndex = null;
+      currentState = null;
+      const prevRoomId = roomId;
+      roomId = "";
+      // Coop progress is server-driven; nothing to clear client-side.
+      document.getElementById("reconnecting-bar").classList.remove("visible");
+      location.hash = "";
+      showScreen("screen-create");
+      setupCreateScreen();
+    }
 
-	    function setRematchModalOpen(open) {
-	      const modal = document.getElementById("rematch-modal");
-	      if (!modal) return;
-	      modal.classList.toggle("open", open);
-	      modal.setAttribute("aria-hidden", open ? "false" : "true");
-	    }
+    function setRematchModalOpen(open) {
+      const modal = document.getElementById("rematch-modal");
+      if (!modal) return;
+      modal.classList.toggle("open", open);
+      modal.setAttribute("aria-hidden", open ? "false" : "true");
+    }
 
-	    function tryPromptRematchModal(state, readyCount) {
-	      const key = `${roomId}:${lastFinishedKey}:rematch:${readyCount}`;
-	      if (key === lastRematchPromptKey) return;
-	      lastRematchPromptKey = key;
+    function tryPromptRematchModal(state, readyCount) {
+      const key = `${roomId}:${lastFinishedKey}:rematch:${readyCount}`;
+      if (key === lastRematchPromptKey) return;
+      lastRematchPromptKey = key;
 
-	      const titleEl = document.getElementById("rematch-modal-title");
-	      const descEl = document.getElementById("rematch-modal-desc");
-	      const btnAccept = document.getElementById("btn-rematch-accept");
-	      const btnNotNow = document.getElementById("btn-rematch-not-now");
-	      if (!titleEl || !descEl || !btnAccept || !btnNotNow) return;
+      const titleEl = document.getElementById("rematch-modal-title");
+      const descEl = document.getElementById("rematch-modal-desc");
+      const btnAccept = document.getElementById("btn-rematch-accept");
+      const btnNotNow = document.getElementById("btn-rematch-not-now");
+      if (!titleEl || !descEl || !btnAccept || !btnNotNow) return;
 
-	      titleEl.textContent = t.rematch_prompt_title || "Revanche?";
-	      descEl.textContent =
-	        typeof t.rematch_prompt_desc === "function"
-	          ? t.rematch_prompt_desc()
-	          : (t.rematch_prompt_desc || "O outro jogador pediu revanche.");
+      titleEl.textContent = t.rematch_prompt_title || "Revanche?";
+      descEl.textContent =
+        typeof t.rematch_prompt_desc === "function"
+          ? t.rematch_prompt_desc()
+          : (t.rematch_prompt_desc || "O outro jogador pediu revanche.");
 
-	      // This popup only appears when a rematch request is pending.
-	      btnAccept.textContent = (state.mode === "coop" ? (t.btn_play_again || t.btn_accept_rematch || t.btn_rematch) : (t.btn_accept_rematch || t.btn_rematch));
-	      btnAccept.disabled = false;
-	      btnAccept.onclick = () => { setRematchModalOpen(false); rematch(); };
+      // This popup only appears when a rematch request is pending.
+      btnAccept.textContent = (state.mode === "coop" ? (t.btn_play_again || t.btn_accept_rematch || t.btn_rematch) : (t.btn_accept_rematch || t.btn_rematch));
+      btnAccept.disabled = false;
+      btnAccept.onclick = () => { setRematchModalOpen(false); rematch(); };
 
-	      btnNotNow.textContent = t.btn_not_now || "Agora não";
-	      btnNotNow.disabled = false;
-	      btnNotNow.onclick = () => {
-	        lastRematchDismissedKey = lastRematchPromptKey;
-	        setRematchModalOpen(false);
-	        // Update UI so the result button reflects there's a pending rematch to accept.
-	        if (currentState) renderGame(currentState);
-	      };
+      btnNotNow.textContent = t.btn_not_now || "Agora não";
+      btnNotNow.disabled = false;
+      btnNotNow.onclick = () => {
+        lastRematchDismissedKey = lastRematchPromptKey;
+        setRematchModalOpen(false);
+        // Update UI so the result button reflects there's a pending rematch to accept.
+        if (currentState) renderGame(currentState);
+      };
 
-	      setRematchModalOpen(true);
-	    }
+      setRematchModalOpen(true);
+    }
 
-	    function newRoom() {
-	      // Keep create selections; they are persisted in localStorage.
-	      if (socket) {
-	        intentionallyClosedSockets.add(socket);
-	        socket.close();
-	      }
-	      socket = null;
-	      myPlayerIndex = null;
-	      lastTurnPlayerIndex = null;
-	      currentState = null;
-	      const prevRoomId = roomId;
-	      // Coop progress is server-driven; nothing to clear client-side.
-	      location.hash = "";
-	      showScreen("screen-create");
-	      setupCreateScreen();
-	    }
+    function newRoom() {
+      // Keep create selections; they are persisted in localStorage.
+      if (socket) {
+        intentionallyClosedSockets.add(socket);
+        socket.close();
+      }
+      socket = null;
+      myPlayerIndex = null;
+      lastTurnPlayerIndex = null;
+      currentState = null;
+      const prevRoomId = roomId;
+      // Coop progress is server-driven; nothing to clear client-side.
+      location.hash = "";
+      showScreen("screen-create");
+      setupCreateScreen();
+    }
 
     document.getElementById("btn-leave").addEventListener("click", leaveRoom);
     document.getElementById("btn-ranking").addEventListener("click", openRankingModal);
