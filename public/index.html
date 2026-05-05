@@ -460,7 +460,8 @@
     /* ── Game ── */
     .scoreboard {
       display: grid;
-      grid-template-columns: 1fr auto 1fr;
+      /* Keep center column stable so the layout doesn't jump when turn text changes/vanishes. */
+      grid-template-columns: 5fr 2fr 5fr;
       align-items: center;
       gap: 12px;
     }
@@ -550,6 +551,7 @@
       font-size: 12px;
       color: var(--text-muted);
       line-height: 1.5;
+      min-width: 92px;
     }
 
     .turn-info strong {
@@ -559,13 +561,64 @@
       color: var(--text);
     }
 
-    .status-bar {
+	    .status-bar {
+	      display: flex;
+	      flex-direction: column;
+	      align-items: stretch;
+	      font-size: 13px;
+	      color: var(--text-muted);
+	      gap: 4px; /* line1 ↔ progress */
+	    }
+
+	    .status-line {
+	      display: flex;
+	      align-items: center;
+	      justify-content: space-between;
+	      gap: 12px;
+	    }
+
+	    .coop-mini-progress-row {
+	      display: none;
+	      width: 100%;
+	      padding: 0 2px;
+	      margin: 0; /* spacing handled by status-bar gap + board-row margin */
+	      justify-content: center;
+	    }
+
+    .coop-mini-progress-row.visible {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 13px;
-      color: var(--text-muted);
-      gap: 12px;
+    }
+
+    .coop-mini-progress {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2px;
+      justify-content: flex-start;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 6px 8px;
+    }
+
+    .coop-mini-cell {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 0.5px solid var(--border);
+    }
+
+    .coop-mini-cell.p1 {
+      background: rgba(29, 158, 117, 0.75);
+      border-color: var(--teal);
+      box-shadow: 0 0 8px rgba(29, 158, 117, 0.35), inset 0 0 4px rgba(29, 158, 117, 0.18);
+    }
+
+    .coop-mini-cell.p2 {
+      background: rgba(153, 60, 29, 0.75);
+      border-color: var(--coral);
+      box-shadow: 0 0 8px rgba(153, 60, 29, 0.35), inset 0 0 4px rgba(153, 60, 29, 0.18);
     }
 
     .status-actions {
@@ -628,9 +681,10 @@
       flex-shrink: 0;
     }
 
-    .board-row {
-      width: 100%;
-    }
+	    .board-row {
+	      width: 100%;
+	      margin-top: 4px; /* progress ↔ grid */
+	    }
 
     .board-scroll {
       display: flex;
@@ -1780,6 +1834,10 @@
         align-items: flex-start;
         text-align: left;
       }
+
+      .scoreboard {
+        grid-template-columns: 5fr 2fr 5fr;
+      }
     }
   </style>
 </head>
@@ -1943,43 +2001,46 @@
           <div class="player-bombs-val" id="p2-bombs"></div>
         </div>
       </div>
-      <div class="status-bar">
-        <span id="bombs-remaining"></span>
-        <div class="status-actions">
-          <div class="sticker-launcher-wrap">
-            <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false"
-              aria-controls="sticker-palette">
-              <span class="sticker-launcher-icon" aria-hidden="true">💭</span>
-            </button>
-            <div class="sticker-badge" id="sticker-badge" aria-hidden="true"></div>
-            <div class="sticker-palette" id="sticker-palette">
-              <div class="sticker-palette-grid" id="sticker-bar" aria-label="Stickers">
-                <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
-                <button class="sticker-btn" data-sticker="thinking"><span class="sticker-btn-emoji">🤔</span></button>
-                <button class="sticker-btn" data-sticker="oops"><span class="sticker-btn-emoji">😅</span></button>
-                <button class="sticker-btn" data-sticker="boom"><span class="sticker-btn-emoji">💥</span></button>
-                <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">🤣</span></button>
-                <button class="sticker-btn" data-sticker="cry"><span class="sticker-btn-emoji">😭</span></button>
-                <button class="sticker-btn" data-sticker="clap"><span class="sticker-btn-emoji">👏</span></button>
-                <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
-              </div>
-            </div>
-          </div>
-          <button class="icon-toggle" id="sound-toggle" type="button">
-            <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
-          </button>
-          <button class="icon-toggle" id="btn-leave" type="button">
-            <span class="icon-toggle-text" data-i18n="btn_leave"></span>
-          </button>
-        </div>
-      </div>
-      <div class="board-row">
-        <div class="board-wrap">
-          <div class="board-scroll">
-            <div class="board" id="board"></div>
-          </div>
-        </div>
-      </div>
+	      <div class="status-bar">
+	        <div class="status-line">
+	          <span id="bombs-remaining"></span>
+	          <div class="status-actions">
+	          <div class="sticker-launcher-wrap">
+	            <button class="sticker-launcher" id="sticker-launcher" type="button" aria-expanded="false"
+	              aria-controls="sticker-palette">
+	              <span class="sticker-launcher-icon" aria-hidden="true">💭</span>
+	            </button>
+	            <div class="sticker-badge" id="sticker-badge" aria-hidden="true"></div>
+	            <div class="sticker-palette" id="sticker-palette">
+	              <div class="sticker-palette-grid" id="sticker-bar" aria-label="Stickers">
+	                <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
+	                <button class="sticker-btn" data-sticker="thinking"><span class="sticker-btn-emoji">🤔</span></button>
+	                <button class="sticker-btn" data-sticker="oops"><span class="sticker-btn-emoji">😅</span></button>
+	                <button class="sticker-btn" data-sticker="boom"><span class="sticker-btn-emoji">💥</span></button>
+	                <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">🤣</span></button>
+	                <button class="sticker-btn" data-sticker="cry"><span class="sticker-btn-emoji">😭</span></button>
+	                <button class="sticker-btn" data-sticker="clap"><span class="sticker-btn-emoji">👏</span></button>
+	                <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
+	              </div>
+	            </div>
+	          </div>
+	          <button class="icon-toggle" id="sound-toggle" type="button">
+	            <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
+	          </button>
+	          <button class="icon-toggle" id="btn-leave" type="button">
+	            <span class="icon-toggle-text" data-i18n="btn_leave"></span>
+	          </button>
+	          </div>
+	        </div>
+	        <div class="coop-mini-progress-row" id="coop-mini-progress-row" aria-hidden="true"></div>
+	      </div>
+	      <div class="board-row">
+	        <div class="board-wrap">
+	          <div class="board-scroll">
+	            <div class="board" id="board"></div>
+	          </div>
+	        </div>
+	      </div>
       <div id="result-area"></div>
     </div>
 
@@ -2056,6 +2117,7 @@
 
     const NAME_STORAGE_KEY = "minefield-name";
     const SOUND_STORAGE_KEY = "minefield-sound-enabled";
+    const CREATE_PREFS_STORAGE_KEY = "minefield-create-prefs";
     function detectDefaultLocale() {
       const prefs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
       for (const lang of prefs) {
@@ -2127,6 +2189,7 @@
       try { updateModeSelectLabels(); } catch { }
       try { updateModeDescription(); } catch { }
       try { updateFtOptions(); } catch { }
+      try { syncSoloCopyForMode(); } catch { }
       try { updatePointsPreview(); } catch { }
 
       // Re-render dynamic content if game is active
@@ -2153,6 +2216,7 @@
     let lastNotifiedTurnKey = "";
     let lastTurnPlayerIndex = null;
     let lastFinishedKey = "";
+    // Coop mini progress is server-driven via `state.safeRevealedBy` (so refresh/other browsers are consistent).
     let fireStickerAudio = null;
     let fireStickerStopTimer = 0;
     let cryStickerAudio = null;
@@ -2727,7 +2791,7 @@
       // Safari/iOS compatibility: avoid Unicode property escapes like `\p{Diacritic}`.
       return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
-    const RESERVED_NAMES = new Set(["EireneBot", "AtenaBot", "ÉrisBot"].map(normalizeNameForCompare));
+    const RESERVED_NAMES = new Set(["EireneBot", "AtenaBot", "ÉrisBot", "NêmesisBot"].map(normalizeNameForCompare));
     function isReservedName(name) { return RESERVED_NAMES.has(normalizeNameForCompare(name)); }
     function isSamePlayerName(a, b) {
       if (!a || !b) return false;
@@ -2812,6 +2876,57 @@
       return document.getElementById("solo-toggle")?.classList.contains("on") ?? false;
     }
 
+    function captureCreatePrefs() {
+      const mode = getSelectedMode();
+      const diff = getSelectedDifficulty();
+      const aiEnabled = isAiEnabled();
+      const aiLevel = document.getElementById("ai-level")?.value ?? "medium";
+      const ft = Number.parseInt(document.getElementById("ft-select")?.value ?? "5", 10);
+      return { mode, diff, aiEnabled, aiLevel, ft };
+    }
+
+    function persistCreatePrefs() {
+      try {
+        localStorage.setItem(CREATE_PREFS_STORAGE_KEY, JSON.stringify(captureCreatePrefs()));
+      } catch { }
+    }
+
+    function applyCreatePrefs() {
+      let prefs = null;
+      try { prefs = JSON.parse(localStorage.getItem(CREATE_PREFS_STORAGE_KEY) || "null"); } catch { }
+      if (!prefs) return;
+
+      const modeSelect = document.getElementById("mode-select");
+      if (modeSelect && typeof prefs.mode === "string") modeSelect.value = prefs.mode;
+
+      if (prefs.diff === "easy" || prefs.diff === "medium" || prefs.diff === "hard") {
+        const radio = document.querySelector(`input[name='diff'][value='${prefs.diff}']`);
+        if (radio) {
+          radio.checked = true;
+          document.querySelectorAll(".diff-option").forEach(o => o.classList.remove("selected"));
+          const opt = radio.closest(".diff-option");
+          if (opt) opt.classList.add("selected");
+        }
+      }
+
+      const ftSelect = document.getElementById("ft-select");
+      if (ftSelect && (prefs.ft === 2 || prefs.ft === 3 || prefs.ft === 5 || prefs.ft === 10)) {
+        ftSelect.value = String(prefs.ft);
+      }
+
+      const aiLevelSelect = document.getElementById("ai-level");
+      if (aiLevelSelect && (prefs.aiLevel === "easy" || prefs.aiLevel === "medium" || prefs.aiLevel === "hard")) {
+        aiLevelSelect.value = prefs.aiLevel;
+      }
+
+      const soloToggle = document.getElementById("solo-toggle");
+      if (soloToggle) {
+        const on = !!prefs.aiEnabled;
+        soloToggle.classList.toggle("on", on);
+        soloToggle.setAttribute("aria-checked", on ? "true" : "false");
+      }
+    }
+
     function syncAiLevelVisibility() {
       const mode = getSelectedMode();
       const aiField = document.getElementById("ai-level-field");
@@ -2894,16 +3009,35 @@
       });
     }
 
+    function syncSoloCopyForMode() {
+      const mode = getSelectedMode();
+      const titleEl = document.querySelector("#solo-row .toggle-title");
+      const hintEl = document.querySelector("#solo-row .toggle-hint");
+      if (!titleEl || !hintEl) return;
+
+      const titleKey = mode === "coop" ? "solo_label_coop" : "solo_label";
+      const hintKey = mode === "coop" ? "solo_hint_coop" : "solo_hint";
+      titleEl.dataset.i18n = titleKey;
+      hintEl.dataset.i18n = hintKey;
+
+      // Apply immediately (data-i18n updates only happen in applyLocale()).
+      if (typeof t[titleKey] === "string") titleEl.textContent = t[titleKey];
+      if (typeof t[hintKey] === "string") hintEl.textContent = t[hintKey];
+    }
+
     function setupModeOptions() {
       const modeSelect = document.getElementById("mode-select");
       if (!modeSelect) return;
       modeSelect.onchange = () => {
         updateModeDescription();
+        syncSoloCopyForMode();
+        persistCreatePrefs();
         updatePointsPreview();
       };
       updateModeSelectLabels();
       updateModeDescription();
       updateFtOptions();
+      syncSoloCopyForMode();
       updatePointsPreview();
     }
 
@@ -2922,6 +3056,7 @@
         newToggle.classList.toggle("on", nextOn);
         newToggle.setAttribute("aria-checked", nextOn ? "true" : "false");
         syncAiLevelVisibility();
+        persistCreatePrefs();
         updatePointsPreview();
       };
 
@@ -2942,6 +3077,8 @@
 
       const refreshCreatePreview = () => {
         updateModeDescription();
+        syncSoloCopyForMode();
+        persistCreatePrefs();
         updatePointsPreview();
       };
 
@@ -2965,7 +3102,13 @@
       updateModeSelectLabels();
       updateModeDescription();
       updateFtOptions();
+      applyCreatePrefs();
+      updateModeSelectLabels();
+      updateModeDescription();
+      syncSoloCopyForMode();
+      updateFtOptions();
       updatePointsPreview();
+      persistCreatePrefs();
 
       document.getElementById("btn-create").onclick = () => {
         const name = document.getElementById("create-name").value.trim();
@@ -3271,6 +3414,15 @@
     function renderGame(state) {
       const p1 = state.players[0];
       const p2 = state.players[1];
+      const turnInfoEl = document.querySelector(".turn-info");
+      if (turnInfoEl) {
+        // End-of-game feedback is shown in the result card; avoid duplicating it here.
+        const hide = state.status === "finished";
+        // Keep layout spacing so the scoreboard doesn't collapse.
+        turnInfoEl.style.visibility = hide ? "hidden" : "";
+        turnInfoEl.style.pointerEvents = hide ? "none" : "";
+        turnInfoEl.setAttribute("aria-hidden", hide ? "true" : "false");
+      }
 
       // Add AI badge if needed
       const p1IsAi = p1?.id === "ai";
@@ -3283,10 +3435,29 @@
       }
       renderPlayerName(document.getElementById("p1-name"), p1, p1IsAi);
       renderPlayerName(document.getElementById("p2-name"), p2, p2IsAi);
-      document.getElementById("p1-score").textContent = p1?.score ?? 0;
-      document.getElementById("p2-score").textContent = p2?.score ?? 0;
-      document.getElementById("p1-bombs").textContent = t.bomb_count(p1?.bombs ?? 0);
-      document.getElementById("p2-bombs").textContent = t.bomb_count(p2?.bombs ?? 0);
+      const p1ScoreEl = document.getElementById("p1-score");
+      const p2ScoreEl = document.getElementById("p2-score");
+      const p1BombsEl = document.getElementById("p1-bombs");
+      const p2BombsEl = document.getElementById("p2-bombs");
+
+      // Coop: keep the same layout, but don't show competitive numbers.
+      const hideNumbers = state.mode === "coop";
+      if (p1ScoreEl) {
+        p1ScoreEl.textContent = hideNumbers ? "" : String(p1?.score ?? 0);
+        p1ScoreEl.style.display = hideNumbers ? "none" : "";
+      }
+      if (p2ScoreEl) {
+        p2ScoreEl.textContent = hideNumbers ? "" : String(p2?.score ?? 0);
+        p2ScoreEl.style.display = hideNumbers ? "none" : "";
+      }
+      if (p1BombsEl) {
+        p1BombsEl.textContent = hideNumbers ? "" : t.bomb_count(p1?.bombs ?? 0);
+        p1BombsEl.style.display = hideNumbers ? "none" : "";
+      }
+      if (p2BombsEl) {
+        p2BombsEl.textContent = hideNumbers ? "" : t.bomb_count(p2?.bombs ?? 0);
+        p2BombsEl.style.display = hideNumbers ? "none" : "";
+      }
 
       document.getElementById("p1-card").className = "player-card" + (state.currentPlayer === 0 ? " active-p1" : "");
       document.getElementById("p2-card").className = "player-card" + (state.currentPlayer === 1 ? " active-p2" : "");
@@ -3302,21 +3473,26 @@
       }
 
       if (state.status === "finished") {
-        const p1 = state.players[0];
-        const p2 = state.players[1];
-
-        if (!p1 || !p2) {
-          turnName = "—";
+        if (state.mode === "coop") {
+          turnName = "";
           turnSuffix = "";
-        } else if (p1.score > p2.score) {
-          turnName = truncateName(p1.name);
-          turnSuffix = t.result_won_suffix ?? "venceu";
-        } else if (p2.score > p1.score) {
-          turnName = truncateName(p2.name);
-          turnSuffix = t.result_won_suffix ?? "venceu";
         } else {
-          turnName = t.result_draw;
-          turnSuffix = "";
+          const p1 = state.players[0];
+          const p2 = state.players[1];
+
+          if (!p1 || !p2) {
+            turnName = "—";
+            turnSuffix = "";
+          } else if (p1.score > p2.score) {
+            turnName = truncateName(p1.name);
+            turnSuffix = t.result_won_suffix ?? "venceu";
+          } else if (p2.score > p1.score) {
+            turnName = truncateName(p2.name);
+            turnSuffix = t.result_won_suffix ?? "venceu";
+          } else {
+            turnName = t.result_draw;
+            turnSuffix = "";
+          }
         }
       } else {
         turnName = truncateName(turnPlayer?.name ?? "—");
@@ -3327,7 +3503,28 @@
       document.getElementById("turn-suffix").textContent = turnSuffix;
 
       const found = (p1?.bombs ?? 0) + (p2?.bombs ?? 0);
-      document.getElementById("bombs-remaining").textContent = t.bombs_remaining(state.totalBombs - found);
+      if (state.mode === "coop" && typeof t.coop_safe_cells_progress === "function") {
+	        // Coop goal: reveal all safe cells (bombs stay hidden).
+	        const totalSafe = (state.grid.length * (state.grid[0]?.length ?? 0)) - state.totalBombs;
+	        let foundSafe = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy.length : 0;
+	        if (!foundSafe) {
+	          for (let r = 0; r < state.grid.length; r++) {
+	            for (let c = 0; c < (state.grid[0]?.length ?? 0); c++) {
+	              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
+	            }
+	          }
+	        }
+	        document.getElementById("bombs-remaining").textContent = t.coop_safe_cells_progress(foundSafe, totalSafe);
+	        renderCoopMiniProgress(state, foundSafe, totalSafe);
+	      } else {
+        document.getElementById("bombs-remaining").textContent = t.bombs_remaining(state.totalBombs - found);
+        const row = document.getElementById("coop-mini-progress-row");
+        if (row) {
+          row.classList.remove("visible");
+          row.innerHTML = "";
+          row.setAttribute("aria-hidden", "true");
+        }
+      }
 
       renderBoard(state);
       renderScoreboardExtras(state);
@@ -3366,6 +3563,24 @@
           }
         }
       }
+    }
+
+    function renderCoopMiniProgress(state, foundSafe, totalSafe) {
+      const row = document.getElementById("coop-mini-progress-row");
+      if (!row) return;
+
+      row.classList.toggle("visible", state.mode === "coop");
+      row.setAttribute("aria-hidden", state.mode === "coop" ? "false" : "true");
+
+      // Render mini cells linearly; CSS handles wrapping based on available width.
+      const owners = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy : [];
+      const cells = [];
+      for (let i = 0; i < totalSafe; i++) {
+        const o = i < (foundSafe | 0) ? owners[i] : undefined;
+        const cls = o === 0 ? "coop-mini-cell p1" : o === 1 ? "coop-mini-cell p2" : "coop-mini-cell";
+        cells.push(`<span class="${cls}"></span>`);
+      }
+      row.innerHTML = `<div class="coop-mini-progress" aria-hidden="true">${cells.join("")}</div>`;
     }
 
     function renderBoard(state) {
@@ -3669,65 +3884,48 @@
     function rematch() {
       if (socket) { intentionallyClosedSockets.add(socket); socket.close(); }
       myPlayerIndex = null;
-      const prevDiff = currentState?.difficulty ?? "easy";
+      const prevDiff = currentState?.difficulty ?? getSelectedDifficulty();
       currentState = null;
       const id = generateRoomId();
       setRoomIdInUrl(id);
       connectToRoom(id, myName, prevDiff);
     }
 
-    function leaveRoom() {
-      // Reset mode selector to Versus.
-      const modeSelect = document.getElementById("mode-select");
-      if (modeSelect) modeSelect.value = "versus";
-      updateModeDescription();
-      updatePointsPreview();
-      // Hide FT field
-      document.getElementById("ft-field")?.classList.remove("visible");
-      if (socket) {
-        intentionallyClosedSockets.add(socket);
-        socket.close();
-        socket = null;
-      }
-      myPlayerIndex = null;
-      lastTurnPlayerIndex = null;
-      currentState = null;
-      roomId = "";
-      document.getElementById("reconnecting-bar").classList.remove("visible");
-      location.hash = "";
-      showScreen("screen-create");
+	    function leaveRoom() {
+	      // Keep create selections; they are persisted in localStorage.
+	      if (socket) {
+	        intentionallyClosedSockets.add(socket);
+	        socket.close();
+	        socket = null;
+	      }
+	      myPlayerIndex = null;
+	      lastTurnPlayerIndex = null;
+	      currentState = null;
+	      const prevRoomId = roomId;
+	      roomId = "";
+	      // Coop progress is server-driven; nothing to clear client-side.
+	      document.getElementById("reconnecting-bar").classList.remove("visible");
+	      location.hash = "";
+	      showScreen("screen-create");
+	      setupCreateScreen();
+	    }
 
-      // Reset do solo toggle e AI level
-      const soloToggle = document.getElementById("solo-toggle");
-      const aiLevelField = document.getElementById("ai-level-field");
-      soloToggle.classList.remove("on");
-      soloToggle.setAttribute("aria-checked", "false");
-      aiLevelField.classList.remove("visible");
-
-      setupCreateScreen();
-    }
-
-    function newRoom() {
-      // Reset mode selector to Versus.
-      const modeSelect = document.getElementById("mode-select");
-      if (modeSelect) modeSelect.value = "versus";
-      updateModeDescription();
-      updatePointsPreview();
-      // Hide FT field
-      document.getElementById("ft-field")?.classList.remove("visible");
-      if (socket) {
-        intentionallyClosedSockets.add(socket);
-        socket.close();
-      }
-      socket = null;
-      myPlayerIndex = null;
-      lastTurnPlayerIndex = null;
-      currentState = null;
-      myName = "";
-      location.hash = "";
-      showScreen("screen-create");
-      setupCreateScreen();
-    }
+	    function newRoom() {
+	      // Keep create selections; they are persisted in localStorage.
+	      if (socket) {
+	        intentionallyClosedSockets.add(socket);
+	        socket.close();
+	      }
+	      socket = null;
+	      myPlayerIndex = null;
+	      lastTurnPlayerIndex = null;
+	      currentState = null;
+	      const prevRoomId = roomId;
+	      // Coop progress is server-driven; nothing to clear client-side.
+	      location.hash = "";
+	      showScreen("screen-create");
+	      setupCreateScreen();
+	    }
 
     document.getElementById("btn-leave").addEventListener("click", leaveRoom);
     document.getElementById("btn-ranking").addEventListener("click", openRankingModal);

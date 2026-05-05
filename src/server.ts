@@ -36,6 +36,9 @@ export interface GameState {
   grid: number[][];
   revealed: boolean[][];
   foundBy: (0 | 1 | null)[][];
+  // Coop progress: ordered owners of each newly revealed *safe* cell across the match.
+  // This is server-sourced so refresh/other browsers render identically.
+  safeRevealedBy?: (0 | 1)[];
   totalBombs: number;
   lastClickedCell?: { row: number; col: number; playerIndex: 0 | 1 };
   lastPlayerClicks: { row: number; col: number; playerIndex: 0 | 1 }[];
@@ -80,9 +83,11 @@ const AI_NAMES: Record<AiLevel, string> = {
   hard: "ÉrisBot",
 };
 
+const COOP_AI_NAME = "NêmesisBot";
+
 function isReservedPlayerName(name: string): boolean {
   const normalized = name.trim().toLowerCase();
-  return Object.values(AI_NAMES).some((n) => n.toLowerCase() === normalized);
+  return Object.values(AI_NAMES).some((n) => n.toLowerCase() === normalized) || COOP_AI_NAME.toLowerCase() === normalized;
 }
 
 function normalizeRankingName(name: string): string {
@@ -181,6 +186,39 @@ export function floodReveal(
   }
 }
 
+export function floodRevealWithAttribution(
+  grid: number[][],
+  revealed: boolean[][],
+  r: number,
+  c: number,
+  rows: number,
+  cols: number
+): { row: number; col: number }[] {
+  const out: { row: number; col: number }[] = [];
+  // Iterative DFS for stable order and to avoid recursion depth issues.
+  const stack: { row: number; col: number }[] = [{ row: r, col: c }];
+  while (stack.length) {
+    const cur = stack.pop()!;
+    if (cur.row < 0 || cur.row >= rows || cur.col < 0 || cur.col >= cols) continue;
+    if (revealed[cur.row][cur.col]) continue;
+    if (grid[cur.row][cur.col] === -1) continue;
+
+    revealed[cur.row][cur.col] = true;
+    out.push({ row: cur.row, col: cur.col });
+
+    if (grid[cur.row][cur.col] === 0) {
+      // Push neighbors in reverse order so pop() yields a consistent, roughly row-major expansion.
+      for (let dr = 1; dr >= -1; dr--) {
+        for (let dc = 1; dc >= -1; dc--) {
+          if (dr === 0 && dc === 0) continue;
+          stack.push({ row: cur.row + dr, col: cur.col + dc });
+        }
+      }
+    }
+  }
+  return out;
+}
+
 export function createInitialState(difficulty: Difficulty, mode: GameMode = "versus"): GameState {
   const { rows, cols, bombs } = CONFIGS[difficulty];
   return {
@@ -192,6 +230,7 @@ export function createInitialState(difficulty: Difficulty, mode: GameMode = "ver
     grid: generateGrid(rows, cols, bombs),
     revealed: Array.from({ length: rows }, () => Array(cols).fill(false)),
     foundBy: Array.from({ length: rows }, () => Array<0 | 1 | null>(cols).fill(null)),
+    safeRevealedBy: [],
     totalBombs: bombs,
     lastPlayerClicks: [],
   };
@@ -304,6 +343,9 @@ export default class GameRoom implements Party.Server {
     if (this.state && !this.state.lastPlayerClicks) {
       this.state.lastPlayerClicks = [];
     }
+    if (this.state && !this.state.safeRevealedBy) {
+      this.state.safeRevealedBy = [];
+    }
   }
 
   async onRequest(req: Party.Request) {
@@ -388,10 +430,16 @@ export default class GameRoom implements Party.Server {
       this.state.players[0] = { id: conn.id, name, score: 0, bombs: 0 };
       this.connectionToPlayer.set(conn.id, 0);
       if (ai) {
-        this.aiLevel = ai.level;
+        // Coop AI is always the same bot (hard), regardless of the selected AI level.
+        this.aiLevel = this.state.mode === "coop" ? "hard" : ai.level;
         await this.room.storage.put("aiLevel", this.aiLevel);
         // Single-player: spawn an AI opponent immediately.
-        this.state.players[1] = { id: "ai", name: AI_NAMES[this.aiLevel], score: 0, bombs: 0 };
+        this.state.players[1] = {
+          id: "ai",
+          name: this.state.mode === "coop" ? COOP_AI_NAME : AI_NAMES[this.aiLevel],
+          score: 0,
+          bombs: 0,
+        };
         this.state.status = "playing";
         this.state.currentPlayer = (Math.random() < 0.5 ? 0 : 1);
         this.ensureAiFlags();
@@ -441,13 +489,19 @@ export default class GameRoom implements Party.Server {
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
       this.state.foundBy[row][col] = playerIndex;
-      player.bombs++;
-      player.score += 10;
-      if (isScoreUncatchable(this.state)) {
+      if (this.state.mode === "coop") {
+        // Coop: hitting any bomb ends the game immediately (team loss).
         this.state.status = "finished";
-      }
-      if (countFoundBombs(this.state) >= this.state.totalBombs) {
-        this.state.status = "finished";
+        this.state.coopResult = "loss";
+      } else {
+        player.bombs++;
+        player.score += 10;
+        if (isScoreUncatchable(this.state)) {
+          this.state.status = "finished";
+        }
+        if (countFoundBombs(this.state) >= this.state.totalBombs) {
+          this.state.status = "finished";
+        }
       }
 
       await this.finalizeMatchIfNeeded();
@@ -460,10 +514,17 @@ export default class GameRoom implements Party.Server {
       }
       return; // IMPORTANTE: retorna aqui
     } else {
-      floodReveal(this.state.grid, this.state.revealed, row, col, rows, cols);
+      const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, row, col, rows, cols);
+      // Record safe cell ownership for coop progress UI.
+      if (this.state.safeRevealedBy) {
+        for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(playerIndex);
+      } else {
+        this.state.safeRevealedBy = Array.from({ length: newlySafe.length }, () => playerIndex);
+      }
       this.state.currentPlayer = playerIndex === 0 ? 1 : 0;
       if (allSafeCellsRevealed(this.state)) {
         this.state.status = "finished";
+        if (this.state.mode === "coop") this.state.coopResult = "win";
       }
     }
 
@@ -553,14 +614,20 @@ export default class GameRoom implements Party.Server {
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
       this.state.foundBy[row][col] = 1;
-      aiPlayer.bombs++;
-      aiPlayer.score += 10;
-      this.aiFlags![row][col] = true;
-      if (isScoreUncatchable(this.state)) {
+      if (this.state.mode === "coop") {
+        // Coop: AI hitting a bomb ends the game immediately (team loss).
         this.state.status = "finished";
-      }
-      if (countFoundBombs(this.state) >= this.state.totalBombs) {
-        this.state.status = "finished";
+        this.state.coopResult = "loss";
+      } else {
+        aiPlayer.bombs++;
+        aiPlayer.score += 10;
+        this.aiFlags![row][col] = true;
+        if (isScoreUncatchable(this.state)) {
+          this.state.status = "finished";
+        }
+        if (countFoundBombs(this.state) >= this.state.totalBombs) {
+          this.state.status = "finished";
+        }
       }
 
       await this.finalizeMatchIfNeeded();
@@ -575,10 +642,16 @@ export default class GameRoom implements Party.Server {
       }
       return; // Retorna aqui, não executa o resto
     } else {
-      floodReveal(this.state.grid, this.state.revealed, row, col, rows, cols);
+      const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, row, col, rows, cols);
+      if (this.state.safeRevealedBy) {
+        for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(1);
+      } else {
+        this.state.safeRevealedBy = Array.from({ length: newlySafe.length }, () => 1);
+      }
       this.state.currentPlayer = 0;
       if (allSafeCellsRevealed(this.state)) {
         this.state.status = "finished";
+        if (this.state.mode === "coop") this.state.coopResult = "win";
       }
     }
 
@@ -661,10 +734,10 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
   const frontierSet = new Set<string>();
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (!state.revealed[r][c]) unknown.push({ row: r, col: c });
+      if (!state.revealed[r][c] && !aiFlags[r][c]) unknown.push({ row: r, col: c });
       if (state.revealed[r][c] && state.grid[r][c] >= 0) {
         for (const n of neighbors(r, c, rows, cols)) {
-          if (!state.revealed[n.row][n.col]) {
+          if (!state.revealed[n.row][n.col] && !aiFlags[n.row][n.col]) {
             const k = `${n.row},${n.col}`;
             if (!frontierSet.has(k)) {
               frontierSet.add(k);
@@ -677,35 +750,51 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
   }
   if (unknown.length === 0) return null;
 
+  const isCoop = state.mode === "coop";
+
   // Easy: just click random unrevealed.
   if (level === "easy") return unknown[Math.floor(Math.random() * unknown.length)];
 
-  // Compute simple constraints from revealed numbered cells.
+  // Compute constraints from revealed numbered cells (what the AI "sees").
+  // For coop, we also persist inferred bombs into aiFlags so it won't click them later.
   const certainBombs: { row: number; col: number }[] = [];
   const certainSafes: { row: number; col: number }[] = [];
+  let changed = true;
+  while (changed) {
+    changed = false;
+    certainBombs.length = 0;
+    certainSafes.length = 0;
 
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      if (!state.revealed[r][c]) continue;
-      const v = state.grid[r][c];
-      if (v < 0) continue;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (!state.revealed[r][c]) continue;
+        const v = state.grid[r][c];
+        if (v < 0) continue;
 
-      const neigh = neighbors(r, c, rows, cols);
-      let knownBombs = 0;
-      const unknownNeigh: { row: number; col: number }[] = [];
-      for (const n of neigh) {
-        const isKnownBomb = (state.revealed[n.row][n.col] && state.grid[n.row][n.col] === -1) || aiFlags[n.row][n.col];
-        if (isKnownBomb) knownBombs++;
-        else if (!state.revealed[n.row][n.col]) unknownNeigh.push(n);
+        const neigh = neighbors(r, c, rows, cols);
+        let knownBombs = 0;
+        const unknownNeigh: { row: number; col: number }[] = [];
+        for (const n of neigh) {
+          const isKnownBomb = (state.revealed[n.row][n.col] && state.grid[n.row][n.col] === -1) || aiFlags[n.row][n.col];
+          if (isKnownBomb) knownBombs++;
+          else if (!state.revealed[n.row][n.col]) unknownNeigh.push(n);
+        }
+
+        const remaining = v - knownBombs;
+        if (remaining <= 0 && unknownNeigh.length) {
+          for (const n of unknownNeigh) certainSafes.push(n);
+        } else if (remaining === unknownNeigh.length && remaining > 0) {
+          for (const n of unknownNeigh) certainBombs.push(n);
+        }
       }
+    }
 
-      const remaining = v - knownBombs;
-      if (remaining <= 0 && unknownNeigh.length) {
-        // All unknown neighbors are safe.
-        for (const n of unknownNeigh) certainSafes.push(n);
-      } else if (remaining === unknownNeigh.length && remaining > 0) {
-        // All unknown neighbors are bombs.
-        for (const n of unknownNeigh) certainBombs.push(n);
+    if (isCoop) {
+      for (const b of certainBombs) {
+        if (!state.revealed[b.row][b.col] && !aiFlags[b.row][b.col]) {
+          aiFlags[b.row][b.col] = true;
+          changed = true;
+        }
       }
     }
   }
@@ -722,7 +811,39 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
     return out;
   };
   const bombs = dedup(certainBombs).filter(c => !state.revealed[c.row][c.col]);
-  const safes = dedup(certainSafes).filter(c => !state.revealed[c.row][c.col]);
+  const safes = dedup(certainSafes).filter(c => !state.revealed[c.row][c.col] && !aiFlags[c.row][c.col]);
+
+  if (isCoop) {
+    // Coop: avoid bombs. Prefer certain safes; otherwise click the lowest-risk cell we can estimate.
+    if (safes.length) return safes[Math.floor(Math.random() * safes.length)];
+
+    const probs = estimateBombProbabilities(state, aiFlags);
+    // Important: do not bias towards the frontier in coop.
+    // When probabilities tie (often early game), prefer cells away from revealed numbers.
+    const candidates = unknown.filter(c => !aiFlags[c.row][c.col]);
+    if (candidates.length === 0) return null;
+
+    let bestCells: { row: number; col: number }[] = [];
+    let bestP = Number.POSITIVE_INFINITY;
+    for (const c of candidates) {
+      const p = probs[c.row]?.[c.col] ?? 0;
+
+      // Frontier penalty: cells adjacent to revealed numbered cells are typically riskier when we have no strong info.
+      let touchesNumber = false;
+      for (const n of neighbors(c.row, c.col, rows, cols)) {
+        if (state.revealed[n.row][n.col] && state.grid[n.row][n.col] >= 0) { touchesNumber = true; break; }
+      }
+
+      const effectiveP = touchesNumber ? Math.min(1, p + 0.15) : p;
+      if (effectiveP < bestP) {
+        bestP = effectiveP;
+        bestCells = [c];
+      } else if (effectiveP === bestP) {
+        bestCells.push(c);
+      }
+    }
+    return bestCells[Math.floor(Math.random() * bestCells.length)];
+  }
 
   // Medium: use sure deductions, otherwise pick from frontier randomly (more "human").
   if (level === "medium") {
@@ -737,13 +858,20 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
 
   const probs = estimateBombProbabilities(state, aiFlags);
   let best: { row: number; col: number } | null = null;
-  let bestP = -1;
-  const candidates = frontier.length ? frontier : unknown;
+  let bestScore = isCoop ? Number.POSITIVE_INFINITY : -1;
+  const candidates = (frontier.length ? frontier : unknown).filter(c => !aiFlags[c.row][c.col]);
+  if (candidates.length === 0) return null;
+
   for (const c of candidates) {
     const p = probs[c.row]?.[c.col] ?? 0;
-    if (p > bestP) { bestP = p; best = c; }
+    if (isCoop) {
+      if (p < bestScore) { bestScore = p; best = c; }
+    } else {
+      if (p > bestScore) { bestScore = p; best = c; }
+    }
   }
-  return best ?? unknown[Math.floor(Math.random() * unknown.length)];
+
+  return best ?? candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 function neighbors(r: number, c: number, rows: number, cols: number): { row: number; col: number }[] {

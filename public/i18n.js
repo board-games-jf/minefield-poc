@@ -43,6 +43,8 @@ export const TRANSLATIONS = {
     btn_create: "Bora jogar!",
     solo_label: "Jogar contra Máquina",
     solo_hint: "Comeca na hora, sem precisar de parceiro",
+    solo_label_coop: "Jogar com a Máquina",
+    solo_hint_coop: "Mutirão com a Máquina, ma",
     ai_level_label: "Nivel da Máquina",
     ai_easy: "De boa",
     ai_medium: "Malemolente",
@@ -72,7 +74,8 @@ export const TRANSLATIONS = {
     // Coop
     coop_won: "É isso aí ma! Cabra desenrolado.",
     coop_lost: "Vixe Maria! Papocou foi tudo.",
-    coop_ai_no_points: "Não conta ponto não, viu!?",
+    coop_ai_no_points: "Jogar multirão com a máquina não conta ponto não, viu!?",
+    coop_safe_cells_progress: (found, total) => `Casas sem minas: ${found}/${total}`,
 
     // AI badge
     ai_badge: "Máquina",
@@ -162,6 +165,8 @@ export const TRANSLATIONS = {
     btn_create: "Criar partida",
     solo_label: "Jogar contra IA",
     solo_hint: "Comeca de imediato, sem adversario",
+    solo_label_coop: "Jogar com IA",
+    solo_hint_coop: "Coop com IA: jogam juntos",
     ai_level_label: "Nivel da IA",
     ai_easy: "Facil",
     ai_medium: "Medio",
@@ -190,7 +195,8 @@ export const TRANSLATIONS = {
     // Coop
     coop_won: "Missão cumprida! Nenhuma bomba encontrada.",
     coop_lost: "Explodiram juntos! Missão falhada.",
-    coop_ai_no_points: "Jogar com NêmesisBot não conta pontos para o ranking.",
+    coop_ai_no_points: "Jogar coop com IA não conta pontos para o ranking.",
+    coop_safe_cells_progress: (found, total) => `Casas sem bombas: ${found}/${total}`,
 
     // AI badge
     ai_badge: "IA",
@@ -274,6 +280,8 @@ export const TRANSLATIONS = {
     btn_create: "Create game",
     solo_label: "Play vs AI",
     solo_hint: "Starts immediately, no opponent needed",
+    solo_label_coop: "Play with AI",
+    solo_hint_coop: "Coop with AI: you play together",
     ai_level_label: "AI level",
     ai_easy: "Easy",
     ai_medium: "Medium",
@@ -302,7 +310,8 @@ export const TRANSLATIONS = {
     // Coop
     coop_won: "Mission complete! Not a single mine hit.",
     coop_lost: "Boom! You both hit a mine.",
-    coop_ai_no_points: "Playing with NêmesisBot doesn't count towards the ranking.",
+    coop_ai_no_points: "Playing coop with AI doesn't count towards the ranking.",
+    coop_safe_cells_progress: (found, total) => `Safe cells: ${found}/${total}`,
 
     // AI badge
     ai_badge: "AI",
