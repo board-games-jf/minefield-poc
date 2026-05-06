@@ -4586,14 +4586,20 @@
       // Add AI badge if needed
       const p1IsAi = p1?.id === "ai";
       const p2IsAi = p2?.id === "ai";
-      function renderPlayerName(spanEl, player, isAi) {
+      const youLabel = t.ranking_you || "you";
+      function renderPlayerName(spanEl, player, isAi, playerIdx) {
         if (!player) { spanEl.textContent = "—"; return; }
-        spanEl.innerHTML = isAi
-          ? `${player.name} <span style="font-size:10px; padding:2px 5px; border-radius:4px; background:rgba(255,255,255,0.1); color:var(--text-muted);">${t.ai_badge}</span>`
-          : player.name;
+        const isMe = myPlayerIndex === playerIdx;
+        const youBadge = isMe
+          ? ` <span style="font-size:10px; padding:2px 5px; border-radius:4px; background:rgba(255,255,255,0.08); color:var(--text-muted);">${youLabel}</span>`
+          : "";
+        const aiBadge = isAi
+          ? ` <span style="font-size:10px; padding:2px 5px; border-radius:4px; background:rgba(255,255,255,0.1); color:var(--text-muted);">${t.ai_badge}</span>`
+          : "";
+        spanEl.innerHTML = player.name + youBadge + aiBadge;
       }
-      renderPlayerName(document.getElementById("p1-name"), p1, p1IsAi);
-      renderPlayerName(document.getElementById("p2-name"), p2, p2IsAi);
+      renderPlayerName(document.getElementById("p1-name"), p1, p1IsAi, 0);
+      renderPlayerName(document.getElementById("p2-name"), p2, p2IsAi, 1);
       const p1ScoreEl = document.getElementById("p1-score");
       const p2ScoreEl = document.getElementById("p2-score");
       const p1BombsEl = document.getElementById("p1-bombs");
