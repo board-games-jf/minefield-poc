@@ -94,15 +94,18 @@ const RANKING_STORAGE_KEY = "ranking";
 
 const AI_NAMES: Record<AiLevel, string> = {
   easy: "EireneBot",
-  medium: "AtenaBot",
+  medium: "HeraBot",
   hard: "ÉrisBot",
 };
 
 const COOP_AI_NAME = "NêmesisBot";
+const EXPLOSIVE_AI_NAME = "AtenaBot";
 
 function isReservedPlayerName(name: string): boolean {
   const normalized = name.trim().toLowerCase();
-  return Object.values(AI_NAMES).some((n) => n.toLowerCase() === normalized) || COOP_AI_NAME.toLowerCase() === normalized;
+  return Object.values(AI_NAMES).some((n) => n.toLowerCase() === normalized)
+    || COOP_AI_NAME.toLowerCase() === normalized
+    || EXPLOSIVE_AI_NAME.toLowerCase() === normalized;
 }
 
 function normalizeRankingName(name: string): string {
@@ -477,13 +480,13 @@ export default class GameRoom implements Party.Server {
       this.state.players[0] = { id: conn.id, name, score: 0, bombs: 0 };
       this.connectionToPlayer.set(conn.id, 0);
       if (ai) {
-        // Coop AI is always the same bot (hard), regardless of the selected AI level.
-        this.aiLevel = this.state.mode === "coop" ? "hard" : ai.level;
+        // Coop and Explosive AI are always hard; in Explosive AtenaBot uses bomb-avoidance heuristic.
+        this.aiLevel = (this.state.mode === "coop" || this.state.mode === "explosive") ? "hard" : ai.level;
         await this.room.storage.put("aiLevel", this.aiLevel);
         // Single-player: spawn an AI opponent immediately.
         this.state.players[1] = {
           id: "ai",
-          name: this.state.mode === "coop" ? COOP_AI_NAME : AI_NAMES[this.aiLevel],
+          name: this.state.mode === "coop" ? COOP_AI_NAME : this.state.mode === "explosive" ? EXPLOSIVE_AI_NAME : AI_NAMES[this.aiLevel],
           score: 0,
           bombs: 0,
         };
@@ -1083,7 +1086,7 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
     if (unknown.length === 0) return null;
   }
 
-  const isCoop = state.mode === "coop";
+  const avoidBombs = state.mode === "coop" || state.mode === "explosive";
 
   // Easy: just click random unrevealed.
   if (level === "easy") return unknown[Math.floor(Math.random() * unknown.length)];
@@ -1122,7 +1125,7 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
       }
     }
 
-    if (isCoop) {
+    if (avoidBombs) {
       for (const b of certainBombs) {
         if (!state.revealed[b.row][b.col] && !aiFlags[b.row][b.col]) {
           aiFlags[b.row][b.col] = true;
@@ -1146,8 +1149,8 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
   const bombs = dedup(certainBombs).filter(c => !state.revealed[c.row][c.col]);
   const safes = dedup(certainSafes).filter(c => !state.revealed[c.row][c.col] && !aiFlags[c.row][c.col]);
 
-  if (isCoop) {
-    // Coop: avoid bombs. Prefer certain safes; otherwise click the lowest-risk cell we can estimate.
+  if (avoidBombs) {
+    // Coop / Explosive: avoid bombs. Prefer certain safes; otherwise click the lowest-risk cell we can estimate.
     if (safes.length) return safes[Math.floor(Math.random() * safes.length)];
 
     const probs = estimateBombProbabilities(state, aiFlags);
@@ -1191,13 +1194,13 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
 
   const probs = estimateBombProbabilities(state, aiFlags);
   let best: { row: number; col: number } | null = null;
-  let bestScore = isCoop ? Number.POSITIVE_INFINITY : -1;
+  let bestScore = avoidBombs ? Number.POSITIVE_INFINITY : -1;
   const candidates = (frontier.length ? frontier : unknown).filter(c => !aiFlags[c.row][c.col]);
   if (candidates.length === 0) return null;
 
   for (const c of candidates) {
     const p = probs[c.row]?.[c.col] ?? 0;
-    if (isCoop) {
+    if (avoidBombs) {
       if (p < bestScore) { bestScore = p; best = c; }
     } else {
       if (p > bestScore) { bestScore = p; best = c; }

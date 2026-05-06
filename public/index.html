@@ -3481,7 +3481,7 @@
       // Safari/iOS compatibility: avoid Unicode property escapes like `\p{Diacritic}`.
       return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
-    const RESERVED_NAMES = new Set(["EireneBot", "AtenaBot", "ÉrisBot", "NêmesisBot"].map(normalizeNameForCompare));
+    const RESERVED_NAMES = new Set(["EireneBot", "HeraBot", "ÉrisBot", "NêmesisBot", "AtenaBot"].map(normalizeNameForCompare));
     function isReservedName(name) { return RESERVED_NAMES.has(normalizeNameForCompare(name)); }
     function isSamePlayerName(a, b) {
       if (!a || !b) return false;
