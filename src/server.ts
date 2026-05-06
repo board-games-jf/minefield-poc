@@ -1118,7 +1118,8 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
         let knownBombs = 0;
         const unknownNeigh: { row: number; col: number }[] = [];
         for (const n of neigh) {
-          const isKnownBomb = (state.revealed[n.row][n.col] && state.grid[n.row][n.col] === -1) || aiFlags[n.row][n.col];
+          const playerFlagged = state.flags?.[n.row]?.[n.col] ?? false;
+          const isKnownBomb = (state.revealed[n.row][n.col] && state.grid[n.row][n.col] === -1) || aiFlags[n.row][n.col] || playerFlagged;
           if (isKnownBomb) knownBombs++;
           else if (!state.revealed[n.row][n.col]) unknownNeigh.push(n);
         }
@@ -1168,20 +1169,23 @@ export function pickAiCell(state: GameState, aiFlags: boolean[][], level: AiLeve
 
     let bestCells: { row: number; col: number }[] = [];
     let bestP = Number.POSITIVE_INFINITY;
+    let bestIsFrontier = true; // used as tiebreaker: prefer non-frontier when rawP is equal
     for (const c of candidates) {
       const p = probs[c.row]?.[c.col] ?? 0;
 
-      // Frontier penalty: cells adjacent to revealed numbered cells are typically riskier when we have no strong info.
+      // Frontier tiebreaker: when raw probabilities are equal, prefer cells away from revealed numbers
+      // (they carry less constraint info so are safer to guess). Do NOT add to rawP — that would
+      // cause the AI to pick an interior bomb over a frontier cell that is actually safer.
       let touchesNumber = false;
       for (const n of neighbors(c.row, c.col, rows, cols)) {
         if (state.revealed[n.row][n.col] && state.grid[n.row][n.col] >= 0) { touchesNumber = true; break; }
       }
 
-      const effectiveP = touchesNumber ? Math.min(1, p + 0.15) : p;
-      if (effectiveP < bestP) {
-        bestP = effectiveP;
+      if (p < bestP || (p === bestP && !touchesNumber && bestIsFrontier)) {
+        bestP = p;
+        bestIsFrontier = touchesNumber;
         bestCells = [c];
-      } else if (effectiveP === bestP) {
+      } else if (p === bestP && touchesNumber === bestIsFrontier) {
         bestCells.push(c);
       }
     }
