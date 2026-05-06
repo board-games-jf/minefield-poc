@@ -6,37 +6,55 @@ import {
   countFoundBombs,
   allSafeCellsRevealed,
   CONFIGS,
+  COOP_CONFIGS,
   pickAiCell,
   isScoreUncatchable,
   applyMatchResultToRanking,
   type GameState,
   type RankingEntry,
 } from "../src/server";
+import {
+  generateGrid as generateEnergyGrid,
+  propagateSafeEnergy,
+  placeWeightedMines,
+  generateDangerMap,
+  generateReliefMap,
+  lcg,
+  ENERGY_PRESETS,
+  type GridGenOptions,
+} from "../src/grid-generator";
 
 // ── generateGrid ───────────────────────────────────────────────────────────
 
 describe("generateGrid", () => {
   it("places the correct number of bombs", () => {
     const grid = generateGrid(6, 6, 10);
-    expect(grid.flat().filter(v => v === -1)).toHaveLength(10);
+    expect(grid.flat().filter((v) => v === -1)).toHaveLength(10);
   });
 
   it("calculates neighbour counts correctly", () => {
-    // 3×3 grid with bomb in center: all 8 neighbours must be 1
+    // 3×3 grid with bomb in center: all 8 neighbours must be 1.
     const grid: number[][] = Array.from({ length: 3 }, () => Array(3).fill(0));
     grid[1][1] = -1;
+
     for (let r = 0; r < 3; r++) {
       for (let c = 0; c < 3; c++) {
         if (grid[r][c] === -1) continue;
+
         let n = 0;
-        for (let dr = -1; dr <= 1; dr++)
+        for (let dr = -1; dr <= 1; dr++) {
           for (let dc = -1; dc <= 1; dc++) {
-            const nr = r + dr, nc = c + dc;
-            if (nr >= 0 && nr < 3 && nc >= 0 && nc < 3 && grid[nr][nc] === -1) n++;
+            const nr = r + dr;
+            const nc = c + dc;
+            if (nr >= 0 && nr < 3 && nc >= 0 && nc < 3 && grid[nr][nc] === -1) {
+              n++;
+            }
           }
+        }
         grid[r][c] = n;
       }
     }
+
     expect(grid[0][0]).toBe(1);
     expect(grid[0][1]).toBe(1);
     expect(grid[0][2]).toBe(1);
@@ -57,7 +75,7 @@ describe("generateGrid", () => {
 
   it("handles high bomb density", () => {
     const grid = generateGrid(3, 3, 8);
-    expect(grid.flat().filter(v => v === -1)).toHaveLength(8);
+    expect(grid.flat().filter((v) => v === -1)).toHaveLength(8);
   });
 });
 
@@ -65,9 +83,17 @@ describe("generateGrid", () => {
 
 describe("floodReveal", () => {
   it("reveals a single numbered cell without propagating", () => {
-    const grid = [[1, -1], [1, 1]];
-    const revealed = [[false, false], [false, false]];
+    const grid = [
+      [1, -1],
+      [1, 1],
+    ];
+    const revealed = [
+      [false, false],
+      [false, false],
+    ];
+
     floodReveal(grid, revealed, 0, 0, 2, 2);
+
     expect(revealed[0][0]).toBe(true);
     expect(revealed[0][1]).toBe(false); // bomb — never revealed
     expect(revealed[1][0]).toBe(false); // no flood from numbered cell
@@ -80,7 +106,9 @@ describe("floodReveal", () => {
       [0, 1, -1],
     ];
     const revealed = Array.from({ length: 3 }, () => Array(3).fill(false));
+
     floodReveal(grid, revealed, 0, 0, 3, 3);
+
     expect(revealed[0][0]).toBe(true);
     expect(revealed[0][1]).toBe(true);
     expect(revealed[0][2]).toBe(true);
@@ -93,24 +121,41 @@ describe("floodReveal", () => {
   });
 
   it("never reveals bombs during flood fill", () => {
-    const grid = [[0, -1], [0, 0]];
-    const revealed = [[false, false], [false, false]];
+    const grid = [
+      [0, -1],
+      [0, 0],
+    ];
+    const revealed = [
+      [false, false],
+      [false, false],
+    ];
+
     floodReveal(grid, revealed, 0, 0, 2, 2);
+
     expect(revealed[0][1]).toBe(false);
   });
 
   it("does not throw on grid edges", () => {
     const grid = [[0]];
     const revealed = [[false]];
+
     expect(() => floodReveal(grid, revealed, 0, 0, 1, 1)).not.toThrow();
     expect(revealed[0][0]).toBe(true);
   });
 
   it("does not re-reveal already revealed cells", () => {
-    const grid = [[0, 0], [0, 0]];
-    const revealed = [[true, false], [false, false]];
+    const grid = [
+      [0, 0],
+      [0, 0],
+    ];
+    const revealed = [
+      [true, false],
+      [false, false],
+    ];
+
     floodReveal(grid, revealed, 0, 1, 2, 2);
-    expect(revealed[0][0]).toBe(true); // already was true
+
+    expect(revealed[0][0]).toBe(true);
   });
 });
 
@@ -145,9 +190,17 @@ describe("createInitialState", () => {
     expect(revealed.flat().some(Boolean)).toBe(false);
   });
 
-  it("totalBombs matches difficulty config", () => {
+  it("totalBombs matches versus difficulty config by default", () => {
     for (const diff of ["easy", "medium", "hard"] as const) {
       expect(createInitialState(diff).totalBombs).toBe(CONFIGS[diff].bombs);
+    }
+  });
+
+  it("coop totalBombs matches coop difficulty config", () => {
+    for (const diff of ["easy", "medium", "hard"] as const) {
+      expect(createInitialState(diff, "coop").totalBombs).toBe(
+        COOP_CONFIGS[diff].bombs,
+      );
     }
   });
 });
@@ -160,7 +213,7 @@ describe("countFoundBombs", () => {
   beforeEach(() => {
     state = createInitialState("easy");
     state.players[0] = { id: "a", name: "Alice", score: 0, bombs: 0 };
-    state.players[1] = { id: "b", name: "Bob",   score: 0, bombs: 0 };
+    state.players[1] = { id: "b", name: "Bob", score: 0, bombs: 0 };
   });
 
   it("returns 0 at game start", () => {
@@ -189,22 +242,49 @@ describe("allSafeCellsRevealed", () => {
 
   it("returns true when all safe cells are revealed", () => {
     const state = createInitialState("easy");
-    const { rows, cols } = CONFIGS["easy"];
-    for (let r = 0; r < rows; r++)
-      for (let c = 0; c < cols; c++)
+    const { rows, cols } = CONFIGS.easy;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
         if (state.grid[r][c] !== -1) state.revealed[r][c] = true;
+      }
+    }
+
     expect(allSafeCellsRevealed(state)).toBe(true);
   });
 
   it("unrevealed bombs do not block game end", () => {
     const state = createInitialState("easy");
-    const { rows, cols } = CONFIGS["easy"];
-    for (let r = 0; r < rows; r++)
-      for (let c = 0; c < cols; c++)
+    const { rows, cols } = CONFIGS.easy;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
         if (state.grid[r][c] !== -1) state.revealed[r][c] = true;
+      }
+    }
+
+    expect(allSafeCellsRevealed(state)).toBe(true);
+  });
+
+  it("coop returns false while the deferred grid is not ready", () => {
+    const state = createInitialState("easy", "coop");
+    expect(state.coopGridReady).toBe(false);
+    expect(allSafeCellsRevealed(state)).toBe(false);
+  });
+
+  it("coop uses COOP_CONFIGS dimensions after the grid is ready", () => {
+    const state = createInitialState("medium", "coop");
+    const { rows, cols } = COOP_CONFIGS.medium;
+
+    state.coopGridReady = true;
+    state.grid = Array.from({ length: rows }, () => Array(cols).fill(1));
+    state.revealed = Array.from({ length: rows }, () => Array(cols).fill(true));
+
     expect(allSafeCellsRevealed(state)).toBe(true);
   });
 });
+
+// ── early finish ───────────────────────────────────────────────────────────
 
 describe("early finish (uncatchable score)", () => {
   it("detects when the trailing player cannot catch up from remaining bombs", () => {
@@ -225,14 +305,22 @@ describe("game flow", () => {
   it("finding a bomb scores +10 and keeps the same player's turn", () => {
     const state = createInitialState("easy");
     state.players[0] = { id: "a", name: "Alice", score: 0, bombs: 0 };
-    state.players[1] = { id: "b", name: "Bob",   score: 0, bombs: 0 };
+    state.players[1] = { id: "b", name: "Bob", score: 0, bombs: 0 };
     state.status = "playing";
 
-    const { rows, cols } = CONFIGS["easy"];
-    let br = -1, bc = -1;
-    outer: for (let r = 0; r < rows; r++)
-      for (let c = 0; c < cols; c++)
-        if (state.grid[r][c] === -1) { br = r; bc = c; break outer; }
+    const { rows, cols } = CONFIGS.easy;
+    let br = -1;
+    let bc = -1;
+
+    outer: for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (state.grid[r][c] === -1) {
+          br = r;
+          bc = c;
+          break outer;
+        }
+      }
+    }
 
     state.revealed[br][bc] = true;
     state.foundBy[br][bc] = 0;
@@ -253,15 +341,20 @@ describe("game flow", () => {
 
   it("game ends when all bombs are found", () => {
     const state = createInitialState("easy");
-    state.players[0] = { id: "a", name: "Alice", score: 100, bombs: CONFIGS["easy"].bombs };
-    state.players[1] = { id: "b", name: "Bob",   score: 0,   bombs: 0 };
-    expect(countFoundBombs(state)).toBe(CONFIGS["easy"].bombs);
+    state.players[0] = {
+      id: "a",
+      name: "Alice",
+      score: 100,
+      bombs: CONFIGS.easy.bombs,
+    };
+    state.players[1] = { id: "b", name: "Bob", score: 0, bombs: 0 };
+    expect(countFoundBombs(state)).toBe(CONFIGS.easy.bombs);
   });
 
   it("winner is the player with the highest score", () => {
     const state = createInitialState("easy");
     state.players[0] = { id: "a", name: "Alice", score: 60, bombs: 6 };
-    state.players[1] = { id: "b", name: "Bob",   score: 40, bombs: 4 };
+    state.players[1] = { id: "b", name: "Bob", score: 40, bombs: 4 };
     const winner = state.players[0]!.score > state.players[1]!.score ? 0 : 1;
     expect(winner).toBe(0);
   });
@@ -269,7 +362,7 @@ describe("game flow", () => {
   it("detects a draw correctly", () => {
     const state = createInitialState("easy");
     state.players[0] = { id: "a", name: "Alice", score: 50, bombs: 5 };
-    state.players[1] = { id: "b", name: "Bob",   score: 50, bombs: 5 };
+    state.players[1] = { id: "b", name: "Bob", score: 50, bombs: 5 };
     expect(state.players[0]!.score === state.players[1]!.score).toBe(true);
   });
 });
@@ -280,7 +373,7 @@ describe("reconnection", () => {
   it("maps player with same name back to their existing slot", () => {
     const state = createInitialState("easy");
     state.players[0] = { id: "conn-old", name: "Alice", score: 30, bombs: 3 };
-    state.players[1] = { id: "conn-b",   name: "Bob",   score: 0,  bombs: 0 };
+    state.players[1] = { id: "conn-b", name: "Bob", score: 0, bombs: 0 };
     state.status = "playing";
 
     let slot: 0 | 1 | null = null;
@@ -293,7 +386,7 @@ describe("reconnection", () => {
   it("state is preserved after serialisation round-trip", () => {
     const state = createInitialState("medium");
     state.players[0] = { id: "a", name: "Alice", score: 50, bombs: 5 };
-    state.players[1] = { id: "b", name: "Bob",   score: 20, bombs: 2 };
+    state.players[1] = { id: "b", name: "Bob", score: 20, bombs: 2 };
     state.status = "playing";
 
     const recovered: GameState = JSON.parse(JSON.stringify(state));
@@ -303,9 +396,12 @@ describe("reconnection", () => {
   });
 });
 
+// ── AI move picker ─────────────────────────────────────────────────────────
+
 describe("AI move picker", () => {
-  it("hard picks a forced bomb when deducible", () => {
+  it("hard picks a forced bomb when deducible in versus mode", () => {
     const state = createInitialState("easy");
+    state.mode = "versus";
     // Small contrived board:
     // (0,0) is revealed "1" and its only unrevealed neighbour is (0,1),
     // so (0,1) must be a bomb from the AI's point of view.
@@ -325,8 +421,37 @@ describe("AI move picker", () => {
       [false, false],
       [false, false],
     ];
+
     const pick = pickAiCell(state, aiFlags, "hard");
+
     expect(pick).toEqual({ row: 0, col: 1 });
+  });
+
+  it("coop AI avoids a deduced bomb by flagging it internally", () => {
+    const state = createInitialState("easy", "coop");
+    state.status = "playing";
+    state.coopGridReady = true;
+    state.grid = [
+      [1, -1],
+      [0, 0],
+    ];
+    state.revealed = [
+      [true, false],
+      [true, true],
+    ];
+    state.foundBy = [
+      [null, null],
+      [null, null],
+    ];
+    const aiFlags = [
+      [false, false],
+      [false, false],
+    ];
+
+    const pick = pickAiCell(state, aiFlags, "hard");
+
+    expect(aiFlags[0][1]).toBe(true);
+    expect(pick).not.toEqual({ row: 0, col: 1 });
   });
 });
 
@@ -337,6 +462,7 @@ describe("applyMatchResultToRanking", () => {
     const result = applyMatchResultToRanking([], [
       { id: "a", name: "Alice", score: 160, bombs: 0 },
     ] as any);
+
     expect(result).toHaveLength(1);
     expect(result[0].name).toBe("Alice");
     expect(result[0].points).toBe(160);
@@ -348,18 +474,20 @@ describe("applyMatchResultToRanking", () => {
     const result = applyMatchResultToRanking(existing, [
       { id: "a", name: "Alice", score: 160, bombs: 0 },
     ] as any);
+
     expect(result[0].points).toBe(260);
     expect(result[0].wins).toBe(2);
   });
 
-  it("coop win: both players receive points (same entry each)", () => {
+  it("coop win: both players receive points", () => {
     const result = applyMatchResultToRanking([], [
       { id: "a", name: "Alice", score: 130, bombs: 0 },
-      { id: "b", name: "Bob",   score: 130, bombs: 0 },
+      { id: "b", name: "Bob", score: 130, bombs: 0 },
     ] as any);
+
     expect(result).toHaveLength(2);
-    const alice = result.find(e => e.name === "Alice")!;
-    const bob   = result.find(e => e.name === "Bob")!;
+    const alice = result.find((e) => e.name === "Alice")!;
+    const bob = result.find((e) => e.name === "Bob")!;
     expect(alice.points).toBe(130);
     expect(alice.wins).toBe(1);
     expect(bob.points).toBe(130);
@@ -369,14 +497,15 @@ describe("applyMatchResultToRanking", () => {
   it("coop win: existing players get incremented", () => {
     const existing: RankingEntry[] = [
       { name: "Alice", points: 50, wins: 1 },
-      { name: "Bob",   points: 50, wins: 1 },
+      { name: "Bob", points: 50, wins: 1 },
     ];
     const result = applyMatchResultToRanking(existing, [
       { id: "a", name: "Alice", score: 90, bombs: 0 },
-      { id: "b", name: "Bob",   score: 90, bombs: 0 },
+      { id: "b", name: "Bob", score: 90, bombs: 0 },
     ] as any);
-    const alice = result.find(e => e.name === "Alice")!;
-    const bob   = result.find(e => e.name === "Bob")!;
+
+    const alice = result.find((e) => e.name === "Alice")!;
+    const bob = result.find((e) => e.name === "Bob")!;
     expect(alice.points).toBe(140);
     expect(alice.wins).toBe(2);
     expect(bob.points).toBe(140);
@@ -385,9 +514,10 @@ describe("applyMatchResultToRanking", () => {
 
   it("returns entries sorted by points descending", () => {
     const result = applyMatchResultToRanking([], [
-      { id: "a", name: "Alice", score: 60,  bombs: 0 },
-      { id: "b", name: "Bob",   score: 160, bombs: 0 },
+      { id: "a", name: "Alice", score: 60, bombs: 0 },
+      { id: "b", name: "Bob", score: 160, bombs: 0 },
     ] as any);
+
     expect(result[0].name).toBe("Bob");
     expect(result[1].name).toBe("Alice");
   });
@@ -397,6 +527,204 @@ describe("applyMatchResultToRanking", () => {
     const result = applyMatchResultToRanking(existing, [
       { id: "a", name: "Alice", score: 60, bombs: 0 },
     ] as any);
-    expect(result.filter(e => e.name === "Alice")).toHaveLength(1);
+
+    expect(result.filter((e) => e.name === "Alice")).toHaveLength(1);
+  });
+});
+
+// ── grid-generator ─────────────────────────────────────────────────────────
+
+describe("generateEnergyGrid", () => {
+  const BASE: GridGenOptions = {
+    rows: 6,
+    cols: 6,
+    bombs: 6,
+    firstClick: { row: 2, col: 2 },
+    ...ENERGY_PRESETS.easy,
+    seed: 42,
+  };
+
+  it("firstClick cell is never a bomb", () => {
+    for (const diff of ["easy", "medium", "hard"] as const) {
+      const opts: GridGenOptions = {
+        rows: 6,
+        cols: 6,
+        bombs: 6,
+        firstClick: { row: 0, col: 0 },
+        ...ENERGY_PRESETS[diff],
+        seed: 99,
+      };
+      const { grid } = generateEnergyGrid(opts);
+      expect(grid[0][0]).not.toBe(-1);
+    }
+  });
+
+  it("firstClick is still safe when safeEnergy is 0", () => {
+    const { grid, safeZone } = generateEnergyGrid({
+      rows: 6,
+      cols: 6,
+      bombs: 6,
+      firstClick: { row: 2, col: 2 },
+      ...ENERGY_PRESETS.hard,
+      safeEnergy: 0,
+      seed: 123,
+    });
+
+    expect(safeZone.has("2,2")).toBe(true);
+    expect(grid[2][2]).not.toBe(-1);
+  });
+
+  it("easy — all immediate neighbors of firstClick are bomb-free", () => {
+    const { grid } = generateEnergyGrid(BASE);
+    const { row, col } = BASE.firstClick;
+
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const nr = row + dr;
+        const nc = col + dc;
+        if (nr < 0 || nr >= BASE.rows || nc < 0 || nc >= BASE.cols) continue;
+        expect(grid[nr][nc]).not.toBe(-1);
+      }
+    }
+  });
+
+  it("exact bomb count matches the bombs parameter", () => {
+    const { grid } = generateEnergyGrid(BASE);
+    const bombCount = grid.flat().filter((v) => v === -1).length;
+    expect(bombCount).toBe(BASE.bombs);
+  });
+
+  it("same seed produces identical output (deterministic)", () => {
+    const a = generateEnergyGrid(BASE);
+    const b = generateEnergyGrid(BASE);
+    expect(a.grid).toEqual(b.grid);
+    expect(a.dangerMap).toEqual(b.dangerMap);
+    expect(a.reliefMap).toEqual(b.reliefMap);
+  });
+
+  it("values are -1 or 0–8", () => {
+    const { grid } = generateEnergyGrid(BASE);
+    for (const v of grid.flat()) {
+      expect(v).toBeGreaterThanOrEqual(-1);
+      expect(v).toBeLessThanOrEqual(8);
+    }
+  });
+
+  it("throws when bombs cannot fit outside the safe zone", () => {
+    expect(() =>
+      generateEnergyGrid({
+        rows: 3,
+        cols: 3,
+        bombs: 9,
+        firstClick: { row: 1, col: 1 },
+        ...ENERGY_PRESETS.easy,
+        seed: 1,
+      }),
+    ).toThrow(/Cannot place/);
+  });
+});
+
+describe("propagateSafeEnergy", () => {
+  it("safeEnergy=3 returns at least 9 cells", () => {
+    const zone = propagateSafeEnergy(6, 6, { row: 3, col: 3 }, 3);
+    expect(zone.size).toBeGreaterThanOrEqual(9);
+  });
+
+  it("safeEnergy=0 still returns firstClick only", () => {
+    const zone = propagateSafeEnergy(6, 6, { row: 3, col: 3 }, 0);
+    expect(zone.size).toBe(1);
+    expect(zone.has("3,3")).toBe(true);
+  });
+
+  it("firstClick is always in the safe zone when safeEnergy >= 1", () => {
+    const zone = propagateSafeEnergy(6, 6, { row: 2, col: 4 }, 1);
+    expect(zone.has("2,4")).toBe(true);
+  });
+
+  it("safeEnergy=2 includes immediate neighbors when centered", () => {
+    const zone = propagateSafeEnergy(6, 6, { row: 3, col: 3 }, 2);
+
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        expect(zone.has(`${3 + dr},${3 + dc}`)).toBe(true);
+      }
+    }
+  });
+});
+
+describe("generateReliefMap", () => {
+  it("does not add relief score inside safeZone", () => {
+    const rows = 6;
+    const cols = 6;
+    const safeZone = propagateSafeEnergy(rows, cols, { row: 3, col: 3 }, 2);
+    const reliefMap = generateReliefMap(rows, cols, safeZone, 2, 3, lcg(10));
+
+    for (const key of safeZone) {
+      const [r, c] = key.split(",").map(Number);
+      expect(reliefMap[r][c]).toBe(0);
+    }
+  });
+});
+
+describe("placeWeightedMines", () => {
+  it("never places a mine inside the safe zone", () => {
+    const rows = 6;
+    const cols = 6;
+    const safeZone = propagateSafeEnergy(rows, cols, { row: 3, col: 3 }, 3);
+    const dangerMap = generateDangerMap(rows, cols, safeZone, 2, 4, lcg(7));
+    const reliefMap = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+    const mineSet = placeWeightedMines(
+      rows,
+      cols,
+      dangerMap,
+      reliefMap,
+      6,
+      lcg(7),
+      safeZone,
+    );
+
+    for (const k of mineSet) {
+      expect(safeZone.has(k)).toBe(false);
+    }
+  });
+
+  it("throws if bomb count exceeds available cells outside safe zone", () => {
+    const rows = 3;
+    const cols = 3;
+    const safeZone = propagateSafeEnergy(rows, cols, { row: 1, col: 1 }, 3);
+    const dangerMap = Array.from({ length: rows }, () => Array(cols).fill(0));
+    const reliefMap = Array.from({ length: rows }, () => Array(cols).fill(0));
+
+    expect(() =>
+      placeWeightedMines(rows, cols, dangerMap, reliefMap, 1, lcg(1), safeZone),
+    ).toThrow(/Cannot place/);
+  });
+});
+
+describe("createInitialState coop — deferred grid", () => {
+  it("returns coopGridReady === false", () => {
+    const state = createInitialState("easy", "coop");
+    expect(state.coopGridReady).toBe(false);
+  });
+
+  it("placeholder grid has no bombs", () => {
+    const state = createInitialState("medium", "coop");
+    const hasBombs = state.grid.flat().some((v) => v === -1);
+    expect(hasBombs).toBe(false);
+  });
+
+  it("placeholder grid is zero-filled until first reveal", () => {
+    const state = createInitialState("hard", "coop");
+    expect(state.grid.flat().every((v) => v === 0)).toBe(true);
+  });
+
+  it("coop dimensions follow COOP_CONFIGS", () => {
+    for (const diff of ["easy", "medium", "hard"] as const) {
+      const state = createInitialState(diff, "coop");
+      expect(state.grid).toHaveLength(COOP_CONFIGS[diff].rows);
+      expect(state.grid[0]).toHaveLength(COOP_CONFIGS[diff].cols);
+      expect(state.totalBombs).toBe(COOP_CONFIGS[diff].bombs);
+    }
   });
 });

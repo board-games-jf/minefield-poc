@@ -34,6 +34,7 @@
       user-select: none;
       transition: border-color 0.15s;
     }
+
     .mode-description-card:hover {
       border-color: var(--border-strong);
     }
@@ -63,7 +64,7 @@
       border: 0.5px solid var(--border-strong);
       border-radius: var(--radius-md);
       padding: 12px 14px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
       animation: mode-toast-in 0.25s ease forwards;
       position: relative;
       cursor: pointer;
@@ -71,8 +72,15 @@
     }
 
     @keyframes mode-toast-in {
-      from { opacity: 0; transform: translateY(-8px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .mode-briefing-toast.hide {
@@ -80,7 +88,10 @@
     }
 
     @keyframes mode-toast-out {
-      to { opacity: 0; transform: translateY(-6px); }
+      to {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
     }
 
     .mode-briefing-icon {
@@ -257,36 +268,47 @@
     }
 
     .mp-cell.revealed {
-      background: rgba(255,255,255,0.04);
+      background: rgba(255, 255, 255, 0.04);
       border-color: transparent;
     }
 
     /* number colours matching real minesweeper convention */
-    .mp-cell.n1 { color: #5b9bd5; }
-    .mp-cell.n2 { color: #4caf6e; }
-    .mp-cell.n3 { color: #e05c5c; }
-    .mp-cell.n4 { color: #9b59b6; }
+    .mp-cell.n1 {
+      color: #5b9bd5;
+    }
+
+    .mp-cell.n2 {
+      color: #4caf6e;
+    }
+
+    .mp-cell.n3 {
+      color: #e05c5c;
+    }
+
+    .mp-cell.n4 {
+      color: #9b59b6;
+    }
 
     .mp-cell.bomb-p1 {
-      background: rgba(29,158,117,0.2);
+      background: rgba(29, 158, 117, 0.2);
       border-color: var(--teal);
       color: var(--teal);
     }
 
     .mp-cell.bomb-p2 {
-      background: rgba(153,60,29,0.2);
+      background: rgba(153, 60, 29, 0.2);
       border-color: var(--coral);
       color: var(--coral);
     }
 
     .mp-cell.bomb-coop {
-      background: rgba(255,255,255,0.05);
+      background: rgba(255, 255, 255, 0.05);
       border-color: var(--border);
       color: var(--text-subtle);
     }
 
     .mp-cell.bomb-explosive {
-      background: rgba(153,60,29,0.25);
+      background: rgba(153, 60, 29, 0.25);
       border-color: var(--coral);
       color: var(--coral);
       font-size: 14px;
@@ -309,8 +331,13 @@
       font-size: 11px;
     }
 
-    .mode-preview-scores .s1 { color: var(--teal); }
-    .mode-preview-scores .s2 { color: var(--coral); }
+    .mode-preview-scores .s1 {
+      color: var(--teal);
+    }
+
+    .mode-preview-scores .s2 {
+      color: var(--coral);
+    }
 
     #mode-briefing-wrap {
       position: fixed;
@@ -318,14 +345,15 @@
       left: 50%;
       transform: translate(-50%, -50%);
       width: calc(100% - 2rem);
-      max-width: 608px; /* 640px container - 2×1rem body padding */
+      max-width: 608px;
+      /* 640px container - 2×1rem body padding */
       z-index: 200;
       pointer-events: none;
     }
 
     #mode-briefing-wrap .mode-briefing-toast {
       pointer-events: auto;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     }
 
 
@@ -898,20 +926,33 @@
       border-color: var(--border-strong);
       color: var(--text);
     }
+
     .status-pill.gold {
       border-color: rgba(255, 215, 0, 0.35);
       background: rgba(255, 215, 0, 0.08);
       color: #ffd700;
       font-weight: 600;
     }
+
     .status-pill.gold.bump {
       animation: pill-bump 0.4s ease;
     }
+
     @keyframes pill-bump {
-      0%   { transform: scale(1); }
-      40%  { transform: scale(1.16); background: rgba(255,215,0,0.22); }
-      100% { transform: scale(1); }
+      0% {
+        transform: scale(1);
+      }
+
+      40% {
+        transform: scale(1.16);
+        background: rgba(255, 215, 0, 0.22);
+      }
+
+      100% {
+        transform: scale(1);
+      }
     }
+
     .cell-float-pts {
       position: absolute;
       top: -2px;
@@ -923,13 +964,25 @@
       pointer-events: none;
       animation: cell-float-up 0.85s ease forwards;
       z-index: 20;
-      text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
       white-space: nowrap;
     }
+
     @keyframes cell-float-up {
-      0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
-      65%  { opacity: 1; transform: translateX(-50%) translateY(-22px); }
-      100% { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+      0% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+
+      65% {
+        opacity: 1;
+        transform: translateX(-50%) translateY(-22px);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-30px);
+      }
     }
 
     .mode-status-pill {
@@ -2551,11 +2604,15 @@
           <div class="join-mode-card-desc" id="join-mode-desc"></div>
           <div class="join-mode-card-hint">
             <span id="join-mode-hint-text" data-i18n="briefing_how_it_works"></span>
-            <span class="join-mode-card-hint-chevron"><svg width="12" height="12" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><polygon fill="currentColor" points="43,17.1 39.9,14 24,29.9 8.1,14 5,17.1 24,36"/></svg></span>
+            <span class="join-mode-card-hint-chevron"><svg width="12" height="12" viewBox="0 0 48 48"
+                xmlns="http://www.w3.org/2000/svg">
+                <polygon fill="currentColor" points="43,17.1 39.9,14 24,29.9 8.1,14 5,17.1 24,36" />
+              </svg></span>
           </div>
           <div class="join-mode-card-expand" id="join-mode-expand"></div>
         </div>
-        <div id="join-diff-info" style="font-size:12px; color:var(--text-subtle); text-align:center; display:none;"></div>
+        <div id="join-diff-info" style="font-size:12px; color:var(--text-subtle); text-align:center; display:none;">
+        </div>
         <div class="field">
           <label for="join-name" data-i18n="join_name_label"></label>
           <input type="text" id="join-name" maxlength="20" data-i18n-ph="join_name_ph" />
@@ -2599,9 +2656,13 @@
         <div class="status-line">
           <div style="display:flex;align-items:center;gap:7px;min-width:0;">
             <button class="mode-status-pill" id="btn-mode-info" type="button">
-              <span id="mode-status-icon"></span><span id="mode-status-name"></span><span id="mode-status-ft" style="display:none;align-items:center;"><span style="opacity:0.6;margin:0 6px;line-height:1;vertical-align:middle;">·</span><span id="mode-status-ft-val"></span></span>
+              <span id="mode-status-icon"></span><span id="mode-status-name"></span><span id="mode-status-ft"
+                style="display:none;align-items:center;"><span
+                  style="opacity:0.6;margin:0 6px;line-height:1;vertical-align:middle;">·</span><span
+                  id="mode-status-ft-val"></span></span>
             </button>
-            <button id="flags-counter" type="button" style="flex-shrink:0; font-size:11px; color:var(--text-subtle); display:none; background:none; border:none; padding:0; cursor:pointer;"></button>
+            <button id="flags-counter" type="button"
+              style="flex-shrink:0; font-size:11px; color:var(--text-subtle); display:none; background:none; border:none; padding:0; cursor:pointer;"></button>
             <span id="bombs-remaining" style="flex-shrink:0;"></span>
             <span id="points-worth" style="flex-shrink:0; display:none;"></span>
           </div>
@@ -2835,7 +2896,7 @@
             if (captionEl) {
               const capKey = currentState.mode === "versus" ? "briefing_versus_caption"
                 : currentState.mode === "coop" ? "briefing_coop_caption"
-                : "briefing_explosive_caption";
+                  : "briefing_explosive_caption";
               captionEl.textContent = t[capKey] ?? "";
             }
           }
@@ -2860,7 +2921,7 @@
             if (captionEl) {
               const capKey = mode === "versus" ? "briefing_versus_caption"
                 : mode === "coop" ? "briefing_coop_caption"
-                : "briefing_explosive_caption";
+                  : "briefing_explosive_caption";
               captionEl.textContent = t[capKey] ?? "";
             }
           }
@@ -2869,9 +2930,9 @@
           if (diffEl && diffEl.dataset.difficulty) {
             const isCoopEl = diffEl.dataset.mode === "coop";
             const diffDesc = {
-              easy:   isCoopEl ? (t.diff_easy_desc_coop   ?? t.diff_easy_desc)   : t.diff_easy_desc,
+              easy: isCoopEl ? (t.diff_easy_desc_coop ?? t.diff_easy_desc) : t.diff_easy_desc,
               medium: isCoopEl ? (t.diff_medium_desc_coop ?? t.diff_medium_desc) : t.diff_medium_desc,
-              hard:   isCoopEl ? (t.diff_hard_desc_coop   ?? t.diff_hard_desc)   : t.diff_hard_desc,
+              hard: isCoopEl ? (t.diff_hard_desc_coop ?? t.diff_hard_desc) : t.diff_hard_desc,
             };
             diffEl.textContent = diffDesc[diffEl.dataset.difficulty] ?? "";
           }
@@ -2939,6 +3000,35 @@
     const THINKING_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
     const OOPS_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
     let soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== "0";
+    const HIDDEN_CELL = -2;
+
+    function getGridRows(state) {
+      return state.grid.length;
+    }
+
+    function getGridCols(state) {
+      return state.grid[0]?.length ?? 0;
+    }
+
+    function isRevealedSafeCell(state, r, c) {
+      const value = state.grid?.[r]?.[c];
+      return state.revealed?.[r]?.[c] === true && typeof value === "number" && value >= 0;
+    }
+
+    function countRevealedSafeCells(state) {
+      let total = 0;
+      const rows = getGridRows(state);
+      const cols = getGridCols(state);
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (isRevealedSafeCell(state, r, c)) total++;
+        }
+      }
+
+      return total;
+    }
+
     function getActivePlayerName() {
       return (myName || localStorage.getItem(NAME_STORAGE_KEY) || "").trim();
     }
@@ -3568,8 +3658,8 @@
 
     // Bomb counts per difficulty — mirrors server CONFIGS / COOP_CONFIGS
     const BOMB_COUNTS = {
-      versus:    { easy: 10, medium: 20, hard: 30 },
-      coop:      { easy: 6,  medium: 12, hard: 20 },
+      versus: { easy: 10, medium: 20, hard: 30 },
+      coop: { easy: 6, medium: 12, hard: 20 },
       explosive: { easy: 10, medium: 20, hard: 30 },
     };
     const GRID_LABELS = { easy: "6 × 6", medium: "8 × 8", hard: "10 × 10" };
@@ -3675,9 +3765,9 @@
       const bombPill = (n) =>
         `<span style="${pillBase}background:var(--coral-light);border:0.5px solid rgba(153,60,29,0.35);"><span style="font-size:12px;line-height:1;display:flex;align-items:center;">💣</span>${n}</span>`;
       const entries = [
-        { el: document.querySelector(".diff-desc[data-i18n='diff_easy_desc']"),   diff: "easy" },
+        { el: document.querySelector(".diff-desc[data-i18n='diff_easy_desc']"), diff: "easy" },
         { el: document.querySelector(".diff-desc[data-i18n='diff_medium_desc']"), diff: "medium" },
-        { el: document.querySelector(".diff-desc[data-i18n='diff_hard_desc']"),   diff: "hard" },
+        { el: document.querySelector(".diff-desc[data-i18n='diff_hard_desc']"), diff: "hard" },
       ];
       for (const { el, diff } of entries) {
         if (el) el.innerHTML = `${gridPill(GRID_LABELS[diff])} ${bombPill(bombs[diff])}`;
@@ -3719,26 +3809,26 @@
       let previewHTML = "";
       if (mode === "versus") {
         const grid = [
-          cell("revealed n1","1"), cell("bomb-p1","💣"), cell("revealed n2","2"), cell("hidden"),
-          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n3","3"), cell("hidden"),
-          cell("revealed n1","1"), cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-p2","💣"),
-          cell("hidden"),          cell("hidden"),          cell("revealed n1","1"), cell("hidden"),
+          cell("revealed n1", "1"), cell("bomb-p1", "💣"), cell("revealed n2", "2"), cell("hidden"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("revealed n3", "3"), cell("hidden"),
+          cell("revealed n1", "1"), cell("revealed n2", "2"), cell("revealed n2", "2"), cell("bomb-p2", "💣"),
+          cell("hidden"), cell("hidden"), cell("revealed n1", "1"), cell("hidden"),
         ];
         previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_versus_caption ?? ""}</div></div>`;
       } else if (mode === "coop") {
         const grid = [
-          cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),           cell("bomb-coop","?"),
-          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n2","2"),  cell("hidden"),
-          cell("revealed n1","1"),cell("revealed n2","2"), cell("revealed n2","2"),  cell("bomb-coop","?"),
-          cell("revealed n1","1"),cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"), cell("bomb-coop", "?"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("revealed n2", "2"), cell("hidden"),
+          cell("revealed n1", "1"), cell("revealed n2", "2"), cell("revealed n2", "2"), cell("bomb-coop", "?"),
+          cell("revealed n1", "1"), cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"),
         ];
         previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_coop_caption ?? ""}</div></div>`;
       } else if (mode === "explosive") {
         const grid = [
-          cell("revealed n1","1"), cell("hidden"),           cell("hidden"),           cell("hidden active-turn"),
-          cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),           cell("hidden"),
-          cell("revealed","·"),   cell("revealed n1","1"),  cell("bomb-explosive","💣"), cell("hidden"),
-          cell("revealed n1","1"),cell("revealed n2","2"),  cell("hidden"),           cell("hidden"),
+          cell("revealed n1", "1"), cell("hidden"), cell("hidden"), cell("hidden active-turn"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"), cell("hidden"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("bomb-explosive", "💣"), cell("hidden"),
+          cell("revealed n1", "1"), cell("revealed n2", "2"), cell("hidden"), cell("hidden"),
         ];
         previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_explosive_caption ?? ""}</div></div>`;
       }
@@ -3976,26 +4066,26 @@
               let previewHTML = "";
               if (state.mode === "versus") {
                 const grid = [
-                  cell("revealed n1","1"), cell("bomb-p1","💣"), cell("revealed n2","2"), cell("hidden"),
-                  cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n3","3"), cell("hidden"),
-                  cell("revealed n1","1"), cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-p2","💣"),
-                  cell("hidden"),          cell("hidden"),          cell("revealed n1","1"), cell("hidden"),
+                  cell("revealed n1", "1"), cell("bomb-p1", "💣"), cell("revealed n2", "2"), cell("hidden"),
+                  cell("revealed", "·"), cell("revealed n1", "1"), cell("revealed n3", "3"), cell("hidden"),
+                  cell("revealed n1", "1"), cell("revealed n2", "2"), cell("revealed n2", "2"), cell("bomb-p2", "💣"),
+                  cell("hidden"), cell("hidden"), cell("revealed n1", "1"), cell("hidden"),
                 ];
                 previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_versus_caption ?? ""}</div></div>`;
               } else if (state.mode === "coop") {
                 const grid = [
-                  cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),           cell("bomb-coop","?"),
-                  cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n2","2"),  cell("hidden"),
-                  cell("revealed n1","1"),cell("revealed n2","2"), cell("revealed n2","2"),  cell("bomb-coop","?"),
-                  cell("revealed n1","1"),cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),
+                  cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"), cell("bomb-coop", "?"),
+                  cell("revealed", "·"), cell("revealed n1", "1"), cell("revealed n2", "2"), cell("hidden"),
+                  cell("revealed n1", "1"), cell("revealed n2", "2"), cell("revealed n2", "2"), cell("bomb-coop", "?"),
+                  cell("revealed n1", "1"), cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"),
                 ];
                 previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_coop_caption ?? ""}</div></div>`;
               } else if (state.mode === "explosive") {
                 const grid = [
-                  cell("revealed n1","1"), cell("hidden"),           cell("hidden"),           cell("hidden active-turn"),
-                  cell("revealed","·"),   cell("revealed n1","1"),  cell("hidden"),           cell("hidden"),
-                  cell("revealed","·"),   cell("revealed n1","1"),  cell("bomb-explosive","💣"), cell("hidden"),
-                  cell("revealed n1","1"),cell("revealed n2","2"),  cell("hidden"),           cell("hidden"),
+                  cell("revealed n1", "1"), cell("hidden"), cell("hidden"), cell("hidden active-turn"),
+                  cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"), cell("hidden"),
+                  cell("revealed", "·"), cell("revealed n1", "1"), cell("bomb-explosive", "💣"), cell("hidden"),
+                  cell("revealed n1", "1"), cell("revealed n2", "2"), cell("hidden"), cell("hidden"),
                 ];
                 previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_explosive_caption ?? ""}</div></div>`;
               }
@@ -4127,7 +4217,7 @@
       let floatCount = 0;
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          if (!prevRevealed[r]?.[c] && state.revealed[r][c] && state.grid[r][c] !== -1) {
+          if (!prevRevealed[r]?.[c] && isRevealedSafeCell(state, r, c)) {
             const cellEl = boardEl.children[r * cols + c];
             if (!cellEl) continue;
             const span = document.createElement("span");
@@ -4391,7 +4481,7 @@
       if (force && wrap.querySelector(".mode-briefing-toast")) {
         const existing = wrap.querySelector(".mode-briefing-toast");
         existing.classList.add("hide");
-        setTimeout(() => { try { existing.remove(); } catch {} }, 320);
+        setTimeout(() => { try { existing.remove(); } catch { } }, 320);
         return;
       }
       // If auto-show but toast already visible (rapid state updates), do nothing
@@ -4413,10 +4503,10 @@
       if (state.mode === "versus") {
         // 4x4: mix of revealed numbered cells in colors + 2 bombs owned by p1/p2, some hidden
         const grid = [
-          cell("revealed n1","1"), cell("bomb-p1","💣"), cell("revealed n2","2"), cell("hidden"),
-          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n3","3"), cell("hidden"),
-          cell("revealed n1","1"), cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-p2","💣"),
-          cell("hidden"),         cell("hidden"),          cell("revealed n1","1"), cell("hidden"),
+          cell("revealed n1", "1"), cell("bomb-p1", "💣"), cell("revealed n2", "2"), cell("hidden"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("revealed n3", "3"), cell("hidden"),
+          cell("revealed n1", "1"), cell("revealed n2", "2"), cell("revealed n2", "2"), cell("bomb-p2", "💣"),
+          cell("hidden"), cell("hidden"), cell("revealed n1", "1"), cell("hidden"),
         ];
         previewHTML = `
           <div class="mode-preview">
@@ -4430,10 +4520,10 @@
       } else if (state.mode === "coop") {
         // 4x4: most cells revealed, 2 bombs still hidden
         const grid = [
-          cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),          cell("bomb-coop","?"),
-          cell("revealed","·"),   cell("revealed n1","1"), cell("revealed n2","2"), cell("hidden"),
-          cell("revealed n1","1"),cell("revealed n2","2"), cell("revealed n2","2"), cell("bomb-coop","?"),
-          cell("revealed n1","1"),cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"), cell("bomb-coop", "?"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("revealed n2", "2"), cell("hidden"),
+          cell("revealed n1", "1"), cell("revealed n2", "2"), cell("revealed n2", "2"), cell("bomb-coop", "?"),
+          cell("revealed n1", "1"), cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"),
         ];
         previewHTML = `
           <div class="mode-preview">
@@ -4443,10 +4533,10 @@
       } else if (state.mode === "explosive") {
         // 4x4: sparse reveals, one bomb exposed, one cursor hovering
         const grid = [
-          cell("revealed n1","1"), cell("hidden"),          cell("hidden"),          cell("hidden active-turn"),
-          cell("revealed","·"),   cell("revealed n1","1"), cell("hidden"),          cell("hidden"),
-          cell("revealed","·"),   cell("revealed n1","1"), cell("bomb-explosive","💣"), cell("hidden"),
-          cell("revealed n1","1"),cell("revealed n2","2"), cell("hidden"),          cell("hidden"),
+          cell("revealed n1", "1"), cell("hidden"), cell("hidden"), cell("hidden active-turn"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"), cell("hidden"),
+          cell("revealed", "·"), cell("revealed n1", "1"), cell("bomb-explosive", "💣"), cell("hidden"),
+          cell("revealed n1", "1"), cell("revealed n2", "2"), cell("hidden"), cell("hidden"),
         ];
         previewHTML = `
           <div class="mode-preview">
@@ -4471,7 +4561,7 @@
       sessionStorage.setItem(seenKey, "1");
       function dismiss() {
         el.classList.add("hide");
-        setTimeout(() => { try { el.remove(); } catch {} }, 320);
+        setTimeout(() => { try { el.remove(); } catch { } }, 320);
       }
       el.querySelector(".mode-briefing-close").addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
       el.addEventListener("click", dismiss);
@@ -4484,7 +4574,7 @@
       const existing = wrap.querySelector(".mode-briefing-toast");
       if (existing) {
         existing.classList.add("hide");
-        setTimeout(() => { try { existing.remove(); } catch {} }, 320);
+        setTimeout(() => { try { existing.remove(); } catch { } }, 320);
         return;
       }
       const flagSvg = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="currentColor"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="currentColor"/></svg>`;
@@ -4495,10 +4585,10 @@
       const flaggedSvg = (color) => `<svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="${color}"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="${color}"/></svg>`;
       const flaggedCell = (color) => `<div class="mp-cell hidden flagged" style="border-color:rgba(200,160,0,0.7);display:flex;align-items:center;justify-content:center;">${flaggedSvg(color)}</div>`;
       const grid = [
-        cell("revealed n1","1"), cell("hidden"),            flaggedCell("var(--teal)"), cell("hidden"),
-        cell("revealed","·"),   cell("revealed n2","2"),   cell("hidden"),              cell("hidden"),
-        cell("revealed n1","1"), flaggedCell("var(--teal)"), cell("revealed n1","1"),   cell("hidden"),
-        cell("revealed","·"),   cell("revealed n1","1"),    cell("revealed","·"),       cell("hidden"),
+        cell("revealed n1", "1"), cell("hidden"), flaggedCell("var(--teal)"), cell("hidden"),
+        cell("revealed", "·"), cell("revealed n2", "2"), cell("hidden"), cell("hidden"),
+        cell("revealed n1", "1"), flaggedCell("var(--teal)"), cell("revealed n1", "1"), cell("hidden"),
+        cell("revealed", "·"), cell("revealed n1", "1"), cell("revealed", "·"), cell("hidden"),
       ];
       const previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.flag_help_caption ?? "Segura ou clique direito para marcar"}</div></div>`;
 
@@ -4517,7 +4607,7 @@
       wrap.appendChild(el);
       function dismiss() {
         el.classList.add("hide");
-        setTimeout(() => { try { el.remove(); } catch {} }, 320);
+        setTimeout(() => { try { el.remove(); } catch { } }, 320);
       }
       el.querySelector(".mode-briefing-close").addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
       el.addEventListener("click", dismiss);
@@ -4718,15 +4808,15 @@
         renderExplosiveFtMeter(state);
       } else if (state.mode === "coop" && typeof t.coop_safe_cells_progress === "function") {
         // Coop goal: reveal all safe cells (bombs stay hidden).
-        const totalSafe = (state.grid.length * (state.grid[0]?.length ?? 0)) - state.totalBombs;
-        let foundSafe = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy.length : 0;
-        if (!foundSafe) {
-          for (let r = 0; r < state.grid.length; r++) {
-            for (let c = 0; c < (state.grid[0]?.length ?? 0); c++) {
-              if (state.revealed[r][c] && state.grid[r][c] !== -1) foundSafe++;
-            }
-          }
-        }
+        const totalCells = getGridRows(state) * getGridCols(state);
+        const totalSafe = Math.max(0, totalCells - state.totalBombs);
+
+        let foundSafe = Array.isArray(state.safeRevealedBy)
+          ? state.safeRevealedBy.length
+          : countRevealedSafeCells(state);
+
+        // Def against old/corrupted state.
+        foundSafe = Math.max(0, Math.min(foundSafe, totalSafe));
         document.getElementById("bombs-remaining").innerHTML = `<span class="status-pill"><span style="font-size:15px;line-height:1;">💣</span> ${state.totalBombs}</span>`;
         document.getElementById("bombs-remaining").style.display = "inline-flex";
         renderCoopMiniProgress(state, foundSafe, totalSafe);
@@ -4850,15 +4940,29 @@
       row.classList.toggle("visible", state.mode === "coop");
       row.setAttribute("aria-hidden", state.mode === "coop" ? "false" : "true");
 
-      // Render mini cells linearly; CSS handles wrapping based on available width.
-      const owners = Array.isArray(state.safeRevealedBy) ? state.safeRevealedBy : [];
+      const safeTotal = Math.max(0, totalSafe | 0);
+      const safeFound = Math.max(0, Math.min(foundSafe | 0, safeTotal));
+      const owners = Array.isArray(state.safeRevealedBy)
+        ? state.safeRevealedBy.slice(0, safeTotal)
+        : [];
+
       const cells = [];
-      for (let i = 0; i < totalSafe; i++) {
-        const o = i < (foundSafe | 0) ? owners[i] : undefined;
-        const cls = o === 0 ? "coop-mini-cell p1" : o === 1 ? "coop-mini-cell p2" : "coop-mini-cell";
+
+      for (let i = 0; i < safeTotal; i++) {
+        const o = i < safeFound ? owners[i] : undefined;
+        const cls =
+          o === 0 ? "coop-mini-cell p1" :
+            o === 1 ? "coop-mini-cell p2" :
+              "coop-mini-cell";
+
         cells.push(`<span class="${cls}"></span>`);
       }
-      row.innerHTML = `<div class="coop-mini-progress" aria-hidden="true"><div class="coop-mini-progress-cells">${cells.join("")}</div><span class="coop-mini-progress-counter">${foundSafe | 0}/${totalSafe}</span></div>`;
+
+      row.innerHTML = `
+      <div class="coop-mini-progress" aria-hidden="true">
+        <div class="coop-mini-progress-cells">${cells.join("")}</div>
+        <span class="coop-mini-progress-counter">${safeFound}/${safeTotal}</span>
+      </div>`;
     }
 
     function renderExplosiveFtMeter(state) {
@@ -4897,103 +5001,165 @@
     }
 
     function renderBoard(state) {
-      const cols = { easy: 6, medium: 8, hard: 10 }[state.difficulty];
-      const rows = state.grid.length;
+      const rows = getGridRows(state);
+      const cols = getGridCols(state) || ({ easy: 6, medium: 8, hard: 10 }[state.difficulty] ?? 10);
+
       const boardEl = document.getElementById("board");
       const boardWrap = document.querySelector("#screen-game .board-wrap");
 
-      // Get the actual available height from the max-height CSS property (70vh)
       const maxHeightStyle = getComputedStyle(boardWrap).maxHeight;
       const maxHeightPx = parseFloat(maxHeightStyle) || (window.innerHeight * 0.7);
 
-      const availW = Math.max(240, Math.min(640, document.querySelector(".container").clientWidth) - 28 /* wrap padding */ - 2);
-      const availH = maxHeightPx - 28 /* wrap padding */ - 2;
+      const availW = Math.max(
+        240,
+        Math.min(640, document.querySelector(".container").clientWidth) - 28 - 2
+      );
+
+      const availH = maxHeightPx - 28 - 2;
       const cssGap = getComputedStyle(document.documentElement).getPropertyValue("--cell-gap").trim();
       const gap = Number.parseFloat(cssGap) || 4;
       const byW = Math.floor((availW - (cols - 1) * gap) / cols);
       const byH = Math.floor((availH - (rows - 1) * gap) / rows);
       const cellSize = Math.max(28, Math.min(56, byW, byH));
+
       boardEl.style.gridTemplateColumns = `repeat(${cols}, ${cellSize}px)`;
 
       if (boardEl.children.length !== rows * cols) {
         boardEl.innerHTML = "";
+
         for (let r = 0; r < rows; r++) {
           for (let c = 0; c < cols; c++) {
             const cell = document.createElement("div");
             cell.className = "cell";
-            const row = r, col = c;
+
+            const row = r;
+            const col = c;
+
             cell.addEventListener("click", () => handleCellClick(row, col));
-            cell.addEventListener("contextmenu", (e) => { e.preventDefault(); handleCellFlag(row, col); });
-            // Long press for mobile
+            cell.addEventListener("contextmenu", (e) => {
+              e.preventDefault();
+              handleCellFlag(row, col);
+            });
+
             let _lpTimer = null;
             let _lpFired = false;
-            cell.addEventListener("touchstart", (e) => {
+
+            cell.addEventListener("touchstart", () => {
               _lpFired = false;
-              _lpTimer = setTimeout(() => { _lpTimer = null; _lpFired = true; handleCellFlag(row, col); }, 400);
+              _lpTimer = setTimeout(() => {
+                _lpTimer = null;
+                _lpFired = true;
+                handleCellFlag(row, col);
+              }, 400);
             }, { passive: true });
+
             cell.addEventListener("touchend", (e) => {
-              if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; }
-              if (_lpFired) { _lpFired = false; e.preventDefault(); }
+              if (_lpTimer) {
+                clearTimeout(_lpTimer);
+                _lpTimer = null;
+              }
+
+              if (_lpFired) {
+                _lpFired = false;
+                e.preventDefault();
+              }
             });
-            cell.addEventListener("touchmove",  () => { if (_lpTimer) { clearTimeout(_lpTimer); _lpTimer = null; } });
+
+            cell.addEventListener("touchmove", () => {
+              if (_lpTimer) {
+                clearTimeout(_lpTimer);
+                _lpTimer = null;
+              }
+            });
+
             boardEl.appendChild(cell);
           }
         }
       }
 
-      // Keep cell sizing responsive even when reusing existing DOM nodes (e.g. rotate phone / resize window).
       const fontSize = Math.max(11, Math.floor(cellSize * 0.42));
+
       for (const el of boardEl.children) {
         el.style.width = cellSize + "px";
         el.style.fontSize = fontSize + "px";
       }
 
-      // Preserve last clicked cell highlight after re-render
-      const lastClickedCellEl = lastClickedCell ? boardEl.children[lastClickedCell.r * cols + lastClickedCell.c] : null;
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
           const cell = boardEl.children[r * cols + c];
+          const value = state.grid?.[r]?.[c] ?? HIDDEN_CELL;
+          const isRevealed = state.revealed?.[r]?.[c] === true;
+
           cell.className = "cell";
           cell.innerHTML = "";
+          cell.textContent = "";
           cell.style.background = "";
           cell.style.borderColor = "";
-          // Restore highlight if this is the last clicked cell (from server)
+
           if (state.lastPlayerClicks?.length > 0) {
-            const isInLastPlayerClicks = state.lastPlayerClicks.some(click => click.row === r && click.col === c);
+            const isInLastPlayerClicks = state.lastPlayerClicks.some(
+              click => click.row === r && click.col === c
+            );
+
             if (isInLastPlayerClicks) {
-              const className = state.lastPlayerClicks[0].playerIndex === 0 ? "last-clicked-p1" : "last-clicked-p2";
+              const className =
+                state.lastPlayerClicks[0].playerIndex === 0
+                  ? "last-clicked-p1"
+                  : "last-clicked-p2";
+
               cell.classList.add(className);
             }
           }
-          if (!state.revealed[r][c]) {
-            // Show flag if present
+
+          // Célula escondida.
+          // -2 significa desconhecida/fechada, não significa 0.
+          if (!isRevealed || value === HIDDEN_CELL) {
             const isFlagged = state.mode === "coop"
               ? state.flags?.[r]?.[c]
               : localFlags[`${r},${c}`];
+
             if (isFlagged) {
               const flagColor = state.mode === "coop"
                 ? "var(--text-muted)"
                 : (myPlayerIndex === 0 ? "var(--teal)" : "var(--coral)");
-              const flagBg = "";
+
               const flagBorder = "rgba(200, 160, 0, 0.7)";
+
               cell.classList.add("flagged");
-              cell.style.background = flagBg;
               cell.style.borderColor = flagBorder;
-              cell.innerHTML = `<svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="${flagColor}"/>
-                <path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="${flagColor}"/>
-              </svg>`;
+              cell.innerHTML = `
+                <svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="${flagColor}"/>
+                  <path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="${flagColor}"/>
+                </svg>`;
             }
+
             continue;
           }
-          if (state.grid[r][c] === -1) {
-            const by = state.foundBy[r][c];
-            cell.classList.add("revealed", by === 0 ? "bomb-p1" : by === 1 ? "bomb-p2" : "bomb-hidden");
+
+          if (value === -1) {
+            const by = state.foundBy?.[r]?.[c];
+
+            cell.classList.add(
+              "revealed",
+              by === 0 ? "bomb-p1" :
+                by === 1 ? "bomb-p2" :
+                  "bomb-hidden"
+            );
+
             cell.textContent = "💣";
-          } else {
-            const v = state.grid[r][c];
-            if (v === 0) cell.classList.add("revealed", "empty");
-            else { cell.classList.add("revealed", "num-" + v); cell.textContent = v; }
+            continue;
+          }
+
+          if (value === 0) {
+            cell.classList.add("revealed", "empty");
+            continue;
+          }
+
+          if (value > 0) {
+            cell.classList.add("revealed", "num-" + value);
+            cell.textContent = value;
+            continue;
           }
         }
       }
@@ -5007,15 +5173,15 @@
     function _flagsKey() { return roomId ? `mf-flags:${roomId}` : null; }
     function saveLocalFlags() {
       const k = _flagsKey(); if (!k) return;
-      try { sessionStorage.setItem(k, JSON.stringify(localFlags)); } catch {}
+      try { sessionStorage.setItem(k, JSON.stringify(localFlags)); } catch { }
     }
     function loadLocalFlags() {
       const k = _flagsKey(); if (!k) return;
-      try { const raw = sessionStorage.getItem(k); if (raw) localFlags = JSON.parse(raw); } catch {}
+      try { const raw = sessionStorage.getItem(k); if (raw) localFlags = JSON.parse(raw); } catch { }
     }
     function clearLocalFlags() {
       localFlags = {};
-      const k = _flagsKey(); if (k) try { sessionStorage.removeItem(k); } catch {}
+      const k = _flagsKey(); if (k) try { sessionStorage.removeItem(k); } catch { }
     }
     window.addEventListener("resize", () => {
       if (!currentState) return;
@@ -5127,10 +5293,6 @@
         : localFlags[`${r},${c}`];
       if (isFlagged) return;
       if (myPlayerIndex !== currentState.currentPlayer) return;
-
-      if (currentState.grid[r][c] === -1) {
-        playBombSound();
-      }
 
       socket.send(JSON.stringify({ type: "reveal", row: r, col: c }));
     }
