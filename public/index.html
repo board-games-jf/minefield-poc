@@ -4698,7 +4698,7 @@
             ? (POINTS_TABLE.explosive[state.explosiveSeries?.target] ?? 0)
             : (POINTS_TABLE[state.mode]?.[state.difficulty] ?? 0);
           if (pts > 0) {
-            pointsWorthEl.innerHTML = `<span class="status-pill" title="Pontos em jogo"><span style="font-size:14px;line-height:1;">🏆</span> ${pts} pts</span>`;
+            pointsWorthEl.innerHTML = `<span class="status-pill gold" title="Pontos em jogo"><span style="font-size:14px;line-height:1;">🏆</span> ${pts} pts</span>`;
             pointsWorthEl.style.display = "inline-flex";
           } else {
             pointsWorthEl.style.display = "none";
