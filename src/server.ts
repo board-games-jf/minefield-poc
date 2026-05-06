@@ -12,6 +12,9 @@ const POINTS_TABLE = {
   explosive: { 2: 10, 3: 20, 5: 30, 10: 40 } as Record<2 | 3 | 5 | 10, number>,
 } as const;
 
+// Bonus awarded per safe cell revealed in coop mode.
+const CELL_BONUS = 10;
+
 export interface DifficultyConfig {
   rows: number;
   cols: number;
@@ -373,6 +376,9 @@ export default class GameRoom implements Party.Server {
       this.state.rematchReady = [false, false];
     }
 
+    // Backward-compat migration: recompute coop per-cell scores from safeRevealedBy.
+    if (this.applyCoopScoreMigration()) await this.persist();
+
     // Resume any pending explosive cooldown on wake.
     if (this.state?.mode === "explosive" && this.state.explosiveCooldownUntil && this.state.status === "playing") {
       const ms = Math.max(0, this.state.explosiveCooldownUntil - Date.now());
@@ -445,8 +451,9 @@ export default class GameRoom implements Party.Server {
         const p = this.state.players[existingSlot];
         if (p) p.id = conn.id;
         this.connectionToPlayer.set(conn.id, existingSlot);
+        const migrated = this.applyCoopScoreMigration();
         await this.persist();
-        this.send(conn, { type: "state", state: this.state });
+        if (migrated) this.broadcast(); else this.send(conn, { type: "state", state: this.state });
         return;
       }
     }
@@ -605,16 +612,17 @@ export default class GameRoom implements Party.Server {
       } else {
         this.state.safeRevealedBy = Array.from({ length: newlySafe.length }, () => playerIndex);
       }
+      // Accumulate per-cell bonus for coop (always track for display; ranking exclusion handled separately).
+      if (this.state.mode === "coop" && newlySafe.length > 0) {
+        const p = this.state.players[playerIndex];
+        if (p && p.id !== "ai") p.score += newlySafe.length * CELL_BONUS;
+      }
       this.state.currentPlayer = playerIndex === 0 ? 1 : 0;
       if (allSafeCellsRevealed(this.state)) {
         this.state.status = "finished";
         if (this.state.mode === "coop") {
           this.state.coopResult = "win";
-          const isAiGame = this.state.players[0]?.id === "ai" || this.state.players[1]?.id === "ai";
-          if (!isAiGame) {
-            const pts = POINTS_TABLE.coop[this.state.difficulty as keyof typeof POINTS_TABLE.coop] ?? 0;
-            for (const p of this.state.players) { if (p) p.score = pts; }
-          }
+          // Base prize was already seeded into score at game start; nothing extra to add here.
         }
       }
     }
@@ -699,6 +707,37 @@ export default class GameRoom implements Party.Server {
       await this.room.storage.put("aiFlags", this.aiFlags);
       this.scheduleAiMove(this.aiLevel);
     }
+  }
+
+  /** Recomputes coop per-cell scores from foundBy/revealed for pre-bonus sessions.
+   *  Returns true if scores were changed (caller should broadcast). */
+  private applyCoopScoreMigration(): boolean {
+    if (!this.state || this.state.mode !== "coop" || this.state.status !== "playing") return false;
+    const isAiGame = this.state.players[0]?.id === "ai" || this.state.players[1]?.id === "ai";
+    const p0 = this.state.players[0];
+    const p1 = this.state.players[1];
+    if (!p0 && !p1) return false;
+    // Both scores must be 0 to qualify for migration (avoid double-applying).
+    const s0 = p0?.score ?? 0;
+    const s1 = p1?.score ?? 0;
+    if (s0 !== 0 || s1 !== 0) return false;
+    // Count safe revealed cells per player via foundBy grid (available since day 1).
+    const counts = [0, 0];
+    const rows = this.state.foundBy.length;
+    const cols = this.state.foundBy[0]?.length ?? 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (this.state.revealed[r][c] && this.state.grid[r][c] !== -1) {
+          const owner = this.state.foundBy[r][c];
+          if (owner === 0 || owner === 1) counts[owner]++;
+        }
+      }
+    }
+    if (counts[0] === 0 && counts[1] === 0) return false;
+    // Apply only to human players (base is added on the frontend).
+    if (p0 && p0.id !== "ai") p0.score = counts[0] * CELL_BONUS;
+    if (p1 && p1.id !== "ai") p1.score = counts[1] * CELL_BONUS;
+    return true;
   }
 
   private resetMatchStatePreservingPlayers() {
@@ -943,12 +982,13 @@ export default class GameRoom implements Party.Server {
     if (!this.state || this.state.status !== "finished") return [];
     const [playerOne, playerTwo] = this.state.players;
     if (!playerOne || !playerTwo) return [];
-    // Coop win: both players are winners (scores were set equal on win).
+    // Coop win: both players are winners. Add base prize to cell delta for ranking.
     if (this.state.mode === "coop") {
       if (this.state.coopResult !== "win") return [];
       const isAiGame = playerOne.id === "ai" || playerTwo.id === "ai";
       if (isAiGame) return [];
-      return [playerOne, playerTwo];
+      const base = POINTS_TABLE.coop[this.state.difficulty as keyof typeof POINTS_TABLE.coop] ?? 0;
+      return [playerOne, playerTwo].map(p => ({ ...p, score: base + p.score }));
     }
     if (playerOne.score === playerTwo.score) return [];
     return playerOne.score > playerTwo.score ? [playerOne] : [playerTwo];

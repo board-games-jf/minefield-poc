@@ -884,6 +884,39 @@
       flex-shrink: 0;
       white-space: nowrap;
     }
+    .status-pill.gold {
+      border-color: rgba(255, 215, 0, 0.35);
+      background: rgba(255, 215, 0, 0.08);
+      color: #ffd700;
+      font-weight: 600;
+    }
+    .status-pill.gold.bump {
+      animation: pill-bump 0.4s ease;
+    }
+    @keyframes pill-bump {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.16); background: rgba(255,215,0,0.22); }
+      100% { transform: scale(1); }
+    }
+    .cell-float-pts {
+      position: absolute;
+      top: -2px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 11px;
+      font-weight: 800;
+      color: #ffd700;
+      pointer-events: none;
+      animation: cell-float-up 0.85s ease forwards;
+      z-index: 20;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+      white-space: nowrap;
+    }
+    @keyframes cell-float-up {
+      0%   { opacity: 1; transform: translateX(-50%) translateY(0); }
+      65%  { opacity: 1; transform: translateX(-50%) translateY(-22px); }
+      100% { opacity: 0; transform: translateX(-50%) translateY(-30px); }
+    }
 
     .mode-status-pill {
       display: inline-flex;
@@ -1909,6 +1942,7 @@
     .cell {
       aspect-ratio: 1;
       border-radius: 5px;
+      position: relative;
       border: 1.5px solid var(--border-strong);
       background: var(--bg-card);
       cursor: pointer;
@@ -3064,6 +3098,13 @@
       const p1 = state.players?.[0];
       const p2 = state.players?.[1];
       if (!p1 || !p2 || myPlayerIndex === null) return;
+
+      if (state.mode === "coop") {
+        if (state.coopResult === "win") playConfetti();
+        else playDefeatEffect();
+        return;
+      }
+
       if (p1.score === p2.score) return;
       const winnerIndex = p1.score > p2.score ? 0 : 1;
       if (winnerIndex === myPlayerIndex) playConfetti();
@@ -4018,7 +4059,45 @@
     // ── State ──────────────────────────────────────────────────────────────────
     let _lastStatusForFlags = null;
     let _lastBoardIdForFlags = null;
+    let _prevRevealed = null;
+
+    function spawnCellBonusFloats(prevRevealed, state) {
+      const isAiGame = state.players[0]?.id === "ai" || state.players[1]?.id === "ai";
+      if (state.mode !== "coop" || state.status !== "playing" || isAiGame) return;
+      const boardEl = document.getElementById("board");
+      if (!boardEl || !prevRevealed) return;
+      const rows = state.revealed.length;
+      const cols = state.revealed[0]?.length ?? 0;
+      let floatCount = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (!prevRevealed[r]?.[c] && state.revealed[r][c] && state.grid[r][c] !== -1) {
+            const cellEl = boardEl.children[r * cols + c];
+            if (!cellEl) continue;
+            const span = document.createElement("span");
+            span.className = "cell-float-pts";
+            span.style.animationDelay = `${floatCount * 55}ms`;
+            span.textContent = "+10";
+            cellEl.appendChild(span);
+            span.addEventListener("animationend", () => span.remove(), { once: true });
+            floatCount++;
+          }
+        }
+      }
+      if (floatCount > 0) {
+        const pillWrap = document.getElementById("points-worth");
+        const inner = pillWrap?.querySelector(".status-pill.gold");
+        if (inner) {
+          inner.classList.remove("bump");
+          void inner.offsetWidth;
+          inner.classList.add("bump");
+          inner.addEventListener("animationend", () => inner.classList.remove("bump"), { once: true });
+        }
+      }
+    }
+
     function handleState(state) {
+      _prevRevealed = currentState?.revealed ?? null;
       currentState = state;
 
       // Reset local flags on new board (rematch, new explosive round, first game)
@@ -4180,6 +4259,7 @@
 
       showScreen("screen-game");
       renderGame(state);
+      spawnCellBonusFloats(_prevRevealed, state);
       if (_forceExplosiveFtRerender && state.mode === "explosive") {
         try { renderExplosiveFtMeter(state); } catch { }
       }
@@ -4607,12 +4687,22 @@
       // ── Points worth ────────────────────────────────────────────────────────
       const pointsWorthEl = document.getElementById("points-worth");
       if (pointsWorthEl) {
-        const pts = state.mode === "explosive"
-          ? (POINTS_TABLE.explosive[state.explosiveSeries?.target] ?? 0)
-          : (POINTS_TABLE[state.mode]?.[state.difficulty] ?? 0);
-        if (pts > 0 && state.status === "playing") {
-          pointsWorthEl.innerHTML = `<span class="status-pill" title="Pontos em jogo"><span style="font-size:14px;line-height:1;">🏆</span> ${pts} pts</span>`;
+        const isAiGame = state.players[0]?.id === "ai" || state.players[1]?.id === "ai";
+        if (state.mode === "coop" && state.status === "playing" && !isAiGame) {
+          const coopBase = POINTS_TABLE.coop?.[state.difficulty] ?? 0;
+          const myScore = coopBase + (state.players[myPlayerIndex ?? 0]?.score ?? 0);
+          pointsWorthEl.innerHTML = `<span class="status-pill gold" title="Pontos acumulados"><span style="font-size:14px;line-height:1;">🏆</span> ${myScore} pts</span>`;
           pointsWorthEl.style.display = "inline-flex";
+        } else if (state.mode !== "coop" && state.status === "playing") {
+          const pts = state.mode === "explosive"
+            ? (POINTS_TABLE.explosive[state.explosiveSeries?.target] ?? 0)
+            : (POINTS_TABLE[state.mode]?.[state.difficulty] ?? 0);
+          if (pts > 0) {
+            pointsWorthEl.innerHTML = `<span class="status-pill" title="Pontos em jogo"><span style="font-size:14px;line-height:1;">🏆</span> ${pts} pts</span>`;
+            pointsWorthEl.style.display = "inline-flex";
+          } else {
+            pointsWorthEl.style.display = "none";
+          }
         } else {
           pointsWorthEl.style.display = "none";
         }
