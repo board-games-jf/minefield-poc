@@ -728,3 +728,99 @@ describe("createInitialState coop — deferred grid", () => {
     }
   });
 });
+
+// ── pickAiCell deduction — certain-safe via player flags ───────────────────
+//
+// Board (0-based, 10×10). Reproduces the reported bug where the AI clicked a
+// dark cell (5,0) instead of the logically-safe cell (5,8).
+//
+// Legenda user (1-based) → 0-based:
+//   L6C6 = [5][5]  flag (player)
+//   L6C9 = [5][8]  unknown (should be deduced bomb, flagged by AI)
+//   L6C8 = [5][7]  unknown → CERTAIN SAFE (target)
+//   L7C7 = [6][6]  revealed = 1
+//   L7C8 = [6][7]  revealed = 3
+//   L7C9 = [6][8]  unknown → certain bomb
+//   L8C8 = [7][7]  revealed = 2
+//   L8C9 = [7][8]  flag (player)
+//   L8C10= [7][9]  revealed = 2
+//
+// Deduction chain:
+//   [6][6]=1, knownBomb=[5][5] → remaining=0 → [5][6],[5][7] certain safe
+//   [7][7]=2, knownBomb=[7][8] → remaining=1 → only unknown=[6][8] → certain bomb
+//   [6][7]=3, knownBombs=[7][8]+[6][8] → remaining=1 → [5][7] safe (already), [5][8] certain bomb
+//
+// Expected: pickAiCell returns [5][7] (L6,C8 in 1-based).
+
+describe("pickAiCell — certain-safe via flags deduction", () => {
+  function makeBoardState(): GameState {
+    // 10×10 all-unknown grid (no bomb positions needed — AI only reads revealed + numbers)
+    const rows = 10, cols = 10;
+    const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(0));
+    const revealed: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const foundBy: (0 | 1 | null)[][] = Array.from({ length: rows }, () => Array(cols).fill(null));
+    const flags: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
+
+    // Revealed numbered cells (0-based)
+    const numberedCells: [number, number, number][] = [
+      // [row, col, value]
+      [5, 0, 1], [5, 1, 1], [5, 2, 1], [5, 3, 2], [5, 4, 3], [5, 6, 3], // L6 C1-C3,C4,C5,C7
+      [6, 0, 0], [6, 1, 0], [6, 2, 0], [6, 3, 0], [6, 4, 1], [6, 5, 1], [6, 6, 1], [6, 7, 3], // L7
+      [7, 0, 1], [7, 1, 1], [7, 2, 0], [7, 3, 0], [7, 4, 0], [7, 5, 0], [7, 6, 0], [7, 7, 2], [7, 9, 2], // L8
+      [8, 1, 1], [8, 2, 0], [8, 3, 0], [8, 4, 0], [8, 5, 0], [8, 6, 0], [8, 7, 1], [8, 8, 1], [8, 9, 1], // L9
+      [9, 0, 1], [9, 1, 1], [9, 2, 0], [9, 3, 0], [9, 4, 0], [9, 5, 0], [9, 6, 0], [9, 7, 0], [9, 8, 0], [9, 9, 0], // L10
+    ];
+    for (const [r, c, v] of numberedCells) {
+      grid[r][c] = v;
+      revealed[r][c] = true;
+      foundBy[r][c] = 0;
+    }
+
+    // Player flags (1-based: L6C6=[5][5], L8C9=[7][8], L9C1=[8][0])
+    flags[5][5] = true;
+    flags[7][8] = true;
+    flags[8][0] = true;
+
+    const state: GameState = {
+      status: "playing",
+      difficulty: "hard",
+      mode: "coop",
+      players: [
+        { id: "human", name: "Human", score: 0, bombs: 0 },
+        { id: "ai",    name: "NêmesisBot", score: 0, bombs: 0 },
+      ],
+      currentPlayer: 1,
+      grid,
+      revealed,
+      foundBy,
+      safeRevealedBy: [],
+      totalBombs: 20,
+      lastPlayerClicks: [],
+      rematchReady: [false, false],
+      flags,
+      coopGridReady: true,
+    };
+    return state;
+  }
+
+  it("deduces certain-safe cells via flag chain and picks one of them", () => {
+    const state = makeBoardState();
+    const aiFlags: boolean[][] = Array.from({ length: 10 }, () => Array(10).fill(false));
+
+    const pick = pickAiCell(state, aiFlags, "hard");
+    expect(pick).not.toBeNull();
+    // [5][7] (L6,C8): safe because [6][6]=1 has its only unknown neighbor here after flag at [5][5]
+    // [6][9] (L7,C10): safe because [7][9]=2 accounts for flag[7][8] + aiFlag[6][8]
+    const certainSafeCells = [[5, 7], [6, 9]];
+    const isCertainSafe = certainSafeCells.some(([r, c]) => pick!.row === r && pick!.col === c);
+    expect(isCertainSafe).toBe(true);
+  });
+
+  it("marks [6][8] (L7,C9) as certain bomb in aiFlags", () => {
+    const state = makeBoardState();
+    const aiFlags: boolean[][] = Array.from({ length: 10 }, () => Array(10).fill(false));
+    pickAiCell(state, aiFlags, "hard");
+    // After deduction, AI should have flagged [6][8] as a known bomb
+    expect(aiFlags[6][8]).toBe(true);
+  });
+});
