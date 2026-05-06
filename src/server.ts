@@ -27,6 +27,13 @@ export const CONFIGS: Record<Difficulty, DifficultyConfig> = {
   hard: { rows: 10, cols: 10, bombs: 30 },
 };
 
+// Lower bomb density for coop mode (same grid size, fewer bombs to reduce forced guessing).
+export const COOP_CONFIGS: Record<Difficulty, DifficultyConfig> = {
+  easy: { rows: 6, cols: 6, bombs: 6 },
+  medium: { rows: 8, cols: 8, bombs: 12 },
+  hard: { rows: 10, cols: 10, bombs: 20 },
+};
+
 export type GameStatus = "waiting" | "playing" | "finished";
 
 export interface Player {
@@ -238,7 +245,7 @@ export function floodRevealWithAttribution(
 }
 
 export function createInitialState(difficulty: Difficulty, mode: GameMode = "versus"): GameState {
-  const { rows, cols, bombs } = CONFIGS[difficulty];
+  const { rows, cols, bombs } = (mode === "coop" ? COOP_CONFIGS : CONFIGS)[difficulty];
   return {
     status: "waiting",
     difficulty,

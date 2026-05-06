@@ -2802,6 +2802,7 @@
       try { updateFtOptions(); } catch { }
       try { syncSoloCopyForMode(); } catch { }
       try { updatePointsPreview(); } catch { }
+      try { updateDiffDescs(); } catch { }
 
       // Re-render dynamic content if game is active
       if (currentState) renderGame(currentState);
@@ -2860,7 +2861,12 @@
           // diff info
           const diffEl = document.getElementById("join-diff-info");
           if (diffEl && diffEl.dataset.difficulty) {
-            const diffDesc = { easy: t.diff_easy_desc, medium: t.diff_medium_desc, hard: t.diff_hard_desc };
+            const isCoopEl = diffEl.dataset.mode === "coop";
+            const diffDesc = {
+              easy:   isCoopEl ? (t.diff_easy_desc_coop   ?? t.diff_easy_desc)   : t.diff_easy_desc,
+              medium: isCoopEl ? (t.diff_medium_desc_coop ?? t.diff_medium_desc) : t.diff_medium_desc,
+              hard:   isCoopEl ? (t.diff_hard_desc_coop   ?? t.diff_hard_desc)   : t.diff_hard_desc,
+            };
             diffEl.textContent = diffDesc[diffEl.dataset.difficulty] ?? "";
           }
           // invited_by line
@@ -3554,6 +3560,14 @@
       explosive: { 2: 10, 3: 20, 5: 30, 10: 40 },
     };
 
+    // Bomb counts per difficulty — mirrors server CONFIGS / COOP_CONFIGS
+    const BOMB_COUNTS = {
+      versus:    { easy: 10, medium: 20, hard: 30 },
+      coop:      { easy: 6,  medium: 12, hard: 20 },
+      explosive: { easy: 10, medium: 20, hard: 30 },
+    };
+    const GRID_LABELS = { easy: "6 × 6", medium: "8 × 8", hard: "10 × 10" };
+
     function getSelectedMode() {
       return document.getElementById("mode-select")?.value ?? "versus";
     }
@@ -3646,8 +3660,26 @@
       preview.classList.add("visible");
     }
 
+    function updateDiffDescs() {
+      const mode = getSelectedMode();
+      const bombs = BOMB_COUNTS[mode] ?? BOMB_COUNTS.versus;
+      const pillBase = "display:inline-flex;align-items:center;gap:3px;padding:0 7px;height:20px;border-radius:6px;font-size:11px;line-height:1;white-space:nowrap;color:var(--text-muted);";
+      const gridPill = (grid) =>
+        `<span style="${pillBase}background:var(--bg-card);border:0.5px solid var(--border);">${grid}</span>`;
+      const bombPill = (n) =>
+        `<span style="${pillBase}background:var(--coral-light);border:0.5px solid rgba(153,60,29,0.35);"><span style="font-size:12px;line-height:1;display:flex;align-items:center;">💣</span>${n}</span>`;
+      const entries = [
+        { el: document.querySelector(".diff-desc[data-i18n='diff_easy_desc']"),   diff: "easy" },
+        { el: document.querySelector(".diff-desc[data-i18n='diff_medium_desc']"), diff: "medium" },
+        { el: document.querySelector(".diff-desc[data-i18n='diff_hard_desc']"),   diff: "hard" },
+      ];
+      for (const { el, diff } of entries) {
+        if (el) el.innerHTML = `${gridPill(GRID_LABELS[diff])} ${bombPill(bombs[diff])}`;
+      }
+    }
+
     function bindPointsPreviewUpdates() {
-      const update = () => updatePointsPreview();
+      const update = () => { updatePointsPreview(); updateDiffDescs(); };
 
       document.getElementById("mode-select")?.addEventListener("change", update);
       document.getElementById("ft-select")?.addEventListener("change", update);
@@ -3800,6 +3832,7 @@
         syncSoloCopyForMode();
         persistCreatePrefs();
         updatePointsPreview();
+        updateDiffDescs();
       };
 
       const ftSelect = document.getElementById("ft-select");
@@ -3828,6 +3861,7 @@
       syncSoloCopyForMode();
       updateFtOptions();
       updatePointsPreview();
+      updateDiffDescs();
       persistCreatePrefs();
 
       document.getElementById("btn-create").onclick = () => {
@@ -3889,10 +3923,11 @@
             return;
           }
           if (state.players[0]) {
+            const isCoopRoom = state.mode === "coop";
             const diffDesc = {
-              easy: t.diff_easy_desc,
-              medium: t.diff_medium_desc,
-              hard: t.diff_hard_desc,
+              easy: isCoopRoom ? (t.diff_easy_desc_coop ?? t.diff_easy_desc) : t.diff_easy_desc,
+              medium: isCoopRoom ? (t.diff_medium_desc_coop ?? t.diff_medium_desc) : t.diff_medium_desc,
+              hard: isCoopRoom ? (t.diff_hard_desc_coop ?? t.diff_hard_desc) : t.diff_hard_desc,
             };
             const MODE_ICONS = { versus: "⚔️", coop: "🤝", explosive: "💥" };
             const MODE_NAME_KEYS = { versus: "mode_versus", coop: "mode_coop", explosive: "mode_explosive" };
@@ -3910,7 +3945,7 @@
 
             // Difficulty
             const diffEl = document.getElementById("join-diff-info");
-            if (diffEl) { diffEl.dataset.difficulty = state.difficulty; diffEl.textContent = diffDesc[state.difficulty] ?? ""; diffEl.style.display = ""; }
+            if (diffEl) { diffEl.dataset.difficulty = state.difficulty; diffEl.dataset.mode = state.mode; diffEl.textContent = diffDesc[state.difficulty] ?? ""; diffEl.style.display = ""; }
 
             // Mode card
             const modeCard = document.getElementById("join-mode-card");
@@ -4557,7 +4592,7 @@
     function updateFlagsCounter(state) {
       const flagsCounterEl = document.getElementById("flags-counter");
       if (!flagsCounterEl) return;
-      if (state && state.status === "playing") {
+      if (state && (state.status === "playing" || state.status === "finished")) {
         const flagCount = state.mode === "coop"
           ? (state.flags ? state.flags.flat().filter(Boolean).length : 0)
           : Object.values(localFlags).filter(Boolean).length;
@@ -4686,8 +4721,8 @@
             }
           }
         }
-        document.getElementById("bombs-remaining").innerHTML = "";
-        document.getElementById("bombs-remaining").style.display = "none";
+        document.getElementById("bombs-remaining").innerHTML = `<span class="status-pill"><span style="font-size:15px;line-height:1;">💣</span> ${state.totalBombs}</span>`;
+        document.getElementById("bombs-remaining").style.display = "inline-flex";
         renderCoopMiniProgress(state, foundSafe, totalSafe);
         const ftRow = document.getElementById("explosive-ft-row");
         if (ftRow) { ftRow.classList.remove("visible"); ftRow.innerHTML = ""; ftRow.setAttribute("aria-hidden", "true"); }
@@ -4711,17 +4746,19 @@
       const pointsWorthEl = document.getElementById("points-worth");
       if (pointsWorthEl) {
         const isAiGame = state.players[0]?.id === "ai" || state.players[1]?.id === "ai";
-        if (state.mode === "coop" && state.status === "playing" && !isAiGame) {
+        if (state.mode === "coop" && !isAiGame) {
           const coopBase = POINTS_TABLE.coop?.[state.difficulty] ?? 0;
           const myScore = coopBase + (state.players[myPlayerIndex ?? 0]?.score ?? 0);
-          pointsWorthEl.innerHTML = `<span class="status-pill gold" title="Pontos acumulados"><span style="font-size:14px;line-height:1;">🏆</span> ${myScore} pts</span>`;
+          const label = state.status === "playing" ? "Pontos em jogo" : "Pontos";
+          pointsWorthEl.innerHTML = `<span class="status-pill gold" title="${label}"><span style="font-size:14px;line-height:1;">🏆</span> ${myScore} pts</span>`;
           pointsWorthEl.style.display = "inline-flex";
-        } else if (state.mode !== "coop" && state.status === "playing") {
+        } else if (state.mode !== "coop") {
           const pts = state.mode === "explosive"
             ? (POINTS_TABLE.explosive[state.explosiveSeries?.target] ?? 0)
             : (POINTS_TABLE[state.mode]?.[state.difficulty] ?? 0);
           if (pts > 0) {
-            pointsWorthEl.innerHTML = `<span class="status-pill gold" title="Pontos em jogo"><span style="font-size:14px;line-height:1;">🏆</span> ${pts} pts</span>`;
+            const label = state.status === "playing" ? "Pontos em jogo" : "Pontos";
+            pointsWorthEl.innerHTML = `<span class="status-pill gold" title="${label}"><span style="font-size:14px;line-height:1;">🏆</span> ${pts} pts</span>`;
             pointsWorthEl.style.display = "inline-flex";
           } else {
             pointsWorthEl.style.display = "none";
