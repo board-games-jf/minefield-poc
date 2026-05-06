@@ -826,13 +826,28 @@ export default class GameRoom implements Party.Server {
     await this.room.storage.put("rankingRecorded", this.rankingRecorded);
   }
 
+  private maskStateForClient(state: GameState): GameState {
+    // Never reveal bomb positions for unrevealed cells — clients only need
+    // to know what is already revealed. This prevents cheating via DevTools.
+    const maskedGrid = state.grid.map((row, r) =>
+      row.map((cell, c) =>
+        cell === -1 && !state.revealed[r][c] ? 0 : cell
+      )
+    );
+    return { ...state, grid: maskedGrid };
+  }
+
   private broadcast() {
     if (!this.state) return;
-    this.room.broadcast(JSON.stringify({ type: "state", state: this.state } satisfies ServerMessage));
+    const masked = this.maskStateForClient(this.state);
+    this.room.broadcast(JSON.stringify({ type: "state", state: masked } satisfies ServerMessage));
   }
 
   private send(conn: Party.Connection, msg: ServerMessage) {
-    conn.send(JSON.stringify(msg));
+    const outMsg = msg.type === "state"
+      ? { ...msg, state: this.maskStateForClient(msg.state) }
+      : msg;
+    conn.send(JSON.stringify(outMsg));
   }
 
   private clearAiTimer() {
