@@ -366,7 +366,7 @@ export function isScoreUncatchable(state: GameState): boolean {
 
 export function allSafeCellsRevealed(state: GameState): boolean {
   // Coop grid has not been generated yet — no safe cells can have been revealed.
-  if (state.mode === "coop" && !state.coopGridReady) return false;
+  if (state.mode === "coop" && state.coopGridReady === false) return false;
 
   const { rows, cols } =
     state.mode === "coop"
@@ -710,7 +710,7 @@ export default class GameRoom implements Party.Server {
 
     // Coop: generate the real grid only on the first valid reveal by the current player.
     // This prevents revealing the zero-filled placeholder grid.
-    if (this.state.mode === "coop" && !this.state.coopGridReady) {
+    if (this.state.mode === "coop" && this.state.coopGridReady === false) {
       this.ensureCoopGridReady({ row, col });
     }
 
@@ -1071,7 +1071,7 @@ export default class GameRoom implements Party.Server {
   private ensureCoopGridReady(firstClick: { row: number; col: number }) {
     if (!this.state) return;
     if (this.state.mode !== "coop") return;
-    if (this.state.coopGridReady) return;
+    if (this.state.coopGridReady !== false) return;
 
     const { rows, cols, bombs } = COOP_CONFIGS[this.state.difficulty];
 
@@ -1194,7 +1194,7 @@ export default class GameRoom implements Party.Server {
     // If the AI starts the match, the board is still a zero-filled placeholder.
     // Generate the real board and use the firstClick cell directly — it is guaranteed
     // safe by the energy propagation algorithm, so no separate pickAiCell needed.
-    if (this.state.mode === "coop" && !this.state.coopGridReady) {
+    if (this.state.mode === "coop" && this.state.coopGridReady === false) {
       const firstClick = this.pickInitialAiCoopClick(rows, cols);
       if (!firstClick) return;
       this.ensureCoopGridReady(firstClick);
@@ -1246,7 +1246,7 @@ export default class GameRoom implements Party.Server {
     if (row < 0 || row >= rows || col < 0 || col >= cols) return;
 
     // Defensive guard: never reveal the coop placeholder.
-    if (this.state.mode === "coop" && !this.state.coopGridReady) return;
+    if (this.state.mode === "coop" && this.state.coopGridReady === false) return;
 
     if (this.state.revealed[row][col]) return;
 
