@@ -1192,11 +1192,48 @@ export default class GameRoom implements Party.Server {
 
     // Critical for coop:
     // If the AI starts the match, the board is still a zero-filled placeholder.
-    // Generate the real board BEFORE pickAiCell() and BEFORE any reveal logic reads state.grid.
+    // Generate the real board and use the firstClick cell directly — it is guaranteed
+    // safe by the energy propagation algorithm, so no separate pickAiCell needed.
     if (this.state.mode === "coop" && !this.state.coopGridReady) {
       const firstClick = this.pickInitialAiCoopClick(rows, cols);
       if (!firstClick) return;
       this.ensureCoopGridReady(firstClick);
+      this.ensureAiFlags();
+      // Click exactly the cell used as firstClick — safe by construction.
+      const { row: fcRow, col: fcCol } = firstClick;
+      if (!this.state.revealed[fcRow][fcCol]) {
+        const pick = { row: fcRow, col: fcCol };
+        // Fall through to the reveal logic below by overwriting row/col.
+        // We do this by continuing with the rest of aiMove using these coords.
+        // Inline the reveal here to avoid duplicating the rest of the function.
+        this.state.lastClickedCell = { row: fcRow, col: fcCol, playerIndex: 1 };
+        this.state.lastPlayerClicks = [{ row: fcRow, col: fcCol, playerIndex: 1 }];
+        const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, fcRow, fcCol, rows, cols);
+        if (this.state.flags) {
+          for (const { row: r, col: c } of newlySafe) {
+            if (this.state.flags[r]?.[c]) this.state.flags[r][c] = false;
+          }
+        }
+        if (this.state.safeRevealedBy) {
+          for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(1);
+        } else {
+          this.state.safeRevealedBy = Array.from({ length: newlySafe.length }, () => 1 as 0 | 1);
+        }
+        for (const { row: r, col: c } of newlySafe) this.state.foundBy[r][c] = 1;
+        this.state.currentPlayer = 0;
+        if (allSafeCellsRevealed(this.state)) {
+          this.state.status = "finished";
+          this.state.coopResult = "win";
+        }
+        await this.finalizeMatchIfNeeded();
+        await this.persist();
+        await this.room.storage.put("aiFlags", this.aiFlags);
+        this.broadcast();
+        if (this.state.status === "playing" && (this.state.currentPlayer as 0 | 1) === 1) {
+          this.scheduleAiMove(level);
+        }
+        return;
+      }
     }
 
     this.ensureAiFlags();

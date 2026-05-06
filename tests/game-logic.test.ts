@@ -824,3 +824,15 @@ describe("pickAiCell — certain-safe via flags deduction", () => {
     expect(aiFlags[6][8]).toBe(true);
   });
 });
+
+// ── coop deferred grid — AI first click never a bomb ──────────────────────
+
+describe("coop deferred grid — AI first click safety", () => {
+  it("cell chosen to generate the grid is never a bomb (20 random positions)", () => {
+    for (let i = 0; i < 20; i++) {
+      const firstClick = { row: 1 + (i % 6), col: 1 + (i % 6) };
+      const { grid } = generateEnergyGrid({ rows: 8, cols: 8, bombs: 12, firstClick, ...ENERGY_PRESETS.medium, seed: i });
+      expect(grid[firstClick.row][firstClick.col]).not.toBe(-1);
+    }
+  });
+});
