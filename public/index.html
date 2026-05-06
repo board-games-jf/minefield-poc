@@ -30,6 +30,12 @@
       font-size: 13px;
       color: var(--text-muted);
       line-height: 1.35;
+      cursor: pointer;
+      user-select: none;
+      transition: border-color 0.15s;
+    }
+    .mode-description-card:hover {
+      border-color: var(--border-strong);
     }
 
     .explosive-dot {
@@ -60,6 +66,8 @@
       box-shadow: 0 4px 20px rgba(0,0,0,0.4);
       animation: mode-toast-in 0.25s ease forwards;
       position: relative;
+      cursor: pointer;
+      user-select: none;
     }
 
     @keyframes mode-toast-in {
@@ -3705,7 +3713,11 @@
           <span class="join-mode-card-hint-chevron">${chevronSvg}</span>
         </div>
         <div class="join-mode-card-expand">${previewHTML}</div>`;
-      desc.querySelector(".join-mode-card-hint").addEventListener("click", () => desc.classList.toggle("open"));
+      desc.querySelector(".join-mode-card-hint").addEventListener("click", (e) => { e.stopPropagation(); desc.classList.toggle("open"); });
+      if (!desc.dataset.clickBound) {
+        desc.dataset.clickBound = "1";
+        desc.addEventListener("click", () => desc.classList.toggle("open"));
+      }
       if (wasOpen) desc.classList.add("open");
     }
 
@@ -3948,8 +3960,11 @@
               }
               modeExpandEl.innerHTML = previewHTML;
 
-              // Toggle expand on click
-              modeCard.addEventListener("click", () => modeCard.classList.toggle("open"));
+              // Toggle expand on click (whole card)
+              if (!modeCard.dataset.clickBound) {
+                modeCard.dataset.clickBound = "1";
+                modeCard.addEventListener("click", () => modeCard.classList.toggle("open"));
+              }
             }
           }
         }
@@ -4417,7 +4432,8 @@
         el.classList.add("hide");
         setTimeout(() => { try { el.remove(); } catch {} }, 320);
       }
-      el.querySelector(".mode-briefing-close").addEventListener("click", dismiss);
+      el.querySelector(".mode-briefing-close").addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
+      el.addEventListener("click", dismiss);
     }
 
     function showFlagsHelpToast() {
@@ -4458,10 +4474,12 @@
         <button class="mode-briefing-close" aria-label="Fechar" type="button">×</button>`;
       wrap.innerHTML = "";
       wrap.appendChild(el);
-      el.querySelector(".mode-briefing-close").addEventListener("click", () => {
+      function dismiss() {
         el.classList.add("hide");
         setTimeout(() => { try { el.remove(); } catch {} }, 320);
-      });
+      }
+      el.querySelector(".mode-briefing-close").addEventListener("click", (e) => { e.stopPropagation(); dismiss(); });
+      el.addEventListener("click", dismiss);
     }
 
     function showStickerToast(from, id) {
@@ -4473,8 +4491,7 @@
       const el = document.createElement("div");
       el.className = "sticker-toast " + (from === 0 ? "p1" : "p2");
       el.dataset.sticker = id;
-      el.innerHTML = `
-    <div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>`;
+      el.innerHTML = `<div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>`;
       toasts.appendChild(el);
       stickerLockedUntil = Math.max(stickerLockedUntil, Date.now() + STICKER_DISPLAY_MS);
       ensureAudioUnlocked();
