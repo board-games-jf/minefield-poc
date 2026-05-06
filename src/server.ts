@@ -675,7 +675,7 @@ export default class GameRoom implements Party.Server {
 
   private async handleSticker(conn: Party.Connection, id: string) {
     if (!this.state) return;
-    if (this.state.status !== "playing") return;
+    if (this.state.status !== "playing" && this.state.status !== "finished") return;
 
     const from = this.connectionToPlayer.get(conn.id);
     if (from === undefined) return;

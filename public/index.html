@@ -891,6 +891,12 @@
       color: var(--text-muted);
       flex-shrink: 0;
       white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    #flags-counter:hover .status-pill {
+      border-color: var(--border-strong);
+      color: var(--text);
     }
     .status-pill.gold {
       border-color: rgba(255, 215, 0, 0.35);
@@ -4353,7 +4359,7 @@
 
     function canSendSticker() {
       if (!socket) return false;
-      if (!currentState || currentState.status !== "playing") return false;
+      if (!currentState || (currentState.status !== "playing" && currentState.status !== "finished")) return false;
       if (myPlayerIndex === null) return false;
       return true;
     }
