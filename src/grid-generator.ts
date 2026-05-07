@@ -102,22 +102,22 @@ export type EnergyPreset = {
 export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
   {
     easy: {
-      safeEnergy: 2,
+      safeEnergy: 1,
       dangerSources: 2,
-      dangerEnergyMax: 4,
-      reliefPockets: 2,
-      reliefEnergyMax: 3,
-      reliefWeightMultiplier: 0.15,
+      dangerEnergyMax: 3,
+      reliefPockets: 1,
+      reliefEnergyMax: 2,
+      reliefWeightMultiplier: 0.35,
       dangerWeightMultiplier: 1.0,
     },
 
     medium: {
-      safeEnergy: 2,
+      safeEnergy: 1,
       dangerSources: 3,
       dangerEnergyMax: 5,
-      reliefPockets: 1,
+      reliefPockets: 2,
       reliefEnergyMax: 3,
-      reliefWeightMultiplier: 0.35,
+      reliefWeightMultiplier: 0.32,
       dangerWeightMultiplier: 1.2,
     },
 
@@ -125,9 +125,9 @@ export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
       safeEnergy: 1,
       dangerSources: 4,
       dangerEnergyMax: 6,
-      reliefPockets: 1,
-      reliefEnergyMax: 2,
-      reliefWeightMultiplier: 0.55,
+      reliefPockets: 3,
+      reliefEnergyMax: 3,
+      reliefWeightMultiplier: 0.45,
       dangerWeightMultiplier: 1.4,
     },
   };
@@ -657,7 +657,283 @@ export function countBombs(grid: number[][]): number {
   return total;
 }
 
+export type ZeroIsland = {
+  cells: Cell[];
+  size: number;
+  touchesFirstClick: boolean;
+  centerRow: number;
+  centerCol: number;
+};
+
+type EmotionalTarget = {
+  minLaterIslands: number;
+  maxLaterIslands: number;
+
+  minIslandSize: number;
+  maxIslandSize: number;
+
+  minLaterZeroCells: number;
+  maxLaterZeroCells: number;
+
+  maxFirstRevealFootprint: number;
+  maxLaterRevealFootprint: number;
+};
+
+const EMOTIONAL_TARGETS: Record<"easy" | "medium" | "hard", EmotionalTarget> = {
+  easy: {
+    // 6×6: se abrir demais, resolve o mapa.
+    minLaterIslands: 0,
+    maxLaterIslands: 1,
+
+    minIslandSize: 1,
+    maxIslandSize: 2,
+
+    minLaterZeroCells: 0,
+    maxLaterZeroCells: 3,
+
+    maxFirstRevealFootprint: 6,
+    maxLaterRevealFootprint: 5,
+  },
+
+  medium: {
+    // 8×8: já pode ter mais respiro.
+    minLaterIslands: 1,
+    maxLaterIslands: 2,
+
+    minIslandSize: 1,
+    maxIslandSize: 4,
+
+    minLaterZeroCells: 2,
+    maxLaterZeroCells: 7,
+
+    maxFirstRevealFootprint: 9,
+    maxLaterRevealFootprint: 8,
+  },
+
+  hard: {
+    // 10×10: mais ilhas, mas ainda controladas.
+    minLaterIslands: 2,
+    maxLaterIslands: 4,
+
+    minIslandSize: 2,
+    maxIslandSize: 5,
+
+    minLaterZeroCells: 4,
+    maxLaterZeroCells: 12,
+
+    maxFirstRevealFootprint: 12,
+    maxLaterRevealFootprint: 10,
+  },
+};
+
+function inferDifficultyFromBoard(rows: number, cols: number): "easy" | "medium" | "hard" {
+  const cells = rows * cols;
+  if (cells <= 36) return "easy";
+  if (cells <= 64) return "medium";
+  return "hard";
+}
+
+export function findZeroIslands(
+  grid: number[][],
+  firstClick: Cell,
+): ZeroIsland[] {
+  const rows = grid.length;
+  const cols = grid[0]?.length ?? 0;
+  const visited = Array.from({ length: rows }, () => Array(cols).fill(false));
+  const islands: ZeroIsland[] = [];
+
+  for (let sr = 0; sr < rows; sr++) {
+    for (let sc = 0; sc < cols; sc++) {
+      if (visited[sr][sc]) continue;
+      if (grid[sr][sc] !== 0) continue;
+
+      const queue: Cell[] = [{ row: sr, col: sc }];
+      const cells: Cell[] = [];
+
+      visited[sr][sc] = true;
+
+      let head = 0;
+      let touchesFirstClick = false;
+      let sumRow = 0;
+      let sumCol = 0;
+
+      while (head < queue.length) {
+        const cur = queue[head++];
+        cells.push(cur);
+
+        sumRow += cur.row;
+        sumCol += cur.col;
+
+        if (cur.row === firstClick.row && cur.col === firstClick.col) {
+          touchesFirstClick = true;
+        }
+
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue;
+
+            const nr = cur.row + dr;
+            const nc = cur.col + dc;
+
+            if (!isInside(rows, cols, nr, nc)) continue;
+            if (visited[nr][nc]) continue;
+            if (grid[nr][nc] !== 0) continue;
+
+            visited[nr][nc] = true;
+            queue.push({ row: nr, col: nc });
+          }
+        }
+      }
+
+      islands.push({
+        cells,
+        size: cells.length,
+        touchesFirstClick,
+        centerRow: sumRow / cells.length,
+        centerCol: sumCol / cells.length,
+      });
+    }
+  }
+
+  return islands;
+}
+
+/**
+ * Mede o tamanho visual da abertura causada por uma ilha de zero.
+ *
+ * No Campo Minado, clicar em um zero revela:
+ * - todos os zeros conectados;
+ * - todos os números ao redor desses zeros.
+ *
+ * Então a ilha visual costuma ser maior do que a quantidade de zeros.
+ */
+function getRevealFootprintSize(grid: number[][], zeroCells: Cell[]): number {
+  const rows = grid.length;
+  const cols = grid[0]?.length ?? 0;
+  const footprint = new Set<string>();
+
+  for (const cell of zeroCells) {
+    footprint.add(cellKey(cell.row, cell.col));
+
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const nr = cell.row + dr;
+        const nc = cell.col + dc;
+
+        if (!isInside(rows, cols, nr, nc)) continue;
+        if (grid[nr][nc] === -1) continue;
+
+        footprint.add(cellKey(nr, nc));
+      }
+    }
+  }
+
+  return footprint.size;
+}
+
+function scoreRange(value: number, min: number, max: number, weight: number): number {
+  if (value >= min && value <= max) return weight;
+
+  if (value < min) {
+    return -(min - value) * weight;
+  }
+
+  return -(value - max) * weight;
+}
+
+function scoreBoardForCoop(
+  result: GridGenResult,
+  options: GridGenOptions,
+): number {
+  const { rows, cols, firstClick } = options;
+  const difficulty = inferDifficultyFromBoard(rows, cols);
+  const target = EMOTIONAL_TARGETS[difficulty];
+
+  const islands = findZeroIslands(result.grid, firstClick);
+
+  const firstIsland = islands.find((island) => island.touchesFirstClick);
+  const laterIslands = islands.filter((island) => !island.touchesFirstClick);
+
+  const meaningfulLaterIslands = laterIslands.filter(
+    (island) => island.size >= target.minIslandSize,
+  );
+
+  const laterZeroCells = meaningfulLaterIslands.reduce(
+    (sum, island) => sum + island.size,
+    0,
+  );
+
+  let score = 0;
+
+  // 1. Quantidade de ilhas fora do começo.
+  score += scoreRange(
+    meaningfulLaterIslands.length,
+    target.minLaterIslands,
+    target.maxLaterIslands,
+    14,
+  );
+
+  // 2. Quantidade total de zeros fora do começo.
+  score += scoreRange(
+    laterZeroCells,
+    target.minLaterZeroCells,
+    target.maxLaterZeroCells,
+    6,
+  );
+
+  // 3. Abertura inicial controlada.
+  const firstRevealFootprint = firstIsland
+    ? getRevealFootprintSize(result.grid, firstIsland.cells)
+    : 0;
+
+  if (firstRevealFootprint === 0) {
+    // Primeiro clique seguro, mas sem respiro nenhum.
+    score -= 8;
+  } else if (firstRevealFootprint <= target.maxFirstRevealFootprint) {
+    score += 10;
+  } else {
+    score -= (firstRevealFootprint - target.maxFirstRevealFootprint) * 6;
+  }
+
+  // 4. Tamanho individual das ilhas e tamanho visual da abertura.
+  for (const island of meaningfulLaterIslands) {
+    if (island.size >= target.minIslandSize && island.size <= target.maxIslandSize) {
+      score += 8;
+    } else if (island.size > target.maxIslandSize) {
+      score -= (island.size - target.maxIslandSize) * 5;
+    }
+
+    const revealFootprint = getRevealFootprintSize(result.grid, island.cells);
+
+    if (revealFootprint <= target.maxLaterRevealFootprint) {
+      score += 6;
+    } else {
+      // Essa é a penalidade que evita ilha visual gigante no hard.
+      score -= (revealFootprint - target.maxLaterRevealFootprint) * 7;
+    }
+  }
+
+  // 5. Recompensa ilhas espalhadas pelo mapa.
+  for (const island of meaningfulLaterIslands) {
+    const dist =
+      Math.abs(island.centerRow - firstClick.row) +
+      Math.abs(island.centerCol - firstClick.col);
+
+    if (dist >= 3) score += 4;
+    if (dist >= 5) score += 4;
+  }
+
+  // 6. Evita mapa totalmente seco.
+  if (islands.length === 0) {
+    score -= 80;
+  }
+
+  return score;
+}
+
 // ── Main Entry Point ──────────────────────────────────────────────────────
+
+
 
 /**
  * Generates a Minesweeper grid for coop mode.
@@ -674,6 +950,50 @@ export function countBombs(grid: number[][]): number {
  * - weighted mine placement combines danger and relief.
  */
 export function generateGrid(options: GridGenOptions): GridGenResult {
+  validateOptions(options);
+
+  const attempts = 12;
+
+  const baseSeed =
+    options.seed ??
+    options.firstClick.row * 1000 +
+      options.firstClick.col * 37 +
+      options.rows * 101 +
+      options.cols * 503 +
+      options.bombs * 997 +
+      (Date.now() % 1_000_000);
+
+  let best: GridGenResult | null = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+  let lastError: unknown = null;
+
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const candidate = generateGridOnce({
+        ...options,
+        seed: baseSeed + i * 7919,
+      });
+
+      const score = scoreBoardForCoop(candidate, options);
+
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!best) {
+    if (lastError instanceof Error) throw lastError;
+    throw new Error("Failed to generate coop grid.");
+  }
+
+  return best;
+}
+
+function generateGridOnce(options: GridGenOptions): GridGenResult {
   validateOptions(options);
 
   const {

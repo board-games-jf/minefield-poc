@@ -1036,9 +1036,12 @@ export default class GameRoom implements Party.Server {
 
       this.resetMatchStatePreservingPlayers();
 
-      // New match: reset AI flags too.
+      // New match: always reset AI flags from scratch — stale flags from the
+      // previous grid would cause the AI to misidentify safe cells as bombs.
       if (this.state.players[1]?.id === "ai") {
-        this.ensureAiFlags();
+        const rows = this.state.grid.length;
+        const cols = this.state.grid[0]?.length ?? 0;
+        this.aiFlags = Array.from({ length: rows }, () => Array(cols).fill(false));
         await this.room.storage.put("aiFlags", this.aiFlags);
       } else {
         this.aiFlags = null;

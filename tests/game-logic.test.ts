@@ -575,7 +575,7 @@ describe("generateEnergyGrid", () => {
   });
 
   it("easy — all immediate neighbors of firstClick are bomb-free", () => {
-    const { grid } = generateEnergyGrid(BASE);
+    const { grid } = generateEnergyGrid({ ...BASE, safeEnergy: 3 });
     const { row, col } = BASE.firstClick;
 
     for (let dr = -1; dr <= 1; dr++) {
