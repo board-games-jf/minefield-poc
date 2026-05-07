@@ -102,7 +102,7 @@ export type EnergyPreset = {
 export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
   {
     easy: {
-      safeEnergy: 2,
+      safeEnergy: 1,
       dangerSources: 2,
       dangerEnergyMax: 3,
       reliefPockets: 1,
@@ -124,11 +124,11 @@ export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
     hard: {
       safeEnergy: 1,
       dangerSources: 4,
-      dangerEnergyMax: 6,
-      reliefPockets: 3,
+      dangerEnergyMax: 5,
+      reliefPockets: 4,
       reliefEnergyMax: 3,
-      reliefWeightMultiplier: 0.45,
-      dangerWeightMultiplier: 1.4,
+      reliefWeightMultiplier: 0.28,
+      dangerWeightMultiplier: 1.25,
     },
   };
 
@@ -681,7 +681,7 @@ type EmotionalTarget = {
 
 const EMOTIONAL_TARGETS: Record<"easy" | "medium" | "hard", EmotionalTarget> = {
   easy: {
-    // 6×6: se abrir demais, resolve o mapa.
+    // 6×6: very tight, so we allow even 0 later islands to avoid impossible boards.
     minLaterIslands: 0,
     maxLaterIslands: 1,
 
@@ -696,7 +696,7 @@ const EMOTIONAL_TARGETS: Record<"easy" | "medium" | "hard", EmotionalTarget> = {
   },
 
   medium: {
-    // 8×8: já pode ter mais respiro.
+    // 8×8: enough room for some breathing, but still small enough to feel tight.
     minLaterIslands: 1,
     maxLaterIslands: 2,
 
@@ -711,15 +711,15 @@ const EMOTIONAL_TARGETS: Record<"easy" | "medium" | "hard", EmotionalTarget> = {
   },
 
   hard: {
-    // 10×10: mais ilhas, mas ainda controladas.
-    minLaterIslands: 2,
-    maxLaterIslands: 4,
+    // 10×10: more breathing room, but still not too much.
+    minLaterIslands: 3,
+    maxLaterIslands: 5,
 
-    minIslandSize: 2,
-    maxIslandSize: 5,
+    minIslandSize: 1,
+    maxIslandSize: 4,
 
-    minLaterZeroCells: 4,
-    maxLaterZeroCells: 12,
+    minLaterZeroCells: 5,
+    maxLaterZeroCells: 14,
 
     maxFirstRevealFootprint: 12,
     maxLaterRevealFootprint: 10,
@@ -887,8 +887,7 @@ function scoreBoardForCoop(
     : 0;
 
   if (firstRevealFootprint === 0) {
-    // Primeiro clique seguro, mas sem respiro nenhum.
-    score -= 8;
+    score -= difficulty === "easy" ? 2 : 8;
   } else if (firstRevealFootprint <= target.maxFirstRevealFootprint) {
     score += 10;
   } else {
