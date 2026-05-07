@@ -726,7 +726,10 @@ const EMOTIONAL_TARGETS: Record<"easy" | "medium" | "hard", EmotionalTarget> = {
   },
 };
 
-function inferDifficultyFromBoard(rows: number, cols: number): "easy" | "medium" | "hard" {
+function inferDifficultyFromBoard(
+  rows: number,
+  cols: number,
+): "easy" | "medium" | "hard" {
   const cells = rows * cols;
   if (cells <= 36) return "easy";
   if (cells <= 64) return "medium";
@@ -831,7 +834,12 @@ function getRevealFootprintSize(grid: number[][], zeroCells: Cell[]): number {
   return footprint.size;
 }
 
-function scoreRange(value: number, min: number, max: number, weight: number): number {
+function scoreRange(
+  value: number,
+  min: number,
+  max: number,
+  weight: number,
+): number {
   if (value >= min && value <= max) return weight;
 
   if (value < min) {
@@ -896,7 +904,10 @@ function scoreBoardForCoop(
 
   // 4. Tamanho individual das ilhas e tamanho visual da abertura.
   for (const island of meaningfulLaterIslands) {
-    if (island.size >= target.minIslandSize && island.size <= target.maxIslandSize) {
+    if (
+      island.size >= target.minIslandSize &&
+      island.size <= target.maxIslandSize
+    ) {
       score += 8;
     } else if (island.size > target.maxIslandSize) {
       score -= (island.size - target.maxIslandSize) * 5;
@@ -932,8 +943,6 @@ function scoreBoardForCoop(
 
 // ── Main Entry Point ──────────────────────────────────────────────────────
 
-
-
 /**
  * Generates a Minesweeper grid for coop mode.
  *
@@ -951,7 +960,10 @@ function scoreBoardForCoop(
 export function generateGrid(options: GridGenOptions): GridGenResult {
   validateOptions(options);
 
-  const attempts = 12;
+  const difficulty = inferDifficultyFromBoard(options.rows, options.cols);
+
+  const attempts =
+    difficulty === "hard" ? 32 : difficulty === "medium" ? 18 : 12;
 
   const baseSeed =
     options.seed ??
