@@ -102,7 +102,7 @@ export type EnergyPreset = {
 export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
   {
     easy: {
-      safeEnergy: 1,
+      safeEnergy: 2,
       dangerSources: 2,
       dangerEnergyMax: 3,
       reliefPockets: 1,
@@ -112,7 +112,7 @@ export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
     },
 
     medium: {
-      safeEnergy: 1,
+      safeEnergy: 2,
       dangerSources: 3,
       dangerEnergyMax: 5,
       reliefPockets: 2,
