@@ -2057,6 +2057,46 @@
       cursor: default;
     }
 
+    /* Coop loss — unrevealed bomb */
+    .cell.bomb-coop-revealed {
+      background: #616161;
+      color: #eceff1;
+      cursor: default;
+    }
+
+    /* Coop loss — flag was on a bomb (correct) */
+    .cell.flag-correct-coop {
+      position: relative;
+    }
+    .cell.flag-correct-coop::after {
+      content: "✓";
+      position: absolute;
+      bottom: 4px;
+      right: 5px;
+      font-size: 11px;
+      font-weight: 900;
+      color: #ffd700;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    /* Coop loss — flag was on a safe cell (wrong) */
+    .cell.flag-wrong-coop {
+      position: relative;
+    }
+    .cell.flag-wrong-coop::after {
+      content: "✕";
+      position: absolute;
+      bottom: 3px;
+      right: 5px;
+      font-size: 11px;
+      font-weight: 900;
+      color: #f87171;
+      line-height: 1;
+      pointer-events: none;
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+    }
+
     .cell.flagged {
       cursor: pointer;
       display: flex;
@@ -3994,7 +4034,9 @@
             // If a rematch is pending, allow joining/reconnecting to accept it.
             const rr = Array.isArray(state.rematchReady) ? state.rematchReady : null;
             const pendingRematch = rr && ((rr[0] || rr[1]) && !(rr[0] && rr[1]));
-            if (!pendingRematch) {
+            // If this is one of the original players refreshing, reconnect so they see the final result.
+            const isOriginalPlayer = savedName && (state.players[0]?.name === savedName || state.players[1]?.name === savedName);
+            if (!pendingRematch && !isOriginalPlayer) {
               showScreen("screen-error");
               setErrorScreen("error_title_finished", "error_room_finished");
               return;
@@ -5117,6 +5159,36 @@
             const isFlagged = state.mode === "coop"
               ? state.flags?.[r]?.[c]
               : localFlags[`${r},${c}`];
+
+            // Coop loss: reveal where bombs were and validate flags.
+            if (state.mode === "coop" && state.status === "finished" && state.coopResult === "loss") {
+              const flagColor = "var(--text-muted)";
+              const flagBorder = "rgba(200, 160, 0, 0.7)";
+              const flagSvg = `<svg width="55%" height="55%" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path opacity="0.5" fill-rule="evenodd" clip-rule="evenodd" d="M6.5 1.75C6.5 1.33579 6.16421 1 5.75 1C5.33579 1 5 1.33579 5 1.75V21.75C5 22.1642 5.33579 22.5 5.75 22.5C6.16421 22.5 6.5 22.1642 6.5 21.75V13.6V3.6V1.75Z" fill="${flagColor}"/><path d="M13.5582 3.87333L13.1449 3.70801C11.5821 3.08288 9.8712 2.9258 8.22067 3.25591L6.5 3.60004V13.6L8.22067 13.2559C9.8712 12.9258 11.5821 13.0829 13.1449 13.708C14.8385 14.3854 16.7024 14.5119 18.472 14.0695L18.5721 14.0445C19.1582 13.898 19.4361 13.2269 19.1253 12.7089L17.5647 10.1078C17.2232 9.53867 17.0524 9.25409 17.0119 8.94455C16.9951 8.81543 16.9951 8.68466 17.0119 8.55553C17.0524 8.24599 17.2232 7.96141 17.5647 7.39225L18.8432 5.26136C19.1778 4.70364 18.6711 4.01976 18.0401 4.17751C16.5513 4.54971 14.9831 4.44328 13.5582 3.87333Z" fill="${flagColor}"/></svg>`;
+
+              if (value === -1 && isFlagged) {
+                // Correct flag: was on a real bomb.
+                cell.classList.add("flagged", "flag-correct-coop");
+                cell.style.borderColor = flagBorder;
+                cell.innerHTML = flagSvg;
+                continue;
+              }
+              if (value === -1) {
+                // Unrevealed bomb without flag: show amber.
+                cell.classList.add("bomb-coop-revealed");
+                cell.textContent = "💣";
+                continue;
+              }
+              if (isFlagged) {
+                // Wrong flag: was on a safe cell.
+                cell.classList.add("flagged", "flag-wrong-coop");
+                cell.style.borderColor = flagBorder;
+                cell.innerHTML = flagSvg;
+                continue;
+              }
+              // Unrevealed safe cell: leave as dark.
+              continue;
+            }
 
             if (isFlagged) {
               const flagColor = state.mode === "coop"
