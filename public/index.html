@@ -346,7 +346,7 @@
       color: var(--coral);
     }
 
-    #mode-briefing-wrap {
+    #mode-briefing-wrap, #defuse-briefing-wrap {
       position: fixed;
       top: 50%;
       left: 50%;
@@ -358,7 +358,8 @@
       pointer-events: none;
     }
 
-    #mode-briefing-wrap .mode-briefing-toast {
+    #mode-briefing-wrap .mode-briefing-toast,
+    #defuse-briefing-wrap .mode-briefing-toast {
       pointer-events: auto;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
     }
@@ -2647,6 +2648,42 @@
       align-items: center;
       justify-content: space-between;
     }
+    .defuse-players-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 4px 0;
+    }
+
+    .defuse-player-chip {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--bg-card);
+      border: 0.5px solid var(--border);
+      border-radius: 999px;
+      padding: 3px 10px 3px 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .defuse-player-chip .chip-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--teal);
+      flex-shrink: 0;
+      display: none;
+    }
+
+    .defuse-player-chip.waiting .chip-dot {
+      background: var(--border-strong);
+      display: none;
+    }
+
     .defuse-top-title {
       font-size: 13px;
       font-weight: 600;
@@ -3054,24 +3091,50 @@
     <!-- Screen: Defuse Game -->
     <div class="screen" id="screen-defuse-game">
       <div class="defuse-top-bar">
-        <div class="defuse-top-title">
-          <span>🛠️</span>
-          <span data-i18n="mode_defuse">Defuse</span>
-          <span id="defuse-game-type-badge" style="font-size:11px; color:var(--text-subtle); background:var(--bg-card); border:0.5px solid var(--border); border-radius:6px; padding:1px 7px;">Solo</span>
+        <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+          <button class="mode-status-pill" id="btn-defuse-mode-info" type="button" style="background:none;flex-shrink:0;">
+            <span>🛠️</span>
+            <span data-i18n="mode_defuse">Defuse</span>
+            <span id="defuse-game-type-badge" style="font-size:11px; color:var(--text-subtle); background:var(--bg-card); border:0.5px solid var(--border); border-radius:6px; padding:1px 7px;">Solo</span>
+          </button>
+          <span id="defuse-player-label" style="font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
         </div>
-        <button class="icon-toggle" id="btn-defuse-leave" type="button">
-          <span class="icon-toggle-text" data-i18n="btn_leave"></span>
-        </button>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <div class="sticker-launcher-wrap">
+            <button class="sticker-launcher" id="defuse-sticker-launcher" type="button" aria-expanded="false" aria-controls="defuse-sticker-palette">
+              <span class="sticker-launcher-icon" aria-hidden="true">💭</span>
+            </button>
+            <div class="sticker-palette" id="defuse-sticker-palette">
+              <div class="sticker-palette-grid" aria-label="Stickers">
+                <button class="sticker-btn" data-sticker="nice"><span class="sticker-btn-emoji">🔥</span></button>
+                <button class="sticker-btn" data-sticker="thinking"><span class="sticker-btn-emoji">🤔</span></button>
+                <button class="sticker-btn" data-sticker="oops"><span class="sticker-btn-emoji">😅</span></button>
+                <button class="sticker-btn" data-sticker="boom"><span class="sticker-btn-emoji">💥</span></button>
+                <button class="sticker-btn" data-sticker="taunt"><span class="sticker-btn-emoji">🤣</span></button>
+                <button class="sticker-btn" data-sticker="cry"><span class="sticker-btn-emoji">😭</span></button>
+                <button class="sticker-btn" data-sticker="clap"><span class="sticker-btn-emoji">👏</span></button>
+                <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
+              </div>
+            </div>
+          </div>
+          <button class="icon-toggle" id="btn-defuse-share" type="button" style="display:none;" aria-label="Compartilhar">
+            <span class="icon-toggle-glyph">🔗</span>
+          </button>
+          <button class="icon-toggle" id="btn-defuse-leave" type="button">
+            <span class="icon-toggle-text" data-i18n="btn_leave"></span>
+          </button>
+        </div>
       </div>
+      <div id="defuse-briefing-wrap"></div>
       <div class="defuse-hud">
-        <div class="defuse-hud-item">
-          <div class="defuse-hud-value" id="defuse-timer">00:00</div>
-          <div class="defuse-hud-label">⏱</div>
-        </div>
-        <div class="defuse-hud-sep"></div>
         <div class="defuse-hud-item">
           <div class="defuse-hud-value" id="defuse-bombs-counter">0/29</div>
           <div class="defuse-hud-label">💣</div>
+        </div>
+        <div class="defuse-hud-sep"></div>
+        <div class="defuse-hud-item">
+          <div class="defuse-hud-value" id="defuse-timer">00:00</div>
+          <div class="defuse-hud-label">🕐</div>
         </div>
         <div class="defuse-hud-sep"></div>
         <div class="defuse-hud-item">
@@ -3079,6 +3142,7 @@
           <div class="defuse-hud-label">🔥</div>
         </div>
       </div>
+      <div id="defuse-players-strip" style="display:none;"></div>
       <div class="defuse-pregame-hint" id="defuse-pregame-hint" data-i18n="defuse_pregame_hint"></div>
       <div class="defuse-board-wrap">
         <div class="defuse-board" id="defuse-board"></div>
@@ -4446,9 +4510,9 @@
           const diff = getSelectedDifficulty();
           const bombs = { easy: 22, medium: 29, hard: 36 }[diff] ?? 29;
           const isMulti = document.getElementById('defuse-btn-multi')?.classList.contains('selected');
+          const squadName = document.getElementById('defuse-squad')?.value.trim() || '';
           if (isMulti) {
-            const squad = document.getElementById('defuse-squad')?.value.trim();
-            if (!squad) {
+            if (!squadName) {
               const squadInput = document.getElementById('defuse-squad');
               if (squadInput) { squadInput.focus(); squadInput.style.borderColor = 'var(--coral)'; setTimeout(() => squadInput.style.borderColor = '', 1500); }
               showError('create-error', t.defuse_squad_required || 'Nome do squad obrigatório');
@@ -4457,7 +4521,7 @@
           }
           myName = name;
           localStorage.setItem(NAME_STORAGE_KEY, name);
-          _startDefuseGame({ isMulti, difficulty: diff, totalBombs: bombs });
+          _startDefuseGame({ isMulti, squadName, difficulty: diff, totalBombs: bombs });
           return;
         }
         const diff = getSelectedDifficulty();
@@ -6260,7 +6324,7 @@
       if (squadInput) squadInput.addEventListener('input', () => { squadInput.dataset.edited = '1'; });
     }
 
-    function _startDefuseGame({ isMulti, difficulty, totalBombs }) {
+    function _startDefuseGame({ isMulti, squadName, difficulty, totalBombs }) {
       _defuseStarted = false; _defuseSeconds = 0; _defuseCurrentAction = 'reveal';
       _defuseTotalBombs = totalBombs; _defuseBombsResolved = 0; _defuseCurrentCombo = 0;
       clearInterval(_defuseTimer);
@@ -6269,6 +6333,37 @@
       document.getElementById('defuse-bombs-counter').textContent = `0/${totalBombs}`;
       document.getElementById('defuse-combo').textContent = '0';
       document.getElementById('defuse-game-type-badge').textContent = isMulti ? 'Multi' : 'Solo';
+      const playerLabel = document.getElementById('defuse-player-label');
+      if (playerLabel) playerLabel.textContent = isMulti ? (squadName || '') : (myName || '');
+      const shareBtn = document.getElementById('btn-defuse-share');
+      if (shareBtn) shareBtn.style.display = isMulti ? '' : 'none';
+      const stickerWrap = document.getElementById('defuse-sticker-launcher')?.closest('.sticker-launcher-wrap');
+      if (stickerWrap) stickerWrap.style.display = isMulti ? '' : 'none';
+
+      const playersStrip = document.getElementById('defuse-players-strip');
+      if (playersStrip) {
+        if (isMulti) {
+          playersStrip.style.display = '';
+          const strip = document.createElement('div');
+          strip.className = 'defuse-players-strip';
+          const chip = document.createElement('div');
+          chip.className = 'defuse-player-chip';
+          const dot = document.createElement('span');
+          dot.className = 'chip-dot';
+          const crown = document.createElement('span');
+          crown.textContent = '👑';
+          crown.style.cssText = 'font-size:11px;line-height:1;';
+          const name = document.createElement('span');
+          name.textContent = myName || '?';
+          chip.append(dot, crown, name);
+          strip.appendChild(chip);
+          playersStrip.innerHTML = '';
+          playersStrip.appendChild(strip);
+        } else {
+          playersStrip.style.display = 'none';
+          playersStrip.innerHTML = '';
+        }
+      }
       const hint = document.getElementById('defuse-pregame-hint');
       if (hint) { hint.style.display = ''; hint.style.opacity = '1'; if (t.defuse_pregame_hint) hint.textContent = t.defuse_pregame_hint; }
       document.getElementById('defuse-btn-reveal').classList.add('active');
@@ -6336,6 +6431,72 @@
       }
     }
 
+    // Called by server integration to update the players strip
+    function _updateDefusePlayers(players = []) {
+      const playersStrip = document.getElementById('defuse-players-strip');
+      if (!playersStrip) return;
+      const strip = document.createElement('div');
+      strip.className = 'defuse-players-strip';
+      players.forEach((p, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'defuse-player-chip' + (p.waiting ? ' waiting' : '');
+        const dot = document.createElement('span');
+        dot.className = 'chip-dot';
+        const name = document.createElement('span');
+        name.textContent = p.name || '?';
+        if (i === 0) {
+          const crown = document.createElement('span');
+          crown.textContent = '👑';
+          crown.style.cssText = 'font-size:11px;line-height:1;';
+          chip.append(dot, crown, name);
+        } else {
+          chip.append(dot, name);
+        }
+        strip.appendChild(chip);
+      });
+      playersStrip.innerHTML = '';
+      playersStrip.appendChild(strip);
+    }
+
+    function showDefuseBriefingToast() {
+      const wrap = document.getElementById('defuse-briefing-wrap');
+      if (!wrap) return;
+      const existing = wrap.querySelector('.mode-briefing-toast');
+      if (existing) {
+        existing.classList.add('hide');
+        setTimeout(() => { try { existing.remove(); } catch {} }, 320);
+        return;
+      }
+      function cell(cls, content = '') {
+        return `<div class="mp-cell ${cls}">${content}</div>`;
+      }
+      const grid = [
+        cell('hidden'), cell('defused', '🛠️'), cell('revealed n1', '1'), cell('hidden'),
+        cell('revealed n1', '1'), cell('revealed n2', '2'), cell('revealed n1', '1'), cell('hidden'),
+        cell('revealed', '·'), cell('revealed n1', '1'), cell('bomb-p1', '💣'), cell('hidden'),
+        cell('revealed', '·'), cell('revealed', '·'), cell('revealed n1', '1'), cell('hidden'),
+      ];
+      const previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join('')}</div><div class="mode-preview-caption">${t.briefing_defuse_caption ?? ''}</div></div>`;
+      const el = document.createElement('div');
+      el.className = 'mode-briefing-toast';
+      el.innerHTML = `
+        <div class="mode-briefing-icon" aria-hidden="true">🛠️</div>
+        <div class="mode-briefing-body">
+          <div class="mode-briefing-name">${t.mode_defuse ?? 'Defuse'}</div>
+          <div class="mode-briefing-desc">${t.mode_defuse_desc ?? ''}</div>
+          ${previewHTML}
+        </div>
+        <button class="mode-briefing-close" aria-label="Fechar" type="button">×</button>`;
+      wrap.innerHTML = '';
+      wrap.appendChild(el);
+      function dismiss() {
+        el.classList.add('hide');
+        setTimeout(() => { try { el.remove(); } catch {} }, 320);
+      }
+      el.querySelector('.mode-briefing-close').addEventListener('click', (e) => { e.stopPropagation(); dismiss(); });
+      el.addEventListener('click', dismiss);
+    }
+
     function setupDefuseGame() {
       document.getElementById('defuse-btn-reveal')?.addEventListener('click', () => {
         _defuseCurrentAction = 'reveal';
@@ -6350,6 +6511,32 @@
       document.getElementById('btn-defuse-leave')?.addEventListener('click', () => {
         clearInterval(_defuseTimer); _defuseStarted = false;
         showScreen('screen-create');
+      });
+      const defuseStickerLauncher = document.getElementById('defuse-sticker-launcher');
+      const defuseStickerPalette = document.getElementById('defuse-sticker-palette');
+      defuseStickerLauncher?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const open = defuseStickerPalette.classList.toggle('open');
+        defuseStickerLauncher.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', (e) => {
+        if (!defuseStickerLauncher?.contains(e.target)) {
+          defuseStickerPalette?.classList.remove('open');
+          defuseStickerLauncher?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      document.getElementById('btn-defuse-mode-info')?.addEventListener('click', () => {
+        showDefuseBriefingToast();
+      });
+      document.getElementById('btn-defuse-share')?.addEventListener('click', async () => {
+        const btn = document.getElementById('btn-defuse-share');
+        const glyph = btn?.querySelector('.icon-toggle-glyph');
+        try {
+          await navigator.clipboard.writeText(location.href);
+          if (glyph) { glyph.textContent = '✅'; setTimeout(() => { glyph.textContent = '🔗'; }, 1800); }
+        } catch {
+          if (glyph) { glyph.textContent = '❌'; setTimeout(() => { glyph.textContent = '🔗'; }, 1800); }
+        }
       });
       document.addEventListener('keydown', (e) => {
         if (!document.getElementById('screen-defuse-game')?.classList.contains('active')) return;
