@@ -6522,9 +6522,11 @@
         if (isBomb) {
           // Revelou uma bomba → +5s de punição
           cell.classList.add('exploded'); cell.textContent = '💣';
-          _defuseCurrentCombo = 0;
-          comboEl.textContent = '0';
-          comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
+          if (_defuseCurrentCombo > 0) {
+            _defuseCurrentCombo = 0;
+            comboEl.textContent = '0';
+            comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
+          }
           _showDefuseTimePenalty(cell, 5);
         } else {
           // Célula segura → mostra número ou ponto
@@ -6544,9 +6546,11 @@
           // Errou! Não era bomba → revela célula + 10s
           cell.classList.add('revealed');
           cell.textContent = neighbors > 0 ? String(neighbors) : '·';
-          _defuseCurrentCombo = 0;
-          comboEl.textContent = '0';
-          comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
+          if (_defuseCurrentCombo > 0) {
+            _defuseCurrentCombo = 0;
+            comboEl.textContent = '0';
+            comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
+          }
           _showDefuseTimePenalty(cell, 10);
         }
       }
