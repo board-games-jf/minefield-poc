@@ -3191,7 +3191,7 @@
         <div class="defuse-board" id="defuse-board"></div>
       </div>
       <div class="defuse-action-bar">
-        <button class="defuse-action-btn active" id="defuse-btn-reveal" type="button">
+        <button class="defuse-action-btn active" id="defuse-btn-inspect" type="button">
           <span class="dab-icon">🔎</span>
           <span data-i18n="defuse_action_reveal"></span>
         </button>
@@ -6341,7 +6341,7 @@
     let _defuseTimer = null;
     let _defuseSeconds = 0;
     let _defuseStarted = false;
-    let _defuseCurrentAction = 'reveal';
+    let _defuseCurrentAction = 'inspect';
     let _defuseTotalBombs = 29;
     let _defuseBombsResolved = 0;
     let _defuseCurrentCombo = 0;
@@ -6375,7 +6375,7 @@
     }
 
     function _startDefuseGame({ isMulti, squadName, difficulty, totalBombs }) {
-      _defuseStarted = false; _defuseSeconds = 0; _defuseCurrentAction = 'reveal';
+      _defuseStarted = false; _defuseSeconds = 0; _defuseCurrentAction = 'inspect';
       _defuseTotalBombs = totalBombs; _defuseBombsResolved = 0; _defuseCurrentCombo = 0;
       clearInterval(_defuseTimer);
 
@@ -6416,10 +6416,10 @@
       }
       const hint = document.getElementById('defuse-pregame-hint');
       if (hint) { hint.style.display = ''; hint.style.opacity = '1'; if (t.defuse_pregame_hint) hint.textContent = t.defuse_pregame_hint; }
-      document.getElementById('defuse-btn-reveal').classList.add('active');
+      document.getElementById('defuse-btn-inspect').classList.add('active');
       document.getElementById('defuse-btn-defuse-action').classList.remove('active');
 
-      const revealSpan = document.querySelector('#defuse-btn-reveal span:last-child');
+      const revealSpan = document.querySelector('#defuse-btn-inspect span:last-child');
       const defuseSpan = document.querySelector('#defuse-btn-defuse-action span:last-child');
       if (revealSpan && t.defuse_action_reveal) revealSpan.textContent = t.defuse_action_reveal;
       if (defuseSpan && t.defuse_action_defuse) defuseSpan.textContent = t.defuse_action_defuse;
@@ -6518,7 +6518,7 @@
       const neighbors = parseInt(cell.dataset.neighbors || '0', 10);
       const comboEl = document.getElementById('defuse-combo');
 
-      if (_defuseCurrentAction === 'reveal') {
+      if (_defuseCurrentAction === 'inspect') {
         if (isBomb) {
           // Revelou uma bomba → +5s de punição
           cell.classList.add('exploded'); cell.textContent = '💣';
@@ -6619,15 +6619,15 @@
     }
 
     function setupDefuseGame() {
-      document.getElementById('defuse-btn-reveal')?.addEventListener('click', () => {
-        _defuseCurrentAction = 'reveal';
-        document.getElementById('defuse-btn-reveal').classList.add('active');
+      document.getElementById('defuse-btn-inspect')?.addEventListener('click', () => {
+        _defuseCurrentAction = 'inspect';
+        document.getElementById('defuse-btn-inspect').classList.add('active');
         document.getElementById('defuse-btn-defuse-action').classList.remove('active');
       });
       document.getElementById('defuse-btn-defuse-action')?.addEventListener('click', () => {
         _defuseCurrentAction = 'defuse';
         document.getElementById('defuse-btn-defuse-action').classList.add('active');
-        document.getElementById('defuse-btn-reveal').classList.remove('active');
+        document.getElementById('defuse-btn-inspect').classList.remove('active');
       });
       document.getElementById('btn-defuse-leave')?.addEventListener('click', () => {
         clearInterval(_defuseTimer); _defuseStarted = false;
@@ -6663,8 +6663,8 @@
         if (!document.getElementById('screen-defuse-game')?.classList.contains('active')) return;
         if (e.code === 'Space' && !['INPUT', 'TEXTAREA', 'BUTTON'].includes(e.target.tagName)) {
           e.preventDefault();
-          if (_defuseCurrentAction === 'reveal') document.getElementById('defuse-btn-defuse-action').click();
-          else document.getElementById('defuse-btn-reveal').click();
+          if (_defuseCurrentAction === 'inspect') document.getElementById('defuse-btn-defuse-action').click();
+          else document.getElementById('defuse-btn-inspect').click();
         }
       });
     }
