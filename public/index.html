@@ -6541,6 +6541,8 @@
         if (isBomb) {
           // Revelou uma bomba → +5s de punição
           cell.classList.add('exploded'); cell.textContent = '💣';
+          _defuseBombsResolved++;
+          document.getElementById('defuse-bombs-counter').textContent = `${_defuseTotalBombs - _defuseBombsResolved}`;
           if (_defuseCurrentCombo > 0) {
             _defuseCurrentCombo = 0;
             comboEl.textContent = '0';
