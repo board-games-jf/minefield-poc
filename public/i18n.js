@@ -78,8 +78,8 @@ export const TRANSLATIONS = {
     mode_versus_desc: "Briga pra ver quem acha mais mina que o outro!",
     mode_coop_desc: "Dois cabra desenrolado pra abrir as caixa sem pisar nas mina.",
     mode_explosive_desc: "Quem pisar na mina primeiro perde a rodada. O primeiro a conquistar a FT vence o desafio!",
-    mode_defuse_desc: "Desarme todas as minas o mais rápido possível. Combo pra bombar o score!",
-    briefing_defuse_caption: "Desarme as minas e bata o recorde!",
+    mode_defuse_desc: "Curiar as casas até saber onde tão as minas. Quando tiver certeza, desarma. O mais rápido que conseguir!",
+    briefing_defuse_caption: "Curiar mina errada: +5s · Desarmar errado: +10s",
 
     // Points preview
     points_preview: (n) => `🏆 Se vencer: ${n} pts`,
@@ -243,8 +243,8 @@ export const TRANSLATIONS = {
     mode_versus_desc: "Compete para encontrar mais bombas que o adversário.",
     mode_coop_desc: "Trabalhem juntos para revelar todas as células sem explodir nenhuma bomba.",
     mode_explosive_desc: "Quem encontrar a primeira bomba perde a rodada. O primeiro a conquistar a FT vence.",
-    mode_defuse_desc: "Desarme todas as bombas o mais rápido possível. Combo para maximizar o score!",
-    briefing_defuse_caption: "Desarme as bombas e bata o recorde!",
+    mode_defuse_desc: "Inspecciona células até teres a certeza de onde estão as bombas. Quando souberes, desarma-as. O mais rápido que conseguires!",
+    briefing_defuse_caption: "Inspecionar bomba errada: +5s · Desarmar errado: +10s",
 
     // Points preview
     points_preview: (n) => `🏆 Se vencer: ${n} pts`,
@@ -400,8 +400,8 @@ export const TRANSLATIONS = {
     mode_versus_desc: "Compete to find more mines than your opponent.",
     mode_coop_desc: "Work together to reveal all cells without hitting a single mine.",
     mode_explosive_desc: "First to hit a mine loses the round. First to the FT wins.",
-    mode_defuse_desc: "Defuse all mines as fast as possible. Build combos to maximize your score!",
-    briefing_defuse_caption: "Defuse mines and set the record!",
+    mode_defuse_desc: "Inspect cells until you know where the bombs are. When you're sure, defuse them. As fast as you can!",
+    briefing_defuse_caption: "Inspect a wrong bomb: +5s · Wrong defuse: +10s",
 
     // Points preview
     points_preview: (n) => `🏆 Win: ${n} pts`,

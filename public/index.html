@@ -3394,6 +3394,20 @@
       try { syncRematchModalLocale(); } catch { }
       try { syncExplosiveOverlayLocale(); } catch { }
 
+      // Re-render defuse briefing toast text if it's currently open
+      try {
+        const defuseWrap = document.getElementById("defuse-briefing-wrap");
+        const defuseToast = defuseWrap?.querySelector(".mode-briefing-toast");
+        if (defuseToast) {
+          const nameEl = defuseToast.querySelector(".mode-briefing-name");
+          const descEl = defuseToast.querySelector(".mode-briefing-desc");
+          const captionEl = defuseToast.querySelector(".mode-preview-caption");
+          if (nameEl) nameEl.textContent = t.mode_defuse ?? "Defuse";
+          if (descEl) descEl.textContent = t.mode_defuse_desc ?? "";
+          if (captionEl) captionEl.textContent = t.briefing_defuse_caption ?? "";
+        }
+      } catch { }
+
       // Re-render briefing toast text if it's currently open
       try {
         const wrap = document.getElementById("mode-briefing-wrap");
@@ -4398,10 +4412,10 @@
         previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_explosive_caption ?? ""}</div></div>`;
       } else if (mode === "defuse") {
         const grid = [
-          cell("hidden"), cell("defused", "🛠️"), cell("revealed n1", "1"), cell("hidden"),
-          cell("revealed n1", "1"), cell("revealed n2", "2"), cell("revealed n1", "1"), cell("hidden"),
-          cell("revealed", "·"), cell("revealed n1", "1"), cell("bomb-p1", "💣"), cell("hidden"),
-          cell("revealed", "·"), cell("revealed", "·"), cell("revealed n1", "1"), cell("hidden"),
+          cell("defused", "💣"), cell("revealed n1", "1"), cell("revealed n1", "1"), cell("bomb-p2", "💣"),
+          cell("revealed n1", "1"), cell("revealed n1", "1"), cell("revealed n1", "1"), cell("revealed n1", "1"),
+          cell("revealed", ""), cell("revealed n1", "1"), cell("revealed n1", "1"), cell("revealed n1", "1"),
+          cell("revealed", ""), cell("revealed n1", "1"), cell("hidden"), cell("revealed n1", "1"),
         ];
         previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join("")}</div><div class="mode-preview-caption">${t.briefing_defuse_caption ?? ""}</div></div>`;
       }
@@ -6625,10 +6639,10 @@
         return `<div class="mp-cell ${cls}">${content}</div>`;
       }
       const grid = [
-        cell('hidden'), cell('defused', '🛠️'), cell('revealed n1', '1'), cell('hidden'),
-        cell('revealed n1', '1'), cell('revealed n2', '2'), cell('revealed n1', '1'), cell('hidden'),
-        cell('revealed', '·'), cell('revealed n1', '1'), cell('bomb-p1', '💣'), cell('hidden'),
-        cell('revealed', '·'), cell('revealed', '·'), cell('revealed n1', '1'), cell('hidden'),
+        cell('defused', '💣'), cell('revealed n1', '1'), cell('revealed n1', '1'), cell('bomb-p2', '💣'),
+        cell('revealed n1', '1'), cell('revealed n1', '1'), cell('revealed n1', '1'), cell('revealed n1', '1'),
+        cell('revealed', ''), cell('revealed n1', '1'), cell('revealed n1', '1'), cell('revealed n1', '1'),
+        cell('revealed', ''), cell('revealed n1', '1'), cell('hidden'), cell('revealed n1', '1'),
       ];
       const previewHTML = `<div class="mode-preview"><div class="mode-preview-grid">${grid.join('')}</div><div class="mode-preview-caption">${t.briefing_defuse_caption ?? ''}</div></div>`;
       const el = document.createElement('div');
