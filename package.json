@@ -7,7 +7,8 @@
     "dev": "partykit dev",
     "deploy": "partykit deploy",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "version:bump": "node -e \"const fs=require('fs'),cp=require('child_process'); const hash=cp.execSync('git rev-parse --short HEAD').toString().trim(); fs.writeFileSync('public/version.json', JSON.stringify({version:hash},null,2)+'\\n'); cp.execSync('git add public/version.json'); cp.execSync('git commit -m \\\"chore: bump version to '+hash+'\\\"'); console.log('Bumped and committed:', hash);\""
   },
   "devDependencies": {
     "partykit": "^0.0.107",
