@@ -2630,18 +2630,61 @@
       border-color: transparent;
       cursor: default;
       transform: none;
+      color: var(--text-muted);
+      font-size: 11px;
     }
     .defuse-cell.defused {
-      background: rgba(29,158,117,0.15);
+      background: rgba(29,158,117,0.18);
       border-color: var(--teal);
       cursor: default;
       transform: none;
+      color: var(--teal);
     }
     .defuse-cell.exploded {
-      background: rgba(153,60,29,0.2);
+      background: rgba(153,60,29,0.22);
       border-color: var(--coral);
       cursor: default;
       transform: none;
+      color: var(--coral);
+    }
+
+    .defuse-time-float {
+      position: fixed;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--coral);
+      pointer-events: none;
+      animation: defuse-time-float-up 1s ease forwards;
+      z-index: 9999;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.7);
+      white-space: nowrap;
+    }
+
+    @keyframes defuse-time-float-up {
+      0%   { opacity: 1; transform: translateY(0) scale(1); }
+      20%  { opacity: 1; transform: translateY(-14px) scale(1.2); }
+      100% { opacity: 0; transform: translateY(-56px) scale(0.9); }
+    }
+
+    @keyframes defuse-board-shake {
+      0%,100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-4px); }
+      80% { transform: translateX(4px); }
+    }
+
+    .defuse-board-shake {
+      animation: defuse-board-shake 0.35s ease;
+    }
+
+    @keyframes defuse-timer-flash {
+      0%,100% { color: inherit; }
+      30%,70% { color: var(--coral); }
+    }
+
+    .defuse-timer-flash {
+      animation: defuse-timer-flash 0.6s ease;
     }
     .defuse-top-bar {
       display: flex;
@@ -6383,15 +6426,69 @@
       if (!board) return;
       board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
       board.innerHTML = '';
+      const total = rows * cols;
+      // Place exactly _defuseTotalBombs bombs randomly
+      const indices = Array.from({ length: total }, (_, i) => i);
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+      const bombSet = new Set(indices.slice(0, _defuseTotalBombs));
+      // Build cells with bomb flag
+      const cells = [];
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
+          const idx = r * cols + c;
           const cell = document.createElement('div');
           cell.className = 'defuse-cell';
           cell.dataset.row = r; cell.dataset.col = c;
+          cell.dataset.bomb = bombSet.has(idx) ? '1' : '0';
           cell.addEventListener('click', _onDefuseCellClick);
           board.appendChild(cell);
+          cells.push(cell);
         }
       }
+      // Compute neighbor counts
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = cells[r * cols + c];
+          if (cell.dataset.bomb === '1') continue;
+          let count = 0;
+          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+            if (dr === 0 && dc === 0) continue;
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && cells[nr * cols + nc].dataset.bomb === '1') count++;
+          }
+          cell.dataset.neighbors = count;
+        }
+      }
+    }
+
+    function _showDefuseTimePenalty(cell, seconds) {
+      const rect = cell.getBoundingClientRect();
+      const el = document.createElement('div');
+      el.className = 'defuse-time-float';
+      el.textContent = `+${seconds}s 💥`;
+      el.style.left = `${rect.left + rect.width / 2}px`;
+      el.style.top = `${rect.top}px`;
+      el.style.transform = 'translateX(-50%)';
+      document.body.appendChild(el);
+      el.addEventListener('animationend', () => el.remove(), { once: true });
+      const timer = document.getElementById('defuse-timer');
+      if (timer) {
+        timer.classList.remove('defuse-timer-flash');
+        void timer.offsetWidth;
+        timer.classList.add('defuse-timer-flash');
+        timer.addEventListener('animationend', () => timer.classList.remove('defuse-timer-flash'), { once: true });
+      }
+      const board = document.getElementById('defuse-board');
+      if (board) {
+        board.classList.remove('defuse-board-shake');
+        void board.offsetWidth;
+        board.classList.add('defuse-board-shake');
+        board.addEventListener('animationend', () => board.classList.remove('defuse-board-shake'), { once: true });
+      }
+      _defuseSeconds += seconds;
     }
 
     function _onDefuseCellClick(e) {
@@ -6410,23 +6507,40 @@
         }, 1000);
       }
 
+      const isBomb = cell.dataset.bomb === '1';
+      const neighbors = parseInt(cell.dataset.neighbors || '0', 10);
+      const comboEl = document.getElementById('defuse-combo');
+
       if (_defuseCurrentAction === 'reveal') {
-        cell.classList.add('revealed');
-      } else {
-        const correct = Math.random() > 0.35;
-        if (correct) {
-          cell.classList.add('defused'); cell.textContent = '✅';
-          _defuseCurrentCombo++; _defuseBombsResolved++;
-          document.getElementById('defuse-combo').textContent = `x${_defuseCurrentCombo}`;
-          document.getElementById('defuse-bombs-counter').textContent = `${_defuseBombsResolved}/${_defuseTotalBombs}`;
-          const c = document.getElementById('defuse-combo');
-          c.style.color = 'var(--teal)'; setTimeout(() => c.style.color = '', 400);
-        } else {
-          cell.classList.add('exploded'); cell.textContent = '💥';
+        if (isBomb) {
+          // Revelou uma bomba → +5s de punição
+          cell.classList.add('exploded'); cell.textContent = '💣';
           _defuseCurrentCombo = 0;
-          document.getElementById('defuse-combo').textContent = '0';
-          const c = document.getElementById('defuse-combo');
-          c.style.color = 'var(--coral)'; setTimeout(() => c.style.color = '', 600);
+          comboEl.textContent = '0';
+          comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
+          _showDefuseTimePenalty(cell, 5);
+        } else {
+          // Célula segura → mostra número ou ponto
+          cell.classList.add('revealed');
+          cell.textContent = neighbors > 0 ? String(neighbors) : '·';
+        }
+      } else {
+        // Ação: Desarmar
+        if (isBomb) {
+          // Acertou! Bomba desarmada → verde
+          cell.classList.add('defused'); cell.textContent = '💣';
+          _defuseCurrentCombo++; _defuseBombsResolved++;
+          comboEl.textContent = `x${_defuseCurrentCombo}`;
+          document.getElementById('defuse-bombs-counter').textContent = `${_defuseBombsResolved}/${_defuseTotalBombs}`;
+          comboEl.style.color = 'var(--teal)'; setTimeout(() => comboEl.style.color = '', 400);
+        } else {
+          // Errou! Não era bomba → revela célula + 10s
+          cell.classList.add('revealed');
+          cell.textContent = neighbors > 0 ? String(neighbors) : '·';
+          _defuseCurrentCombo = 0;
+          comboEl.textContent = '0';
+          comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
+          _showDefuseTimePenalty(cell, 10);
         }
       }
     }
