@@ -68,7 +68,7 @@ export const TRANSLATIONS = {
     defuse_squad_placeholder: "Ex: Os Caba",
     defuse_squad_required: "Nome do squad é obrigatório no Multi",
     defuse_hall_of_fame_hint: "🏆 O cabra mais ligêro entra pra lista dos bichãozão!",
-    defuse_pregame_hint: "Clica numa casa pra começar o cronômetro",
+    defuse_pregame_hint: "Clica numa casa pra começar o peia",
     defuse_action_inspect: "Curiar",
     defuse_action_defuse: "Desarmar",
     btn_back: "Voltar",

@@ -2581,12 +2581,13 @@
     .defuse-action-btn .dab-icon { font-size: 18px; }
     .defuse-pregame-hint {
       text-align: center;
-      font-size: 12px;
-      color: var(--text-subtle);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
       animation: defuse-hint-pulse 2s ease-in-out infinite;
     }
     @keyframes defuse-hint-pulse {
-      0%, 100% { opacity: 0.45; }
+      0%, 100% { opacity: 0.5; }
       50% { opacity: 1; }
     }
     .defuse-board-wrap {
@@ -2626,13 +2627,20 @@
       transform: scale(1.07);
     }
     .defuse-cell.revealed {
-      background: rgba(255,255,255,0.04);
+      background: transparent;
       border-color: transparent;
       cursor: default;
       transform: none;
-      color: var(--text-muted);
-      font-size: 11px;
+      font-weight: 600;
     }
+    .defuse-cell.revealed.num-1 { color: #378ADD; }
+    .defuse-cell.revealed.num-2 { color: #639922; }
+    .defuse-cell.revealed.num-3 { color: #D85A30; }
+    .defuse-cell.revealed.num-4 { color: #7F77DD; }
+    .defuse-cell.revealed.num-5 { color: #E24B4A; }
+    .defuse-cell.revealed.num-6 { color: #1D9E75; }
+    .defuse-cell.revealed.num-7 { color: #EF9F27; }
+    .defuse-cell.revealed.num-8 { color: #888780; }
     .defuse-cell.defused {
       background: rgba(29,158,117,0.18);
       border-color: var(--teal);
@@ -6552,7 +6560,7 @@
         } else {
           // Célula segura → mostra número ou ponto
           cell.classList.add('revealed');
-          cell.textContent = neighbors > 0 ? String(neighbors) : '·';
+          if (neighbors > 0) { cell.textContent = String(neighbors); cell.classList.add(`num-${neighbors}`); }
         }
       } else {
         // Ação: Desarmar
@@ -6566,7 +6574,7 @@
         } else {
           // Errou! Não era bomba → revela célula + 10s
           cell.classList.add('revealed');
-          cell.textContent = neighbors > 0 ? String(neighbors) : '·';
+          if (neighbors > 0) { cell.textContent = String(neighbors); cell.classList.add(`num-${neighbors}`); }
           if (_defuseCurrentCombo > 0) {
             _defuseCurrentCombo = 0;
             comboEl.textContent = '0';
