@@ -4759,15 +4759,12 @@
         }
         if (msg.type === "bomb-found") {
           playBombSound();
-          const mode = currentState && currentState.mode;
-          if (mode === 'coop' || mode === 'explosive') {
-            const bw = document.querySelector('#screen-game .board-wrap');
-            if (bw) {
-              bw.classList.remove('defuse-board-shake');
-              void bw.offsetWidth;
-              bw.classList.add('defuse-board-shake');
-              bw.addEventListener('animationend', () => bw.classList.remove('defuse-board-shake'), { once: true });
-            }
+          const bw = document.querySelector('#screen-game .board-wrap');
+          if (bw) {
+            bw.classList.remove('defuse-board-shake');
+            void bw.offsetWidth;
+            bw.classList.add('defuse-board-shake');
+            bw.addEventListener('animationend', () => bw.classList.remove('defuse-board-shake'), { once: true });
           }
         }
         if (msg.type === "error") handleServerError(msg.message);

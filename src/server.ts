@@ -728,6 +728,7 @@ export default class GameRoom implements Party.Server {
     this.state.lastClickedCell = { row, col, playerIndex };
     this.state.lastPlayerClicks.push({ row, col, playerIndex });
 
+    const bombMode = this.state.mode;
     if (this.state.grid[row][col] === -1) {
       this.state.revealed[row][col] = true;
       this.state.foundBy[row][col] = playerIndex;
@@ -789,6 +790,14 @@ export default class GameRoom implements Party.Server {
       await this.finalizeMatchIfNeeded();
       await this.persist();
       this.broadcast();
+      if (bombMode === "coop" || bombMode === "explosive") {
+        this.room.broadcast(
+          JSON.stringify({
+            type: "bomb-found",
+            playerIndex: playerIndex as 0 | 1,
+          } satisfies ServerMessage),
+        );
+      }
 
       // Bomba: mantém a rodada, não limpa, não passa a vez
       if (
@@ -1324,12 +1333,15 @@ export default class GameRoom implements Party.Server {
       await this.persist();
       await this.room.storage.put("aiFlags", this.aiFlags);
       this.broadcast();
-      this.room.broadcast(
-        JSON.stringify({
-          type: "bomb-found",
-          playerIndex: 1,
-        } satisfies ServerMessage),
-      );
+      // Only shake in modes where hitting a bomb is bad (not versus, where it scores points)
+      if (this.state.mode === "coop") {
+        this.room.broadcast(
+          JSON.stringify({
+            type: "bomb-found",
+            playerIndex: 1,
+          } satisfies ServerMessage),
+        );
+      }
 
       // Bomb keeps the turn, so schedule another move immediately.
       if (this.state.status === "playing" && this.state.currentPlayer === 1) {
