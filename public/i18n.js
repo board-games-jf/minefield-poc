@@ -55,6 +55,10 @@ export const TRANSLATIONS = {
 
     // Mode selector
     mode_label: "Modo de jogo",
+    mode_category_arcade: "Arcade",
+    mode_category_survival: "Survival",
+    mode_coming_soon: "Já já",
+    mode_defuse: "Desarmar",
     mode_versus: "Arengueiro",
     mode_coop: "Mutirão",
     mode_explosive: "Papoco",
@@ -201,6 +205,10 @@ export const TRANSLATIONS = {
 
     // Mode selector
     mode_label: "Modo de jogo",
+    mode_category_arcade: "Arcade",
+    mode_category_survival: "Survival",
+    mode_coming_soon: "Em breve",
+    mode_defuse: "Desarmar",
     mode_versus: "Versus",
     mode_coop: "Coop",
     mode_explosive: "Explosivo",
@@ -339,6 +347,10 @@ export const TRANSLATIONS = {
 
     // Mode selector
     mode_label: "Game mode",
+    mode_category_arcade: "Arcade",
+    mode_category_survival: "Survival",
+    mode_coming_soon: "Coming soon",
+    mode_defuse: "Defuse",
     mode_versus: "Versus",
     mode_coop: "Coop",
     mode_explosive: "Explosive",
