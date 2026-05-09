@@ -4,7 +4,7 @@ import {
   floodReveal,
   createInitialState,
   countFoundBombs,
-  allSafeCellsRevealed,
+  areAllCoopSafeCellsRevealed,
   CONFIGS,
   COOP_CONFIGS,
   pickAiCell,
@@ -240,11 +240,11 @@ describe("countFoundBombs", () => {
   });
 });
 
-// ── allSafeCellsRevealed ────────────────────────────────────────────────────────
+// ── areAllCoopSafeCellsRevealed ────────────────────────────────────────────
 
-describe("allSafeCellsRevealed", () => {
+describe("areAllCoopSafeCellsRevealed", () => {
   it("returns false when safe cells remain hidden", () => {
-    expect(allSafeCellsRevealed(createInitialState("easy"))).toBe(false);
+    expect(areAllCoopSafeCellsRevealed(createInitialState("easy", "coop"))).toBe(false);
   });
 
   it("returns true when all safe cells are revealed", () => {
@@ -257,7 +257,10 @@ describe("allSafeCellsRevealed", () => {
       }
     }
 
-    expect(allSafeCellsRevealed(state)).toBe(true);
+    // Mark state as coop and ready so the helper uses COOP_CONFIGS dims.
+    state.mode = "coop";
+    state.coopGridReady = true;
+    expect(areAllCoopSafeCellsRevealed(state)).toBe(true);
   });
 
   it("unrevealed bombs do not block game end", () => {
@@ -270,13 +273,15 @@ describe("allSafeCellsRevealed", () => {
       }
     }
 
-    expect(allSafeCellsRevealed(state)).toBe(true);
+    state.mode = "coop";
+    state.coopGridReady = true;
+    expect(areAllCoopSafeCellsRevealed(state)).toBe(true);
   });
 
   it("coop returns false while the deferred grid is not ready", () => {
     const state = createInitialState("easy", "coop");
     expect(state.coopGridReady).toBe(false);
-    expect(allSafeCellsRevealed(state)).toBe(false);
+    expect(areAllCoopSafeCellsRevealed(state)).toBe(false);
   });
 
   it("coop uses COOP_CONFIGS dimensions after the grid is ready", () => {
@@ -287,7 +292,7 @@ describe("allSafeCellsRevealed", () => {
     state.grid = Array.from({ length: rows }, () => Array(cols).fill(1));
     state.revealed = Array.from({ length: rows }, () => Array(cols).fill(true));
 
-    expect(allSafeCellsRevealed(state)).toBe(true);
+    expect(areAllCoopSafeCellsRevealed(state)).toBe(true);
   });
 });
 

@@ -392,6 +392,16 @@ function maskDefuseGrid(state: DefuseState): number[][] {
   );
 }
 
+function areAllDefuseSafeCellsRevealed(state: DefuseState): boolean {
+  const { rows, cols, grid, revealed } = state;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c] !== -1 && !revealed[r][c]) return false;
+    }
+  }
+  return true;
+}
+
 // ── Game Logic ─────────────────────────────────────────────────────────────
 
 export function generateGrid(
@@ -575,22 +585,24 @@ export function isScoreUncatchable(state: GameState): boolean {
   return p1.score > p2.score + maxSwing || p2.score > p1.score + maxSwing;
 }
 
-export function allSafeCellsRevealed(state: GameState): boolean {
-  // Coop grid has not been generated yet — no safe cells can have been revealed.
-  if (state.mode === "coop" && state.coopGridReady === false) return false;
-
-  const { rows, cols } =
-    state.mode === "coop"
-      ? COOP_CONFIGS[state.difficulty]
-      : CONFIGS[state.difficulty];
-
+function areAllNonBombCellsRevealed(
+  state: GameState,
+  dims: { rows: number; cols: number },
+): boolean {
+  const { rows, cols } = dims;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       if (!state.revealed[r][c] && state.grid[r][c] !== -1) return false;
     }
   }
-
   return true;
+}
+
+export function areAllCoopSafeCellsRevealed(state: GameState): boolean {
+  // Coop grid has not been generated yet — no safe cells can have been revealed.
+  if (state.mode === "coop" && state.coopGridReady === false) return false;
+  const { rows, cols } = COOP_CONFIGS[state.difficulty];
+  return areAllNonBombCellsRevealed(state, { rows, cols });
 }
 
 // ── PartyKit Server ────────────────────────────────────────────────────────
@@ -1175,7 +1187,51 @@ export default class GameRoom implements Party.Server {
         if (p && p.id !== "ai") p.score += newlySafe.length * CELL_BONUS;
       }
       this.state.currentPlayer = playerIndex === 0 ? 1 : 0;
-      if (this.state.mode === "coop" && allSafeCellsRevealed(this.state)) {
+      if (
+        this.state.mode === "explosive" &&
+        this.state.explosiveSeries &&
+        areAllNonBombCellsRevealed(this.state, { rows, cols })
+      ) {
+        // Explosive: if players reveal every non-bomb cell without hitting any bomb,
+        // the round is a draw and both sides get a point.
+        const series = this.state.explosiveSeries;
+        series.wins[0] += 1;
+        series.wins[1] += 1;
+        series.round += 1;
+
+        const target = series.target;
+        const p1Reached = series.wins[0] >= target;
+        const p2Reached = series.wins[1] >= target;
+
+        if (p1Reached && p2Reached) {
+          // Match draw: no winner points.
+          const p1 = this.state.players[0];
+          const p2 = this.state.players[1];
+          if (p1) p1.score = 0;
+          if (p2) p2.score = 0;
+          this.state.status = "finished";
+        } else if (p1Reached || p2Reached) {
+          const winner: 0 | 1 = p1Reached ? 0 : 1;
+          const pts = POINTS_TABLE.explosive[target];
+          const pWin = this.state.players[winner];
+          const pLose = this.state.players[winner === 0 ? 1 : 0];
+          if (pWin) pWin.score = pts;
+          if (pLose) pLose.score = 0;
+          this.state.status = "finished";
+        } else {
+          // Start next round.
+          this.state.currentPlayer = Math.random() < 0.5 ? 0 : 1;
+          this.state.explosiveCooldownUntil = Date.now() + 5000;
+          this.clearExplosiveCooldownTimer();
+          this.explosiveCooldownTimer = setTimeout(
+            () => void this.finishExplosiveCooldown(),
+            5000,
+          );
+        }
+      } else if (
+        this.state.mode === "coop" &&
+        areAllCoopSafeCellsRevealed(this.state)
+      ) {
         this.state.status = "finished";
         this.state.coopResult = "win";
         // Base prize was already seeded into score at game start; nothing extra to add here.
@@ -1655,7 +1711,10 @@ export default class GameRoom implements Party.Server {
         for (const { row: r, col: c } of newlySafe)
           this.state.foundBy[r][c] = 1;
         this.state.currentPlayer = 0;
-        if (allSafeCellsRevealed(this.state)) {
+        if (
+          this.state.mode === "coop" &&
+          areAllCoopSafeCellsRevealed(this.state)
+        ) {
           this.state.status = "finished";
           this.state.coopResult = "win";
         }
@@ -1849,7 +1908,7 @@ export default class GameRoom implements Party.Server {
         this.state.foundBy[r][c] = 1;
       }
       this.state.currentPlayer = 0;
-      if (allSafeCellsRevealed(this.state)) {
+      if (areAllNonBombCellsRevealed(this.state, { rows, cols })) {
         this.state.status = "finished";
         if (this.state.mode === "coop") {
           this.state.coopResult = "win";
@@ -2147,7 +2206,7 @@ export default class GameRoom implements Party.Server {
     }
 
     // Check win condition
-    if (s.bombsResolved >= s.totalBombs) {
+    if (s.bombsResolved >= s.totalBombs || areAllDefuseSafeCellsRevealed(s)) {
       const realTime = s.startedAt ? Date.now() - s.startedAt : 0;
       s.finalTime = realTime + s.totalPenalties;
       s.status = "finished";

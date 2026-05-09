@@ -1137,6 +1137,12 @@
       animation: ftFlash 600ms ease-in-out infinite;
     }
 
+    .ft-cell.flash.draw {
+      background: rgba(230, 168, 41, 0.92);
+      border-color: rgba(230, 168, 41, 0.95);
+      box-shadow: 0 0 14px rgba(230, 168, 41, 0.55), inset 0 0 6px rgba(230, 168, 41, 0.18);
+    }
+
     @keyframes ftFlash {
       0% {
         transform: scale(1);
@@ -5362,8 +5368,11 @@
         const w1 = state.explosiveSeries.wins?.[0] ?? 0;
         const w2 = state.explosiveSeries.wins?.[1] ?? 0;
         if (w1 !== lastExplosiveWins[0] || w2 !== lastExplosiveWins[1]) {
-          if (w1 > lastExplosiveWins[0]) ftFlash = { side: 0, index: w1 - 1, until: Date.now() + 3000 };
-          else if (w2 > lastExplosiveWins[1]) ftFlash = { side: 1, index: w2 - 1, until: Date.now() + 3000 };
+          const p1Up = w1 > lastExplosiveWins[0];
+          const p2Up = w2 > lastExplosiveWins[1];
+          if (p1Up && p2Up) ftFlash = { side: "draw", index: Math.max(w1 - 1, w2 - 1), until: Date.now() + 3000 };
+          else if (p1Up) ftFlash = { side: 0, index: w1 - 1, until: Date.now() + 3000 };
+          else if (p2Up) ftFlash = { side: 1, index: w2 - 1, until: Date.now() + 3000 };
           lastExplosiveWins = [w1, w2];
           _forceExplosiveFtRerender = true;
 
@@ -6083,7 +6092,9 @@
         const out = [];
         for (let i = 0; i < target; i++) {
           const filled = i < wins ? " filled" : "";
-          const flashing = (now < ftFlash.until && ftFlash.side === side && ftFlash.index === i) ? " flash" : "";
+          const isDrawFlash = now < ftFlash.until && ftFlash.side === "draw" && ftFlash.index === i;
+          const isSideFlash = now < ftFlash.until && ftFlash.side === side && ftFlash.index === i;
+          const flashing = isDrawFlash ? " flash draw" : (isSideFlash ? " flash" : "");
           out.push(`<span class="ft-cell${filled}${flashing} ${cls}"></span>`);
         }
         return out.join("");
@@ -7210,8 +7221,14 @@
       if (bombsEl) bombsEl.textContent = `${totalBombs - bombsResolved}`;
       const hint = document.getElementById('defuse-pregame-hint');
 
+      if (status === 'finished') {
+        // Stop ticking immediately; finished time is server authoritative.
+        clearInterval(_defuseTimer);
+        _defuseStarted = false;
+      }
+
       // Start / sync timer from server startedAt
-      if (startedAt && !_defuseStarted) {
+      if (startedAt && !_defuseStarted && status !== 'finished') {
         _defuseStarted = true;
         if (hint) { hint.style.opacity = '0'; setTimeout(() => hint.style.display = 'none', 300); }
         clearInterval(_defuseTimer);
@@ -7262,8 +7279,6 @@
 
       // Finished
       if (status === 'finished') {
-        clearInterval(_defuseTimer);
-        _defuseStarted = false;
         const won = finalTime !== null && finalTime < 1_200_000;
         _defuseGameOver(won ? 'win' : 'timeout', { finalTimeMs: finalTime, highestCombo });
       }
