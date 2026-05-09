@@ -2,6 +2,8 @@ import type * as Party from "partykit/server";
 import {
   generateGrid as generateCoopGrid,
   ENERGY_PRESETS,
+  generateVersusGrid,
+  VERSUS_ENERGY_PRESETS,
 } from "./grid-generator";
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -91,6 +93,7 @@ export interface DefuseState {
   squadName?: string;
   isMulti?: boolean;
   squadMembers?: string[];
+  defuseGridReady?: boolean;
   serverNow?: number;
   elapsedMs?: number;
   rows: number;
@@ -293,17 +296,21 @@ export function buildDefuseRankingPayload(
 export function createDefuseState(
   difficulty: Difficulty,
   playerName: string,
+  options?: { deferGrid?: boolean },
 ): DefuseState {
   const { rows, cols, bombs } = DEFUSE_CONFIGS[difficulty];
-  const grid = generateDefuseGrid(rows, cols, bombs);
+  const deferGrid = options?.deferGrid === true;
   return {
     status: "waiting",
     difficulty,
     playerName,
     squadMembers: [playerName],
+    defuseGridReady: deferGrid ? false : true,
     rows,
     cols,
-    grid,
+    grid: deferGrid
+      ? Array.from({ length: rows }, () => Array(cols).fill(0))
+      : generateDefuseGrid(rows, cols, bombs),
     revealed: Array.from({ length: rows }, () => Array(cols).fill(false)),
     defused:  Array.from({ length: rows }, () => Array(cols).fill(false)),
     exploded: Array.from({ length: rows }, () => Array(cols).fill(false)),
@@ -475,6 +482,15 @@ export function createInitialState(
     difficulty
   ];
   const isCoop = mode === "coop";
+  const readyGrid =
+    mode === "versus"
+      ? generateVersusGrid({
+          rows,
+          cols,
+          bombs,
+          ...VERSUS_ENERGY_PRESETS[difficulty],
+        }).grid
+      : generateGrid(rows, cols, bombs);
 
   return {
     status: "waiting",
@@ -485,7 +501,7 @@ export function createInitialState(
     // Coop: use a zero-filled placeholder; actual grid is generated on the first valid reveal.
     grid: isCoop
       ? Array.from({ length: rows }, () => Array(cols).fill(0))
-      : generateGrid(rows, cols, bombs),
+      : readyGrid,
     ...(isCoop ? { coopGridReady: false } : {}),
     revealed: Array.from({ length: rows }, () => Array(cols).fill(false)),
     foundBy: Array.from({ length: rows }, () =>
@@ -1703,6 +1719,42 @@ export default class GameRoom implements Party.Server {
 
   // ── Defuse-room helpers ────────────────────────────────────────────────
 
+  private ensureDefuseGridReady(firstClick: { row: number; col: number }) {
+    if (!this.defuseState) return;
+    if (this.defuseState.defuseGridReady !== false) return;
+
+    const { rows, cols, bombs } = DEFUSE_CONFIGS[this.defuseState.difficulty];
+    if (
+      firstClick.row < 0 ||
+      firstClick.row >= rows ||
+      firstClick.col < 0 ||
+      firstClick.col >= cols
+    ) {
+      return;
+    }
+
+    const preset = ENERGY_PRESETS[this.defuseState.difficulty];
+    const result = generateCoopGrid({
+      rows,
+      cols,
+      bombs,
+      firstClick,
+      ...preset,
+    });
+
+    this.defuseState.grid = result.grid;
+    this.defuseState.defuseGridReady = true;
+    this.defuseState.revealed = Array.from({ length: rows }, () =>
+      Array(cols).fill(false),
+    );
+    this.defuseState.defused = Array.from({ length: rows }, () =>
+      Array(cols).fill(false),
+    );
+    this.defuseState.exploded = Array.from({ length: rows }, () =>
+      Array(cols).fill(false),
+    );
+  }
+
   private maskedDefuseState(): DefuseState {
     if (!this.defuseState) throw new Error("no defuse state");
     const serverNow = Date.now();
@@ -1747,7 +1799,7 @@ export default class GameRoom implements Party.Server {
       conn.send(JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage));
       return;
     }
-    this.defuseState = createDefuseState(difficulty, name);
+    this.defuseState = createDefuseState(difficulty, name, { deferGrid: true });
     this.defuseState.status = "waiting";
     if (isMulti) {
       this.defuseState.isMulti = true;
@@ -1778,6 +1830,7 @@ export default class GameRoom implements Party.Server {
       s.startedAt = Date.now();
       s.status = "playing";
     }
+    this.ensureDefuseGridReady({ row, col });
 
     // Enforce 20-minute hard cap
     if (Date.now() - s.startedAt + s.totalPenalties > 1_200_000) {
@@ -1869,11 +1922,17 @@ export default class GameRoom implements Party.Server {
   private async handleDefuseRestart(conn: Party.Connection) {
     if (!this.defuseState) return;
     const requesterName = this.defuseConnectionToName.get(conn.id);
-    if (!requesterName || normalizeRankingName(requesterName) !== normalizeRankingName(this.defuseState.playerName)) {
+    if (!requesterName) {
+      return;
+    }
+    const isOwner =
+      normalizeRankingName(requesterName) ===
+      normalizeRankingName(this.defuseState.playerName);
+    if (this.defuseState.status !== "finished" && !isOwner) {
       return;
     }
     const { difficulty, playerName, isMulti, squadName, squadMembers } = this.defuseState;
-    this.defuseState = createDefuseState(difficulty, playerName);
+    this.defuseState = createDefuseState(difficulty, playerName, { deferGrid: true });
     this.defuseState.isMulti = isMulti;
     this.defuseState.squadName = squadName;
     this.defuseState.squadMembers = squadMembers ?? [playerName];

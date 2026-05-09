@@ -7135,6 +7135,7 @@
           const cell = cellEls[r * cols + c];
           if (!cell) continue;
           const val = grid[r][c];
+          cell.style.pointerEvents = '';
           cell.classList.remove('revealed', 'defused', 'exploded');
           for (let n = 1; n <= 8; n++) cell.classList.remove(`num-${n}`);
           cell.textContent = '';
@@ -7162,7 +7163,7 @@
       if (shareBtn) shareBtn.style.display = '';
       const restartBtn = document.getElementById('btn-defuse-restart');
       const isDefuseOwner = !!myName && !!playerName && isSamePlayerName(myName, playerName);
-      if (restartBtn) restartBtn.style.display = isDefuseOwner ? '' : 'none';
+      if (restartBtn) restartBtn.style.display = status === 'finished' ? '' : 'none';
       const playersStrip = document.getElementById('defuse-players-strip');
       if (playersStrip) {
         if (isMulti) {
@@ -7245,6 +7246,8 @@
       document.querySelectorAll('.defuse-cell:not(.revealed):not(.defused):not(.exploded)').forEach(c => {
         c.style.pointerEvents = 'none';
       });
+      const topRestartBtn = document.getElementById('btn-defuse-restart');
+      if (topRestartBtn) topRestartBtn.style.display = '';
       const modal = document.getElementById('defuse-result-inline');
       const titleEl = document.getElementById('defuse-result-title');
       const bodyEl = document.getElementById('defuse-result-body');

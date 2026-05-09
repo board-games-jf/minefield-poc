@@ -86,6 +86,8 @@ export type EnergyPreset = {
   dangerWeightMultiplier: number;
 };
 
+export type WeightedPreset = Omit<EnergyPreset, "safeEnergy">;
+
 /**
  * Preset parameters keyed by coop difficulty.
  *
@@ -131,6 +133,44 @@ export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
       dangerWeightMultiplier: 1.25,
     },
   };
+
+export const VERSUS_ENERGY_PRESETS: Record<
+  "easy" | "medium" | "hard",
+  WeightedPreset
+> = {
+  easy: {
+    dangerSources: 2,
+    dangerEnergyMax: 3,
+    reliefPockets: 1,
+    reliefEnergyMax: 1,
+    reliefWeightMultiplier: 0.7,
+    dangerWeightMultiplier: 1.05,
+  },
+  medium: {
+    dangerSources: 3,
+    dangerEnergyMax: 4,
+    reliefPockets: 1,
+    reliefEnergyMax: 2,
+    reliefWeightMultiplier: 0.72,
+    dangerWeightMultiplier: 1.15,
+  },
+  hard: {
+    dangerSources: 4,
+    dangerEnergyMax: 5,
+    reliefPockets: 2,
+    reliefEnergyMax: 2,
+    reliefWeightMultiplier: 0.75,
+    dangerWeightMultiplier: 1.25,
+  },
+};
+
+export interface WeightedGridOptions extends WeightedPreset {
+  rows: number;
+  cols: number;
+  bombs: number;
+  safeZone?: Set<string>;
+  seed?: number;
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -1004,15 +1044,13 @@ export function generateGrid(options: GridGenOptions): GridGenResult {
   return best;
 }
 
-function generateGridOnce(options: GridGenOptions): GridGenResult {
-  validateOptions(options);
-
+function buildWeightedGrid(
+  options: WeightedGridOptions,
+): Omit<GridGenResult, "safeZone"> & { safeZone: Set<string> } {
   const {
     rows,
     cols,
     bombs,
-    firstClick,
-    safeEnergy,
     dangerSources,
     dangerEnergyMax,
     reliefPockets = 0,
@@ -1021,19 +1059,7 @@ function generateGridOnce(options: GridGenOptions): GridGenResult {
     dangerWeightMultiplier = 1,
   } = options;
 
-  const seed =
-    options.seed ??
-    firstClick.row * 1000 +
-      firstClick.col * 37 +
-      rows * 101 +
-      cols * 503 +
-      bombs * 997 +
-      (Date.now() % 1_000_000);
-
-  const rng = lcg(seed);
-
-  const safeZone = propagateSafeEnergy(rows, cols, firstClick, safeEnergy);
-
+  const safeZone = options.safeZone ?? new Set<string>();
   const availableOutsideSafeZone = rows * cols - safeZone.size;
 
   if (bombs > availableOutsideSafeZone) {
@@ -1041,6 +1067,12 @@ function generateGridOnce(options: GridGenOptions): GridGenResult {
       `Cannot place ${bombs} bombs: safeZone has ${safeZone.size} cells, leaving only ${availableOutsideSafeZone} available cells.`,
     );
   }
+
+  const seed =
+    options.seed ??
+    rows * 101 + cols * 503 + bombs * 997 + (Date.now() % 1_000_000);
+
+  const rng = lcg(seed);
 
   const reliefMap = generateReliefMap(
     rows,
@@ -1072,16 +1104,41 @@ function generateGridOnce(options: GridGenOptions): GridGenResult {
     dangerWeightMultiplier,
   );
 
-  const grid = calcNumbers(rows, cols, mineSet);
-
-  if (!validateBoard(grid, firstClick, bombs, safeZone)) {
-    throw new Error("Generated board failed validation.");
-  }
-
   return {
-    grid,
+    grid: calcNumbers(rows, cols, mineSet),
     safeZone,
     dangerMap,
     reliefMap,
   };
+}
+
+function generateGridOnce(options: GridGenOptions): GridGenResult {
+  validateOptions(options);
+
+  const { rows, cols, bombs, firstClick, safeEnergy } = options;
+  const safeZone = propagateSafeEnergy(rows, cols, firstClick, safeEnergy);
+  const result = buildWeightedGrid({
+    ...options,
+    safeZone,
+    seed:
+      options.seed ??
+      firstClick.row * 1000 +
+        firstClick.col * 37 +
+        rows * 101 +
+        cols * 503 +
+        bombs * 997 +
+        (Date.now() % 1_000_000),
+  });
+
+  if (!validateBoard(result.grid, firstClick, bombs, safeZone)) {
+    throw new Error("Generated board failed validation.");
+  }
+
+  return result;
+}
+
+export function generateVersusGrid(
+  options: WeightedGridOptions,
+): GridGenResult {
+  return buildWeightedGrid(options);
 }

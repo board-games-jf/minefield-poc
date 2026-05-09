@@ -20,12 +20,14 @@ import {
 } from "../src/server";
 import {
   generateGrid as generateEnergyGrid,
+  generateVersusGrid,
   propagateSafeEnergy,
   placeWeightedMines,
   generateDangerMap,
   generateReliefMap,
   lcg,
   ENERGY_PRESETS,
+  VERSUS_ENERGY_PRESETS,
   type GridGenOptions,
 } from "../src/grid-generator";
 
@@ -731,6 +733,74 @@ describe("createInitialState coop — deferred grid", () => {
       expect(state.grid[0]).toHaveLength(COOP_CONFIGS[diff].cols);
       expect(state.totalBombs).toBe(COOP_CONFIGS[diff].bombs);
     }
+  });
+});
+
+describe("coop energy generator regressions", () => {
+  it("keeps the first click safe for every coop difficulty", () => {
+    for (const diff of ["easy", "medium", "hard"] as const) {
+      const firstClick = { row: 1, col: 1 };
+      const result = generateEnergyGrid({
+        rows: COOP_CONFIGS[diff].rows,
+        cols: COOP_CONFIGS[diff].cols,
+        bombs: COOP_CONFIGS[diff].bombs,
+        firstClick,
+        ...ENERGY_PRESETS[diff],
+        seed: 1234,
+      });
+
+      expect(result.grid[firstClick.row][firstClick.col]).not.toBe(-1);
+    }
+  });
+
+  it("never places bombs inside the coop safe zone", () => {
+    const firstClick = { row: 2, col: 2 };
+    const result = generateEnergyGrid({
+      rows: COOP_CONFIGS.medium.rows,
+      cols: COOP_CONFIGS.medium.cols,
+      bombs: COOP_CONFIGS.medium.bombs,
+      firstClick,
+      ...ENERGY_PRESETS.medium,
+      seed: 4321,
+    });
+
+    for (const key of result.safeZone) {
+      const [row, col] = key.split(",").map(Number);
+      expect(result.grid[row][col]).not.toBe(-1);
+    }
+  });
+
+  it("keeps the exact coop bomb count", () => {
+    for (const diff of ["easy", "medium", "hard"] as const) {
+      const result = generateEnergyGrid({
+        rows: COOP_CONFIGS[diff].rows,
+        cols: COOP_CONFIGS[diff].cols,
+        bombs: COOP_CONFIGS[diff].bombs,
+        firstClick: { row: 0, col: 0 },
+        ...ENERGY_PRESETS[diff],
+        seed: 999,
+      });
+
+      expect(result.grid.flat().filter((v) => v === -1)).toHaveLength(
+        COOP_CONFIGS[diff].bombs,
+      );
+    }
+  });
+});
+
+describe("versus weighted generator", () => {
+  it("keeps the exact bomb count without a safe zone", () => {
+    const result = generateVersusGrid({
+      rows: CONFIGS.medium.rows,
+      cols: CONFIGS.medium.cols,
+      bombs: CONFIGS.medium.bombs,
+      ...VERSUS_ENERGY_PRESETS.medium,
+      seed: 2024,
+    });
+
+    expect(result.grid.flat().filter((v) => v === -1)).toHaveLength(
+      CONFIGS.medium.bombs,
+    );
   });
 });
 
