@@ -6437,11 +6437,11 @@
       if (!currentState || currentState.status !== "playing") return;
       if (currentState.mode === "explosive" && currentState.explosiveCooldownUntil && Date.now() < currentState.explosiveCooldownUntil) return;
       if (currentState.revealed[r][c]) return;
-      // Block click on flagged cell
+      // Tap on a flagged cell → remove the flag (instead of blocking)
       const isFlagged = currentState.mode === "coop"
         ? currentState.flags?.[r]?.[c]
         : localFlags[`${r},${c}`];
-      if (isFlagged) return;
+      if (isFlagged) { handleCellFlag(r, c); return; }
       if (myPlayerIndex !== currentState.currentPlayer) return;
 
       socket.send(JSON.stringify({ type: "reveal", row: r, col: c }));
