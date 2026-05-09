@@ -5177,6 +5177,23 @@
           else showStickerToast(msg.from, msg.id);
         }
       });
+
+      // If the tab was backgrounded and comes back, ask server for the latest state.
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) return;
+        if (!_defuseSocket) return;
+        if (!document.getElementById('screen-defuse-game')?.classList.contains('active')) return;
+        try {
+          const last = _defuseCurrentState;
+          _defuseSocket.send(JSON.stringify({
+            type: 'defuse-join',
+            name: myName,
+            difficulty: last?.difficulty ?? difficulty,
+            isMulti: !!last?.isMulti,
+            squadName: last?.isMulti ? (last?.squadName || myName) : undefined,
+          }));
+        } catch {}
+      });
     }
 
     // ── WebSocket ──────────────────────────────────────────────────────────────

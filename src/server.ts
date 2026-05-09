@@ -1773,6 +1773,20 @@ export default class GameRoom implements Party.Server {
     };
   }
 
+  private async ensureDefuseTimeout() {
+    if (!this.defuseState) return;
+    const s = this.defuseState;
+    if (s.status === "finished") return;
+    if (!s.startedAt) return;
+
+    const effectiveElapsedMs = Date.now() - s.startedAt + s.totalPenalties;
+    if (effectiveElapsedMs < 1_200_000) return;
+
+    s.status = "finished";
+    s.finalTime = 1_200_000;
+    await this.persistDefuse();
+  }
+
   private broadcastDefuse() {
     if (!this.defuseState) return;
     const msg = JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage);
@@ -1788,6 +1802,7 @@ export default class GameRoom implements Party.Server {
     this.defuseConnectionToName.set(conn.id, name);
     // Reconnect: send current state
     if (this.defuseState) {
+      await this.ensureDefuseTimeout();
       if (this.defuseState.isMulti) {
         const members = this.defuseState.squadMembers ?? [this.defuseState.playerName];
         const exists = members.some((member) => normalizeRankingName(member) === normalizeRankingName(name));
@@ -1818,6 +1833,7 @@ export default class GameRoom implements Party.Server {
     action: "inspect" | "defuse",
   ) {
     if (!this.defuseState) return;
+    await this.ensureDefuseTimeout();
     if (this.defuseState.status === "finished") return;
 
     const s = this.defuseState;
