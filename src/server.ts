@@ -76,6 +76,8 @@ export interface GameState {
   flags?: boolean[][];
   /** Coop only: false until the first reveal triggers deferred grid generation. */
   coopGridReady?: boolean;
+  /** Explosive only: false until the first reveal triggers deferred grid generation. */
+  explosiveGridReady?: boolean;
 }
 
 // ── Defuse-specific types ─────────────────────────────────────────────────
@@ -483,6 +485,7 @@ export function createInitialState(
     difficulty
   ];
   const isCoop = mode === "coop";
+  const isExplosive = mode === "explosive";
   const readyGrid =
     mode === "versus"
       ? generateVersusGrid({
@@ -502,8 +505,11 @@ export function createInitialState(
     // Coop: use a zero-filled placeholder; actual grid is generated on the first valid reveal.
     grid: isCoop
       ? Array.from({ length: rows }, () => Array(cols).fill(0))
-      : readyGrid,
+      : isExplosive
+        ? Array.from({ length: rows }, () => Array(cols).fill(0))
+        : readyGrid,
     ...(isCoop ? { coopGridReady: false } : {}),
+    ...(isExplosive ? { explosiveGridReady: false } : {}),
     revealed: Array.from({ length: rows }, () => Array(cols).fill(false)),
     foundBy: Array.from({ length: rows }, () =>
       Array<0 | 1 | null>(cols).fill(null),
@@ -937,6 +943,15 @@ export default class GameRoom implements Party.Server {
       this.ensureCoopGridReady({ row, col });
     }
 
+    // Explosive: generate the real grid only on the first valid reveal by the current player.
+    // This guarantees the first click is never a bomb and keeps distribution consistent.
+    if (
+      this.state.mode === "explosive" &&
+      this.state.explosiveGridReady === false
+    ) {
+      this.ensureExplosiveGridReady({ row, col });
+    }
+
     if (this.state.revealed[row][col]) return;
 
     const player = this.state.players[playerIndex]!;
@@ -974,7 +989,8 @@ export default class GameRoom implements Party.Server {
           this.state.status = "finished";
         } else {
           // Start cooldown so players can see where they lost before the next round starts.
-          this.state.currentPlayer = winner;
+          // Loser starts the next round (even though the other player gets the point).
+          this.state.currentPlayer = playerIndex;
           this.state.explosiveCooldownUntil = Date.now() + 5000;
           this.clearExplosiveCooldownTimer();
           this.explosiveCooldownTimer = setTimeout(
@@ -1178,7 +1194,10 @@ export default class GameRoom implements Party.Server {
     this.state.explosiveCooldownUntil = undefined;
 
     const { rows, cols, bombs } = CONFIGS[this.state.difficulty];
-    this.state.grid = generateGrid(rows, cols, bombs);
+    // Defer explosive grid generation to the first click of the round so
+    // the click is guaranteed safe and distribution can be tuned.
+    this.state.grid = Array.from({ length: rows }, () => Array(cols).fill(0));
+    this.state.explosiveGridReady = false;
     this.state.revealed = Array.from({ length: rows }, () =>
       Array(cols).fill(false),
     );
@@ -1364,6 +1383,54 @@ export default class GameRoom implements Party.Server {
       Array<0 | 1 | null>(cols).fill(null),
     );
     this.state.safeRevealedBy = [];
+    this.state.flags = undefined;
+  }
+
+  /**
+   * Explosive only.
+   * Generates the real explosive grid from the first valid click.
+   * Guarantees the first click is not a bomb, and reuses the coop distribution tuning.
+   */
+  private ensureExplosiveGridReady(firstClick: { row: number; col: number }) {
+    if (!this.state) return;
+    if (this.state.mode !== "explosive") return;
+    if (this.state.explosiveGridReady !== false) return;
+
+    const { rows, cols, bombs } = CONFIGS[this.state.difficulty];
+
+    if (
+      firstClick.row < 0 ||
+      firstClick.row >= rows ||
+      firstClick.col < 0 ||
+      firstClick.col >= cols
+    ) {
+      return;
+    }
+
+    const preset = ENERGY_PRESETS[this.state.difficulty];
+    const result = generateCoopGrid({
+      rows,
+      cols,
+      bombs,
+      firstClick,
+      ...preset,
+    });
+
+    this.state.grid = result.grid;
+    this.state.explosiveGridReady = true;
+
+    // Keep auxiliary matrices aligned with the explosive config.
+    this.state.revealed = Array.from({ length: rows }, () =>
+      Array(cols).fill(false),
+    );
+    this.state.foundBy = Array.from({ length: rows }, () =>
+      Array<0 | 1 | null>(cols).fill(null),
+    );
+    this.state.safeRevealedBy = [];
+    this.state.lastClickedCell = undefined;
+    this.state.lastPlayerClicks = [];
+
+    // Explosive does not use coop flags.
     this.state.flags = undefined;
   }
 
