@@ -10,8 +10,13 @@ import {
   pickAiCell,
   isScoreUncatchable,
   applyMatchResultToRanking,
+  DEFUSE_CONFIGS,
+  createDefuseState,
+  sortDefuseRanking,
+  buildDefuseRankingPayload,
   type GameState,
   type RankingEntry,
+  type DefuseRankingEntry,
 } from "../src/server";
 import {
   generateGrid as generateEnergyGrid,
@@ -834,5 +839,179 @@ describe("coop deferred grid — AI first click safety", () => {
       const { grid } = generateEnergyGrid({ rows: 8, cols: 8, bombs: 12, firstClick, ...ENERGY_PRESETS.medium, seed: i });
       expect(grid[firstClick.row][firstClick.col]).not.toBe(-1);
     }
+  });
+});
+// ── Defuse mode ────────────────────────────────────────────────────────────
+
+describe("DEFUSE_CONFIGS", () => {
+  it("has correct bomb counts per difficulty", () => {
+    expect(DEFUSE_CONFIGS.easy.bombs).toBe(23);
+    expect(DEFUSE_CONFIGS.medium.bombs).toBe(29);
+    expect(DEFUSE_CONFIGS.hard.bombs).toBe(36);
+  });
+
+  it("all difficulties use a 12×12 grid", () => {
+    for (const diff of ["easy", "medium", "hard"] as const) {
+      expect(DEFUSE_CONFIGS[diff].rows).toBe(12);
+      expect(DEFUSE_CONFIGS[diff].cols).toBe(12);
+    }
+  });
+});
+
+describe("createDefuseState", () => {
+  it("returns waiting status with correct dimensions", () => {
+    const s = createDefuseState("medium", "Alice");
+    expect(s.status).toBe("waiting");
+    expect(s.difficulty).toBe("medium");
+    expect(s.playerName).toBe("Alice");
+    expect(s.rows).toBe(12);
+    expect(s.cols).toBe(12);
+    expect(s.totalBombs).toBe(29);
+  });
+
+  it("grid contains exactly the configured number of bombs", () => {
+    for (const diff of ["easy", "medium", "hard"] as const) {
+      const s = createDefuseState(diff, "Test");
+      const bombs = s.grid.flat().filter((v) => v === -1).length;
+      expect(bombs).toBe(DEFUSE_CONFIGS[diff].bombs);
+    }
+  });
+
+  it("starts with all tracking counters at zero", () => {
+    const s = createDefuseState("easy", "Bob");
+    expect(s.totalPenalties).toBe(0);
+    expect(s.bombsResolved).toBe(0);
+    expect(s.combo).toBe(0);
+    expect(s.highestCombo).toBe(0);
+    expect(s.wrongDefuses).toBe(0);
+    expect(s.triggeredBombs).toBe(0);
+    expect(s.startedAt).toBeNull();
+    expect(s.finalTime).toBeNull();
+  });
+
+  it("revealed / defused / exploded boards are all false", () => {
+    const s = createDefuseState("easy", "Bob");
+    expect(s.revealed.flat().every((v) => v === false)).toBe(true);
+    expect(s.defused.flat().every((v) => v === false)).toBe(true);
+    expect(s.exploded.flat().every((v) => v === false)).toBe(true);
+  });
+
+  it("neighbour counts are consistent with bomb positions", () => {
+    const s = createDefuseState("easy", "Test");
+    const { grid, rows, cols } = s;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        if (grid[r][c] === -1) continue;
+        let expected = 0;
+        for (let dr = -1; dr <= 1; dr++)
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === -1) expected++;
+          }
+        expect(grid[r][c]).toBe(expected);
+      }
+    }
+  });
+});
+
+describe("sortDefuseRanking", () => {
+  const base: Omit<DefuseRankingEntry, "finalTime" | "highestCombo" | "triggeredBombs" | "wrongDefuses" | "timestamp"> = {
+    name: "x", realTime: 0, totalPenalties: 0, accuracy: 100, difficulty: "medium",
+  };
+
+  it("sorts by finalTime ascending", () => {
+    const entries: DefuseRankingEntry[] = [
+      { ...base, name: "B", finalTime: 120_000, highestCombo: 3, triggeredBombs: 0, wrongDefuses: 0, timestamp: 1 },
+      { ...base, name: "A", finalTime: 90_000,  highestCombo: 3, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+    ];
+    const sorted = sortDefuseRanking(entries);
+    expect(sorted[0].name).toBe("A");
+    expect(sorted[1].name).toBe("B");
+  });
+
+  it("breaks finalTime tie by highestCombo descending", () => {
+    const entries: DefuseRankingEntry[] = [
+      { ...base, name: "Low",  finalTime: 60_000, highestCombo: 2, triggeredBombs: 0, wrongDefuses: 0, timestamp: 1 },
+      { ...base, name: "High", finalTime: 60_000, highestCombo: 5, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+    ];
+    const sorted = sortDefuseRanking(entries);
+    expect(sorted[0].name).toBe("High");
+  });
+
+  it("breaks further tie by triggeredBombs ascending", () => {
+    const entries: DefuseRankingEntry[] = [
+      { ...base, name: "More", finalTime: 60_000, highestCombo: 3, triggeredBombs: 2, wrongDefuses: 0, timestamp: 1 },
+      { ...base, name: "Less", finalTime: 60_000, highestCombo: 3, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+    ];
+    const sorted = sortDefuseRanking(entries);
+    expect(sorted[0].name).toBe("Less");
+  });
+
+  it("does not mutate the original array", () => {
+    const entries: DefuseRankingEntry[] = [
+      { ...base, name: "B", finalTime: 100, highestCombo: 1, triggeredBombs: 0, wrongDefuses: 0, timestamp: 1 },
+      { ...base, name: "A", finalTime: 50,  highestCombo: 1, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+    ];
+    sortDefuseRanking(entries);
+    expect(entries[0].name).toBe("B"); // original order unchanged
+  });
+});
+
+describe("buildDefuseRankingPayload", () => {
+  const mkEntry = (name: string, finalTime: number, difficulty: "easy" | "medium" | "hard" = "medium"): DefuseRankingEntry => ({
+    name, finalTime, realTime: finalTime, totalPenalties: 0, accuracy: 100,
+    highestCombo: 1, triggeredBombs: 0, wrongDefuses: 0, difficulty, timestamp: 1,
+  });
+
+  const entries: DefuseRankingEntry[] = [
+    mkEntry("Alice", 90_000),
+    mkEntry("Bob",   60_000),
+    mkEntry("Carol", 75_000),
+    mkEntry("EasyPlayer", 30_000, "easy"),
+  ];
+
+  it("filters to the requested difficulty", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", null, 10);
+    expect(payload.top.every((e) => e.difficulty === "medium")).toBe(true);
+    expect(payload.top).toHaveLength(3);
+  });
+
+  it("respects the limit", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", null, 2);
+    expect(payload.top).toHaveLength(2);
+  });
+
+  it("assigns sequential positions starting at 1", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", null, 10);
+    expect(payload.top.map((e) => e.position)).toEqual([1, 2, 3]);
+  });
+
+  it("top list is ordered by finalTime ascending", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", null, 10);
+    expect(payload.top[0].name).toBe("Bob");
+    expect(payload.top[1].name).toBe("Carol");
+    expect(payload.top[2].name).toBe("Alice");
+  });
+
+  it("returns player with correct position when found", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", "Carol", 10);
+    expect(payload.player?.name).toBe("Carol");
+    expect(payload.player?.position).toBe(2);
+  });
+
+  it("player lookup is case-insensitive", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", "alice", 10);
+    expect(payload.player?.name).toBe("Alice");
+    expect(payload.player?.position).toBe(3);
+  });
+
+  it("returns player null when not found in that difficulty", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", "EasyPlayer", 10);
+    expect(payload.player).toBeNull();
+  });
+
+  it("returns player null when playerName is null", () => {
+    const payload = buildDefuseRankingPayload(entries, "medium", null, 10);
+    expect(payload.player).toBeNull();
   });
 });

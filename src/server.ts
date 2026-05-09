@@ -8,7 +8,7 @@ import {
 
 export type Difficulty = "easy" | "medium" | "hard";
 export type AiLevel = "easy" | "medium" | "hard";
-export type GameMode = "versus" | "coop" | "explosive";
+export type GameMode = "versus" | "coop" | "explosive" | "defuse";
 
 const POINTS_TABLE = {
   versus: { easy: 60, medium: 110, hard: 160 },
@@ -76,6 +76,57 @@ export interface GameState {
   coopGridReady?: boolean;
 }
 
+// ── Defuse-specific types ─────────────────────────────────────────────────
+
+export const DEFUSE_CONFIGS: Record<Difficulty, { rows: number; cols: number; bombs: number }> = {
+  easy:   { rows: 12, cols: 12, bombs: 23 },
+  medium: { rows: 12, cols: 12, bombs: 29 },
+  hard:   { rows: 12, cols: 12, bombs: 36 },
+};
+
+export interface DefuseState {
+  status: "waiting" | "playing" | "finished";
+  difficulty: Difficulty;
+  playerName: string;
+  squadName?: string;
+  isMulti?: boolean;
+  rows: number;
+  cols: number;
+  /** -1=bomb, 0-8=safe; -2=hidden on client for unrevealed cells */
+  grid: number[][];
+  revealed: boolean[][];
+  defused:  boolean[][]; // correctly defused bombs (green 💣)
+  exploded: boolean[][]; // Inspect-hit bombs     (red 💣)
+  startedAt: number | null;
+  totalPenalties: number; // accumulated ms
+  totalBombs: number;
+  bombsResolved: number;  // defused + exploded
+  combo: number;
+  highestCombo: number;
+  wrongDefuses: number;
+  triggeredBombs: number;
+  finalTime: number | null; // ms = realTime + totalPenalties
+}
+
+export interface DefuseRankingEntry {
+  name: string;
+  finalTime: number;        // ms
+  realTime: number;         // ms (pure elapsed)
+  totalPenalties: number;   // ms
+  accuracy: number;         // 0–100
+  highestCombo: number;
+  triggeredBombs: number;   // Inspect mistakes (+5s each)
+  wrongDefuses: number;     // Defuse-wrong mistakes (+10s each)
+  difficulty: Difficulty;
+  timestamp: number;
+  squadMembers?: string[];  // present for multi rooms
+}
+
+const DEFUSE_RANKING_ROOM_ID = "__defuse-ranking__";
+const DEFUSE_RANKING_KEY_PREFIX = "defuse";
+
+// ── Shared types ──────────────────────────────────────────────────────────
+
 export interface RankingEntry {
   name: string;
   points: number;
@@ -104,14 +155,20 @@ export type ClientMessage =
   | { type: "reveal"; row: number; col: number }
   | { type: "flag"; row: number; col: number }
   | { type: "rematch" }
-  | { type: "sticker"; id: string };
+  | { type: "sticker"; id: string }
+  | { type: "defuse-join"; name: string; difficulty: Difficulty; squadName?: string; isMulti?: boolean }
+  | { type: "defuse-inspect"; row: number; col: number }
+  | { type: "defuse-defuse"; row: number; col: number }
+  | { type: "defuse-restart" };
 
 // Server → Client
 export type ServerMessage =
   | { type: "state"; state: GameState }
   | { type: "error"; message: string }
   | { type: "sticker"; id: string; from: 0 | 1; at: number }
-  | { type: "bomb-found"; playerIndex: 0 | 1 };
+  | { type: "bomb-found"; playerIndex: 0 | 1 }
+  | { type: "defuse-state"; state: DefuseState }
+  | { type: "defuse-penalty"; seconds: 5 | 10; row: number; col: number };
 
 const RANKING_ROOM_ID = "__ranking__";
 const RANKING_STORAGE_KEY = "ranking";
@@ -192,6 +249,103 @@ export function buildRankingPayload(
     top,
     player: { ...sorted[playerIndex], position: playerIndex + 1 },
   };
+}
+
+// ── Defuse helpers ─────────────────────────────────────────────────────────
+
+export function sortDefuseRanking(entries: DefuseRankingEntry[]): DefuseRankingEntry[] {
+  return [...entries].sort((a, b) =>
+    a.finalTime - b.finalTime ||
+    b.highestCombo - a.highestCombo ||
+    a.triggeredBombs - b.triggeredBombs ||
+    a.wrongDefuses - b.wrongDefuses ||
+    a.timestamp - b.timestamp
+  );
+}
+
+export interface DefuseRankingPayload {
+  top: (DefuseRankingEntry & { position: number })[];
+  player: (DefuseRankingEntry & { position: number }) | null;
+}
+
+export function buildDefuseRankingPayload(
+  entries: DefuseRankingEntry[],
+  difficulty: Difficulty,
+  playerName: string | null,
+  limit: number,
+): DefuseRankingPayload {
+  const filtered = entries.filter((e) => e.difficulty === difficulty);
+  const sorted = sortDefuseRanking(filtered);
+  const top = sorted.slice(0, limit).map((e, i) => ({ ...e, position: i + 1 }));
+  if (!playerName) return { top, player: null };
+  const idx = sorted.findIndex(
+    (e) => e.name.trim().toLowerCase() === playerName.trim().toLowerCase(),
+  );
+  return {
+    top,
+    player: idx === -1 ? null : { ...sorted[idx], position: idx + 1 },
+  };
+}
+
+export function createDefuseState(
+  difficulty: Difficulty,
+  playerName: string,
+): DefuseState {
+  const { rows, cols, bombs } = DEFUSE_CONFIGS[difficulty];
+  const grid = generateDefuseGrid(rows, cols, bombs);
+  return {
+    status: "waiting",
+    difficulty,
+    playerName,
+    rows,
+    cols,
+    grid,
+    revealed: Array.from({ length: rows }, () => Array(cols).fill(false)),
+    defused:  Array.from({ length: rows }, () => Array(cols).fill(false)),
+    exploded: Array.from({ length: rows }, () => Array(cols).fill(false)),
+    startedAt: null,
+    totalPenalties: 0,
+    totalBombs: bombs,
+    bombsResolved: 0,
+    combo: 0,
+    highestCombo: 0,
+    wrongDefuses: 0,
+    triggeredBombs: 0,
+    finalTime: null,
+  };
+}
+
+function generateDefuseGrid(rows: number, cols: number, bombs: number): number[][] {
+  const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(0));
+  let placed = 0;
+  while (placed < bombs) {
+    const r = Math.floor(Math.random() * rows);
+    const c = Math.floor(Math.random() * cols);
+    if (grid[r][c] !== -1) { grid[r][c] = -1; placed++; }
+  }
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (grid[r][c] === -1) continue;
+      let count = 0;
+      for (let dr = -1; dr <= 1; dr++)
+        for (let dc = -1; dc <= 1; dc++) {
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === -1) count++;
+        }
+      grid[r][c] = count;
+    }
+  }
+  return grid;
+}
+
+function maskDefuseGrid(state: DefuseState): number[][] {
+  return state.grid.map((row, r) =>
+    row.map((cell, c) => {
+      if (state.status === "finished") return cell;
+      if (state.revealed[r][c] || state.defused[r][c] || state.exploded[r][c]) return cell;
+      return -2; // hidden
+    }),
+  );
 }
 
 // ── Game Logic ─────────────────────────────────────────────────────────────
@@ -406,6 +560,19 @@ export default class GameRoom implements Party.Server {
           );
       }
 
+      if (url.pathname === "/api/defuse-ranking") {
+        const partyName = Object.keys(lobby.parties)[0];
+        if (!partyName) return Response.json({ top: [], player: null } satisfies DefuseRankingPayload);
+        const player = url.searchParams.get("player");
+        const difficulty = (url.searchParams.get("difficulty") || "medium") as Difficulty;
+        const limit = url.searchParams.get("limit") || "10";
+        return lobby.parties[partyName]
+          .get(DEFUSE_RANKING_ROOM_ID)
+          .fetch(
+            `/defuse-snapshot?difficulty=${encodeURIComponent(difficulty)}&limit=${encodeURIComponent(limit)}${player ? `&player=${encodeURIComponent(player)}` : ""}`,
+          );
+      }
+
       let path = url.pathname;
       if (path === "/") path = "/index.html";
 
@@ -462,6 +629,8 @@ export default class GameRoom implements Party.Server {
   }
 
   state: GameState | null = null;
+  defuseState: DefuseState | null = null;
+  private defuseRankingRecorded = false;
   connectionToPlayer: Map<string, 0 | 1> = new Map();
   private aiTimer: ReturnType<typeof setTimeout> | null = null;
   private explosiveCooldownTimer: ReturnType<typeof setTimeout> | null = null;
@@ -473,6 +642,11 @@ export default class GameRoom implements Party.Server {
   constructor(readonly room: Party.Room) {}
 
   async onStart() {
+    if (this.isDefuseRoom()) {
+      this.defuseState = (await this.room.storage.get<DefuseState>("defuse-state")) ?? null;
+      this.defuseRankingRecorded = (await this.room.storage.get<boolean>("defuse-ranking-recorded")) ?? false;
+      return;
+    }
     this.state = (await this.room.storage.get<GameState>("state")) ?? null;
     const saved =
       await this.room.storage.get<Map<string, 0 | 1>>("connectionToPlayer");
@@ -517,7 +691,7 @@ export default class GameRoom implements Party.Server {
 
   async onRequest(req: Party.Request) {
     try {
-      if (this.room.id !== RANKING_ROOM_ID) {
+      if (this.room.id !== RANKING_ROOM_ID && this.room.id !== DEFUSE_RANKING_ROOM_ID) {
         return new Response("Not found", { status: 404 });
       }
 
@@ -550,6 +724,32 @@ export default class GameRoom implements Party.Server {
         return Response.json({ ok: true });
       }
 
+      // Defuse ranking snapshot
+      if (req.method === "GET" && url.pathname.endsWith("/defuse-snapshot")) {
+        const difficulty = (url.searchParams.get("difficulty") || "medium") as Difficulty;
+        const limit = Number.parseInt(url.searchParams.get("limit") || "10", 10);
+        const player = url.searchParams.get("player");
+        const entries = (await this.room.storage.get<DefuseRankingEntry[]>(DEFUSE_RANKING_KEY_PREFIX)) ?? [];
+        return Response.json(buildDefuseRankingPayload(entries, difficulty, player, Number.isFinite(limit) ? limit : 10));
+      }
+
+      // Apply defuse match result
+      if (req.method === "POST" && url.pathname.endsWith("/apply-defuse")) {
+        const entry = (await req.json()) as DefuseRankingEntry;
+        const entries = (await this.room.storage.get<DefuseRankingEntry[]>(DEFUSE_RANKING_KEY_PREFIX)) ?? [];
+        // Keep only best result per player per difficulty (lower finalTime wins)
+        const existingIdx = entries.findIndex(
+          (e) => e.name.toLowerCase() === entry.name.toLowerCase() && e.difficulty === entry.difficulty
+        );
+        if (existingIdx === -1) {
+          entries.push(entry);
+        } else if (entry.finalTime < entries[existingIdx].finalTime) {
+          entries[existingIdx] = entry;
+        }
+        await this.room.storage.put(DEFUSE_RANKING_KEY_PREFIX, entries);
+        return Response.json({ ok: true });
+      }
+
       return new Response("Not found", { status: 404 });
     } catch (err) {
       console.error("onRequest error", err);
@@ -558,12 +758,25 @@ export default class GameRoom implements Party.Server {
   }
 
   async onConnect(conn: Party.Connection) {
+    if (this.isDefuseRoom()) {
+      if (this.defuseState) {
+        conn.send(JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage));
+      }
+      return;
+    }
     if (!this.state) return;
     this.send(conn, { type: "state", state: this.state });
   }
 
   async onMessage(message: string, sender: Party.Connection) {
     const msg = JSON.parse(message) as ClientMessage;
+    if (this.isDefuseRoom()) {
+      if (msg.type === "defuse-join") await this.handleDefuseJoin(sender, msg.name, msg.difficulty, msg.squadName, msg.isMulti);
+      if (msg.type === "defuse-inspect") await this.handleDefuseAction(sender, msg.row, msg.col, "inspect");
+      if (msg.type === "defuse-defuse") await this.handleDefuseAction(sender, msg.row, msg.col, "defuse");
+      if (msg.type === "defuse-restart") await this.handleDefuseRestart(sender);
+      return;
+    }
     if (msg.type === "join")
       await this.handleJoin(
         sender,
@@ -1470,6 +1683,199 @@ export default class GameRoom implements Party.Server {
     if (playerOne.score === playerTwo.score) return [];
     return playerOne.score > playerTwo.score ? [playerOne] : [playerTwo];
   }
+
+  // ── Defuse-room helpers ────────────────────────────────────────────────
+
+  private isDefuseRoom(): boolean {
+    return this.room.id.startsWith("defuse-");
+  }
+
+  private maskedDefuseState(): DefuseState {
+    if (!this.defuseState) throw new Error("no defuse state");
+    return { ...this.defuseState, grid: maskDefuseGrid(this.defuseState) };
+  }
+
+  private broadcastDefuse() {
+    if (!this.defuseState) return;
+    const msg = JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage);
+    this.room.broadcast(msg);
+  }
+
+  private async persistDefuse() {
+    await this.room.storage.put("defuse-state", this.defuseState);
+    await this.room.storage.put("defuse-ranking-recorded", this.defuseRankingRecorded);
+  }
+
+  private async handleDefuseJoin(conn: Party.Connection, name: string, difficulty: Difficulty, squadName?: string, isMulti?: boolean) {
+    // Reconnect: send current state
+    if (this.defuseState) {
+      conn.send(JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage));
+      return;
+    }
+    this.defuseState = createDefuseState(difficulty, name);
+    this.defuseState.status = "waiting";
+    if (isMulti && squadName) {
+      this.defuseState.isMulti = true;
+      this.defuseState.squadName = squadName;
+    }
+    await this.persistDefuse();
+    this.broadcastDefuse();
+  }
+
+  private async handleDefuseAction(
+    conn: Party.Connection,
+    row: number,
+    col: number,
+    action: "inspect" | "defuse",
+  ) {
+    if (!this.defuseState) return;
+    if (this.defuseState.status === "finished") return;
+
+    const s = this.defuseState;
+    const { rows, cols } = s;
+    if (row < 0 || row >= rows || col < 0 || col >= cols) return;
+
+    // Cell already resolved?
+    if (s.revealed[row][col] || s.defused[row][col] || s.exploded[row][col]) return;
+
+    // Start timer on first action
+    if (s.startedAt === null) {
+      s.startedAt = Date.now();
+      s.status = "playing";
+    }
+
+    // Enforce 20-minute hard cap
+    if (Date.now() - s.startedAt + s.totalPenalties > 1_200_000) {
+      s.status = "finished";
+      s.finalTime = 1_200_000;
+      await this.persistDefuse();
+      this.broadcastDefuse();
+      return;
+    }
+
+    const isBomb = s.grid[row][col] === -1;
+    let penaltySeconds = 0;
+
+    if (action === "inspect") {
+      if (isBomb) {
+        // Triggered explosion
+        s.exploded[row][col] = true;
+        s.triggeredBombs++;
+        s.combo = 0;
+        s.bombsResolved++;
+        penaltySeconds = 5;
+        s.totalPenalties += 5000;
+      } else {
+        // Safe: flood-reveal
+        this.defuseFloodReveal(row, col);
+      }
+    } else {
+      // defuse action
+      if (isBomb) {
+        // Correct defuse
+        s.defused[row][col] = true;
+        s.combo++;
+        if (s.combo > s.highestCombo) s.highestCombo = s.combo;
+        s.bombsResolved++;
+      } else {
+        // Wrong defuse
+        s.revealed[row][col] = true;
+        s.wrongDefuses++;
+        s.combo = 0;
+        penaltySeconds = 10;
+        s.totalPenalties += 10000;
+      }
+    }
+
+    // Check win condition
+    if (s.bombsResolved >= s.totalBombs) {
+      const realTime = s.startedAt ? Date.now() - s.startedAt : 0;
+      s.finalTime = realTime + s.totalPenalties;
+      s.status = "finished";
+    }
+
+    await this.persistDefuse();
+    this.broadcastDefuse();
+
+    if (penaltySeconds > 0) {
+      this.room.broadcast(JSON.stringify({
+        type: "defuse-penalty",
+        seconds: penaltySeconds as 5 | 10,
+        row,
+        col,
+      } satisfies ServerMessage));
+    }
+
+    if (s.status === "finished") {
+      await this.finalizeDefuseMatch();
+    }
+  }
+
+  private defuseFloodReveal(startRow: number, startCol: number) {
+    if (!this.defuseState) return;
+    const s = this.defuseState;
+    const { grid, revealed, rows, cols } = s;
+    const stack = [{ row: startRow, col: startCol }];
+    while (stack.length) {
+      const { row, col } = stack.pop()!;
+      if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
+      if (revealed[row][col]) continue;
+      if (grid[row][col] === -1) continue;
+      revealed[row][col] = true;
+      if (grid[row][col] === 0) {
+        for (let dr = -1; dr <= 1; dr++)
+          for (let dc = -1; dc <= 1; dc++)
+            if (dr !== 0 || dc !== 0)
+              stack.push({ row: row + dr, col: col + dc });
+      }
+    }
+  }
+
+  private async handleDefuseRestart(conn: Party.Connection) {
+    if (!this.defuseState) return;
+    const { difficulty, playerName } = this.defuseState;
+    this.defuseState = createDefuseState(difficulty, playerName);
+    this.defuseRankingRecorded = false;
+    await this.persistDefuse();
+    this.broadcastDefuse();
+  }
+
+  private async finalizeDefuseMatch() {
+    if (!this.defuseState || this.defuseRankingRecorded) return;
+    if (this.defuseState.status !== "finished") return;
+    this.defuseRankingRecorded = true;
+    const s = this.defuseState;
+    const realTime = s.startedAt ? (s.finalTime ?? 0) - s.totalPenalties : 0;
+    const totalActions = s.totalBombs;
+    const accuracy = totalActions > 0
+      ? Math.round(((totalActions - s.wrongDefuses - s.triggeredBombs) / totalActions) * 100)
+      : 100;
+    const entry: DefuseRankingEntry = {
+      name: s.isMulti && s.squadName ? s.squadName : s.playerName,
+      finalTime: s.finalTime ?? 0,
+      realTime,
+      totalPenalties: s.totalPenalties,
+      accuracy,
+      highestCombo: s.highestCombo,
+      triggeredBombs: s.triggeredBombs,
+      wrongDefuses: s.wrongDefuses,
+      difficulty: s.difficulty,
+      timestamp: Date.now(),
+      squadMembers: s.isMulti ? [s.playerName] : undefined,
+    };
+    await this.getDefuseRankingParty().fetch("/apply-defuse", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(entry),
+    });
+    await this.persistDefuse();
+  }
+
+  private getDefuseRankingParty() {
+    return this.room.context.parties[this.room.name].get(DEFUSE_RANKING_ROOM_ID);
+  }
+
+  // ── Ranking finalization ───────────────────────────────────────────────
 
   private async finalizeMatchIfNeeded() {
     if (!this.state || this.state.status !== "finished" || this.rankingRecorded)

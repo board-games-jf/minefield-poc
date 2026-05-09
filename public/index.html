@@ -2398,7 +2398,10 @@
 
     .ranking-modal-card {
       width: min(680px, calc(100vw - 36px));
-      max-height: min(760px, calc(100vh - 36px));
+      max-height: calc(100dvh - 36px);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
     }
 
     .ranking-modal-head {
@@ -2406,14 +2409,17 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
+      flex-shrink: 0;
     }
 
     .ranking-scroll {
-      overflow-y: auto;
       display: flex;
       flex-direction: column;
       gap: 10px;
       padding-right: 4px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
     }
 
     .ranking-close {
@@ -2426,6 +2432,212 @@
       cursor: pointer;
       font-size: 18px;
     }
+
+    .ranking-tabs {
+      display: flex;
+      gap: 0;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 3px;
+    }
+
+    .ranking-tab {
+      padding: 4px 10px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      line-height: 1;
+    }
+
+    .ranking-tab.active {
+      background: rgba(255,255,255,0.09);
+      color: var(--text);
+    }
+
+    .ranking-defuse-filters {
+      display: flex;
+      gap: 0;
+      padding-bottom: 0;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 3px;
+      flex-shrink: 0;
+    }
+
+    .ranking-diff-btn {
+      flex: 1;
+      padding: 5px 8px;
+      border-radius: var(--radius-md);
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      line-height: 1.2;
+    }
+
+    .ranking-diff-sub {
+      font-size: 10px;
+      font-weight: 400;
+      opacity: 0.7;
+    }
+
+    .ranking-diff-btn.active {
+      background: rgba(255,255,255,0.09);
+      color: var(--text);
+    }
+
+    .defuse-rank-row {
+      display: grid;
+      grid-template-columns: 36px 1fr auto;
+      align-items: center;
+      gap: 0;
+      border-radius: var(--radius-sm);
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      font-size: 12px;
+      overflow: hidden;
+      transition: border-color 0.15s;
+    }
+
+    .defuse-rank-row.highlight {
+      border-color: var(--teal);
+    }
+
+    .defuse-rank-pos {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      align-self: stretch;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-subtle);
+      padding: 10px 4px;
+    }
+
+    .defuse-rank-pos.top1 { color: #f0c040; }
+    .defuse-rank-pos.top2 { color: #b0b0b0; }
+    .defuse-rank-pos.top3 { color: #c87941; }
+
+    .defuse-rank-body {
+      padding: 8px 10px;
+      min-width: 0;
+    }
+
+    .defuse-rank-name {
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .defuse-rank-members {
+      font-size: 10px;
+      color: var(--text-subtle);
+      margin-top: 1px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .defuse-rank-penalties {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+
+    .defuse-rank-members-chips {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .chip-crown {
+      font-size: 10px;
+    }
+
+    .chip-label {
+      font-size: 10px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 28px;
+      box-sizing: border-box;
+      padding: 0 10px;
+      line-height: 1;
+      border-radius: 6px;
+      vertical-align: middle;
+    }
+
+    .badge img,
+    .badge svg,
+    .badge .icon {
+      display: block;
+      flex-shrink: 0;
+    }
+
+    .badge span {
+      display: flex;
+      align-items: center;
+    }
+
+    .defuse-rank-penalty-pill {
+      font-size: 10px;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.08);
+      border: 0.5px solid rgba(255,255,255,0.18);
+      white-space: nowrap;
+    }
+
+    .defuse-rank-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      padding: 8px 12px;
+      gap: 3px;
+      align-self: stretch;
+      justify-content: center;
+    }
+
+    .defuse-rank-row.highlight .defuse-rank-meta {}
+
+    .defuse-rank-time {
+      font-weight: 700;
+      color: var(--text);
+      font-size: 14px;
+      white-space: nowrap;
+      letter-spacing: -0.5px;
+    }
+
+    .defuse-rank-combo {
+      font-size: 11px;
+      color: var(--teal);
+      white-space: nowrap;
+    }
+
+    .defuse-result-title-won   { color: var(--teal); }
+    .defuse-result-title-timeout { color: var(--coral); }
 
     .confetti {
       position: fixed;
@@ -3201,12 +3413,12 @@
         <div class="defuse-hud-sep"></div>
         <div class="defuse-hud-item">
           <div class="defuse-hud-value" id="defuse-timer">00:00</div>
-          <div class="defuse-hud-label">🕐</div>
+          <div class="defuse-hud-label">⏰</div>
         </div>
         <div class="defuse-hud-sep"></div>
         <div class="defuse-hud-item">
           <div class="defuse-hud-value" id="defuse-combo">0</div>
-          <div class="defuse-hud-label">🔥</div>
+          <div class="defuse-hud-label">🎯</div>
         </div>
       </div>
       <div id="defuse-players-strip" style="display:none;"></div>
@@ -3242,13 +3454,40 @@
   <div class="ranking-modal" id="ranking-modal" aria-hidden="true">
     <div class="ranking-modal-card">
       <div class="ranking-modal-head">
-        <div class="ranking-title" data-i18n="ranking_top10_title"></div>
+        <div class="ranking-title" id="ranking-modal-title" data-i18n="ranking_top10_title"></div>
+        <div class="ranking-tabs">
+          <button class="ranking-tab active" id="ranking-tab-main" data-tab="main">🏆</button>
+          <button class="ranking-tab" id="ranking-tab-defuse" data-tab="defuse">⏰</button>
+        </div>
         <button class="ranking-close" id="btn-ranking-close" type="button" aria-label="Close">×</button>
       </div>
-      <div class="ranking-scroll">
-        <div class="ranking-list" id="ranking-modal-list"></div>
-        <div class="ranking-divider" id="ranking-modal-divider" style="display:none;"></div>
-        <div id="ranking-modal-player"></div>
+      <div id="ranking-tab-main-content" style="display:flex;flex-direction:column;flex:1;min-height:0;">
+        <div class="ranking-scroll">
+          <div class="ranking-list" id="ranking-modal-list"></div>
+          <div class="ranking-divider" id="ranking-modal-divider" style="display:none;"></div>
+          <div id="ranking-modal-player"></div>
+        </div>
+      </div>
+      <div id="ranking-tab-defuse-content" style="display:none;flex-direction:column;flex:1;min-height:0;">
+        <div class="ranking-defuse-filters">
+          <button class="ranking-diff-btn active" data-diff="easy">
+            <span data-i18n="diff_easy_name"></span>
+            <span class="ranking-diff-sub">💣 23</span>
+          </button>
+          <button class="ranking-diff-btn" data-diff="medium">
+            <span data-i18n="diff_medium_name"></span>
+            <span class="ranking-diff-sub">💣 29</span>
+          </button>
+          <button class="ranking-diff-btn" data-diff="hard">
+            <span data-i18n="diff_hard_name"></span>
+            <span class="ranking-diff-sub">💣 36</span>
+          </button>
+        </div>
+        <div class="ranking-scroll" style="margin-top:10px;flex:1;min-height:0;">
+          <div class="ranking-list" id="defuse-ranking-list"></div>
+          <div class="ranking-divider" id="defuse-ranking-divider" style="display:none;"></div>
+          <div id="defuse-ranking-player"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -3269,6 +3508,21 @@
 
   <div class="confetti" id="confetti"></div>
   <div class="end-flash" id="end-flash"></div>
+
+  <!-- Defuse result modal -->
+  <div class="ranking-modal" id="defuse-result-modal" aria-hidden="true">
+    <div class="ranking-modal-card" style="gap:14px;">
+      <div class="ranking-modal-head">
+        <div class="ranking-title" id="defuse-result-title"></div>
+        <button class="ranking-close" id="btn-defuse-result-close" type="button" aria-label="Fechar">×</button>
+      </div>
+      <div id="defuse-result-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+      <div class="result-actions" style="margin-top:4px;">
+        <button class="btn btn-primary" id="btn-defuse-result-restart" type="button"></button>
+        <button class="btn btn-secondary" id="btn-defuse-result-ranking" type="button"></button>
+      </div>
+    </div>
+  </div>
 
   <div class="sticker-toasts" id="sticker-toasts" aria-live="polite" aria-atomic="true"></div>
 
@@ -6108,7 +6362,7 @@
       const title = t.ranking_your_position || "Your position";
       return `
     <div class="ranking-player-card">
-      <div class="ranking-pos">#${entry.position}</div>
+      <div class="ranking-pos">${entry.position}</div>
       <div class="ranking-name">${title}</div>
       <div class="ranking-wins">${points} · ${wins}</div>
     </div>`;
@@ -6133,7 +6387,6 @@
       try {
         const snap = await fetchRankingSnapshot(10);
         const top = Array.isArray(snap.top) ? snap.top : [];
-        const player = snap.player || null;
 
         if (!top.length) {
           listEl.innerHTML = `<div class="ranking-empty">${t.ranking_empty || "No ranking yet."}</div>`;
@@ -6143,12 +6396,6 @@
         listEl.innerHTML = top
           .map((e) => rankingRowHtml(e, { highlight: isSamePlayerName(e.name, activeName) }))
           .join("");
-
-        const inTop = top.some((e) => isSamePlayerName(e.name, activeName));
-        if (player && !inTop) {
-          divider.style.display = "block";
-          playerEl.innerHTML = rankingPlayerCardHtml(player);
-        }
       } catch {
         listEl.innerHTML = `<div class="ranking-empty">${t.error_generic || "Error"}</div>`;
       }
@@ -6156,6 +6403,89 @@
 
     function closeRankingModal() {
       setRankingModalOpen(false);
+    }
+
+    let _rankingActiveTab = 'main';
+    let _defuseRankingDiff = 'medium';
+
+    async function openRankingModalOnTab(tab) {
+      _rankingActiveTab = tab || 'main';
+      setRankingModalOpen(true);
+      const titleEl = document.getElementById('ranking-modal-title');
+      if (titleEl) titleEl.textContent = _rankingActiveTab === 'defuse' ? `⏰ ${t.ranking_top10_title?.replace(/^\S+\s*/, '') || 'Top 10'}` : (t.ranking_top10_title || '🏆 Top 10');
+      document.getElementById('ranking-tab-main-content').style.display = _rankingActiveTab === 'main' ? 'flex' : 'none';
+      document.getElementById('ranking-tab-defuse-content').style.display = _rankingActiveTab === 'defuse' ? 'flex' : 'none';
+      document.getElementById('ranking-tab-main').classList.toggle('active', _rankingActiveTab === 'main');
+      document.getElementById('ranking-tab-defuse').classList.toggle('active', _rankingActiveTab === 'defuse');
+      if (_rankingActiveTab === 'defuse') {
+        await loadDefuseRankingTab(_defuseRankingDiff);
+      } else {
+        await openRankingModal();
+      }
+    }
+
+    async function fetchDefuseRankingSnapshot(difficulty) {
+      const activeName = getActivePlayerName();
+      const params = new URLSearchParams({ limit: '10', difficulty });
+      if (activeName) params.set('player', activeName);
+      const res = await fetch(`/api/defuse-ranking?${params.toString()}`);
+      if (!res.ok) throw new Error('defuse_ranking_fetch_failed');
+      return await res.json();
+    }
+
+    function fmtMs(ms) {
+      const total = Math.round(ms / 1000);
+      const m = String(Math.floor(total / 60)).padStart(2, '0');
+      const s = String(total % 60).padStart(2, '0');
+      return `${m}:${s}`;
+    }
+
+    function defuseRankingRowHtml(entry) {
+      const activeName = getActivePlayerName();
+      const isMeInSquad = entry.squadMembers?.some(m => isSamePlayerName(m, activeName)) ?? false;
+      const isMe = isSamePlayerName(entry.name, activeName) || isMeInSquad;
+      const medal = entry.position === 1 ? '🥇' : entry.position === 2 ? '🥈' : entry.position === 3 ? '🥉' : null;
+      const posHtml = medal
+        ? `<span class="ranking-medal">${medal}</span>`
+        : `<span class="ranking-pos-num">${entry.position}</span>`;
+      const youSuffix = isMe ? ` <span class="ranking-you">${t.ranking_you || '(you)'}</span>` : '';
+      const members = entry.squadMembers?.length
+        ? `<div class="defuse-rank-members-chips">${entry.squadMembers.map((m, i) => {
+            return `<div class="badge defuse-rank-penalty-pill">${i === 0 ? '<span class="chip-crown">👑</span>' : ''}<span class="chip-label">${m}</span></div>`;
+          }).join('')}</div>`
+        : '';
+      const penParts = [
+        entry.triggeredBombs > 0 ? `<span class="badge defuse-rank-penalty-pill">🔎 +${entry.triggeredBombs * 5}s</span>` : '',
+        entry.wrongDefuses > 0   ? `<span class="badge defuse-rank-penalty-pill">🛠️ +${entry.wrongDefuses * 10}s</span>` : '',
+      ].filter(Boolean).join('');
+      const penLine = penParts ? `<div class="defuse-rank-penalties">${penParts}${members}</div>` : members ? `<div class="defuse-rank-penalties">${members}</div>` : '';
+      return `
+    <div class="ranking-row${isMe ? ' highlight' : ''}">
+      <div class="ranking-pos">${posHtml}</div>
+      <div class="ranking-main">
+        <div class="ranking-name">${entry.name}${youSuffix}</div>
+        ${penLine}
+      </div>
+      <div class="ranking-meta">
+        <div class="ranking-points">${fmtMs(entry.finalTime)}</div>
+        <div class="ranking-wins">🎯 ×${entry.highestCombo}</div>
+      </div>
+    </div>`;
+    }
+
+    async function loadDefuseRankingTab(difficulty) {
+      _defuseRankingDiff = difficulty;
+      document.querySelectorAll('.ranking-diff-btn').forEach(b => b.classList.toggle('active', b.dataset.diff === difficulty));
+      const listEl = document.getElementById('defuse-ranking-list');
+      listEl.innerHTML = `<div class="ranking-empty">${t.ranking_empty || 'No ranking yet.'}</div>`;
+      try {
+        const snap = await fetchDefuseRankingSnapshot(difficulty);
+        const top = Array.isArray(snap.top) ? snap.top : [];
+        if (!top.length) return;
+        listEl.innerHTML = top.map(defuseRankingRowHtml).join('');
+      } catch {
+        listEl.innerHTML = `<div class="ranking-empty">${t.error_generic || 'Error'}</div>`;
+      }
     }
 
     async function renderResultRankingSummary() {
@@ -6318,10 +6648,36 @@
     }
 
     document.getElementById("btn-leave").addEventListener("click", leaveRoom);
-    document.getElementById("btn-ranking").addEventListener("click", openRankingModal);
+    document.getElementById("btn-ranking").addEventListener("click", () => openRankingModalOnTab('main'));
     document.getElementById("btn-ranking-close").addEventListener("click", closeRankingModal);
     document.getElementById("ranking-modal").addEventListener("click", (e) => {
       if (e.target.id === "ranking-modal") closeRankingModal();
+    });
+    document.getElementById("ranking-tab-main").addEventListener("click", () => openRankingModalOnTab('main'));
+    document.getElementById("ranking-tab-defuse").addEventListener("click", () => openRankingModalOnTab('defuse'));
+    document.querySelectorAll(".ranking-diff-btn").forEach(btn => {
+      btn.addEventListener("click", () => loadDefuseRankingTab(btn.dataset.diff));
+    });
+
+    // Defuse result modal buttons
+    document.getElementById("btn-defuse-result-close")?.addEventListener("click", () => {
+      const m = document.getElementById("defuse-result-modal");
+      if (m) { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); }
+    });
+    document.getElementById("defuse-result-modal")?.addEventListener("click", (e) => {
+      if (e.target.id === "defuse-result-modal") {
+        e.target.classList.remove("open"); e.target.setAttribute("aria-hidden", "true");
+      }
+    });
+    document.getElementById("btn-defuse-result-restart")?.addEventListener("click", () => {
+      const m = document.getElementById("defuse-result-modal");
+      if (m) { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); }
+      if (_defuseLastParams) _startDefuseGame(_defuseLastParams);
+    });
+    document.getElementById("btn-defuse-result-ranking")?.addEventListener("click", () => {
+      const m = document.getElementById("defuse-result-modal");
+      if (m) { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); }
+      openRankingModalOnTab('defuse');
     });
 
     document.getElementById("rematch-modal").addEventListener("click", (e) => {
@@ -6383,6 +6739,8 @@
     let _defuseTotalBombs = 29;
     let _defuseBombsResolved = 0;
     let _defuseCurrentCombo = 0;
+    let _defuseSocket = null;
+    let _defuseRoomId = null;
 
     function setupDefuseCreate() {
       const btnSolo = document.getElementById('defuse-btn-solo');
@@ -6465,49 +6823,51 @@
       if (revealSpan && t.defuse_action_inspect) revealSpan.textContent = t.defuse_action_inspect;
       if (defuseSpan && t.defuse_action_defuse) defuseSpan.textContent = t.defuse_action_defuse;
 
+      // Show loading board (12×12 placeholder) and open WS
       _buildDefuseGrid(12, 12);
       showScreen('screen-defuse-game');
+
+      // Close any old socket
+      if (_defuseSocket) { try { _defuseSocket.close(); } catch {} _defuseSocket = null; }
+
+      _defuseRoomId = `defuse-${generateRoomId()}`;
+      _defuseSocket = new PartySocket({ host: PARTYKIT_HOST, room: _defuseRoomId });
+      _defuseSocket.addEventListener('open', () => {
+        _defuseSocket.send(JSON.stringify({
+          type: 'defuse-join',
+          name: myName,
+          difficulty,
+          isMulti: !!isMulti,
+          squadName: isMulti ? (squadName || myName) : undefined,
+        }));
+      });
+      _defuseSocket.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'defuse-state') _applyDefuseState(msg.state);
+        if (msg.type === 'defuse-penalty') {
+          const board = document.getElementById('defuse-board');
+          const cellEl = board?.querySelector(`[data-row='${msg.row}'][data-col='${msg.col}']`);
+          _showDefuseTimePenalty(cellEl, msg.seconds);
+        }
+      });
     }
 
     function _buildDefuseGrid(rows, cols) {
       const board = document.getElementById('defuse-board');
       if (!board) return;
       board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      board.dataset.rows = rows;
+      board.dataset.cols = cols;
       board.innerHTML = '';
-      const total = rows * cols;
-      // Place exactly _defuseTotalBombs bombs randomly
-      const indices = Array.from({ length: total }, (_, i) => i);
-      for (let i = indices.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [indices[i], indices[j]] = [indices[j], indices[i]];
-      }
-      const bombSet = new Set(indices.slice(0, _defuseTotalBombs));
-      // Build cells with bomb flag
-      const cells = [];
+      // Server is authoritative — cells are just placeholders until state arrives
       for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-          const idx = r * cols + c;
           const cell = document.createElement('div');
           cell.className = 'defuse-cell';
-          cell.dataset.row = r; cell.dataset.col = c;
-          cell.dataset.bomb = bombSet.has(idx) ? '1' : '0';
+          cell.dataset.row = r;
+          cell.dataset.col = c;
           cell.addEventListener('click', _onDefuseCellClick);
           board.appendChild(cell);
-          cells.push(cell);
-        }
-      }
-      // Compute neighbor counts
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const cell = cells[r * cols + c];
-          if (cell.dataset.bomb === '1') continue;
-          let count = 0;
-          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
-            if (dr === 0 && dc === 0) continue;
-            const nr = r + dr, nc = c + dc;
-            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && cells[nr * cols + nc].dataset.bomb === '1') count++;
-          }
-          cell.dataset.neighbors = count;
         }
       }
     }
@@ -6542,61 +6902,126 @@
     function _onDefuseCellClick(e) {
       const cell = e.currentTarget;
       if (cell.classList.contains('revealed') || cell.classList.contains('defused') || cell.classList.contains('exploded')) return;
+      if (!_defuseSocket) return;
+      const row = parseInt(cell.dataset.row, 10);
+      const col = parseInt(cell.dataset.col, 10);
+      const msgType = _defuseCurrentAction === 'inspect' ? 'defuse-inspect' : 'defuse-defuse';
+      _defuseSocket.send(JSON.stringify({ type: msgType, row, col }));
+    }
 
-      if (!_defuseStarted) {
+    function _applyDefuseState(state) {
+      const { rows, cols, grid, revealed, defused, exploded, startedAt, totalPenalties,
+              bombsResolved, totalBombs, combo, highestCombo, status, finalTime } = state;
+
+      // Rebuild grid if dimensions changed
+      const board = document.getElementById('defuse-board');
+      if (board && (parseInt(board.dataset.rows || '0') !== rows || parseInt(board.dataset.cols || '0') !== cols)) {
+        _buildDefuseGrid(rows, cols);
+      }
+
+      // Update cell visuals from server state
+      const cellEls = board ? board.querySelectorAll('.defuse-cell') : [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const cell = cellEls[r * cols + c];
+          if (!cell) continue;
+          const val = grid[r][c];
+          cell.classList.remove('revealed', 'defused', 'exploded');
+          for (let n = 1; n <= 8; n++) cell.classList.remove(`num-${n}`);
+          cell.textContent = '';
+          if (defused[r][c]) {
+            cell.classList.add('defused'); cell.textContent = '💣';
+          } else if (exploded[r][c]) {
+            cell.classList.add('exploded'); cell.textContent = '💣';
+          } else if (revealed[r][c]) {
+            cell.classList.add('revealed');
+            if (val > 0) { cell.textContent = String(val); cell.classList.add(`num-${val}`); }
+          }
+        }
+      }
+
+      // Sync counters
+      _defuseTotalBombs = totalBombs;
+      _defuseBombsResolved = bombsResolved;
+      _defuseCurrentCombo = combo;
+      const comboEl = document.getElementById('defuse-combo');
+      if (comboEl) comboEl.textContent = combo > 0 ? `x${combo}` : '0';
+      const bombsEl = document.getElementById('defuse-bombs-counter');
+      if (bombsEl) bombsEl.textContent = `${totalBombs - bombsResolved}`;
+
+      // Start / sync timer from server startedAt
+      if (startedAt && !_defuseStarted) {
         _defuseStarted = true;
         const hint = document.getElementById('defuse-pregame-hint');
         if (hint) { hint.style.opacity = '0'; setTimeout(() => hint.style.display = 'none', 300); }
+        clearInterval(_defuseTimer);
         _defuseTimer = setInterval(() => {
           _defuseSeconds++;
           const m = String(Math.floor(_defuseSeconds / 60)).padStart(2, '0');
           const s = String(_defuseSeconds % 60).padStart(2, '0');
-          document.getElementById('defuse-timer').textContent = `${m}:${s}`;
+          const timerEl = document.getElementById('defuse-timer');
+          if (timerEl) timerEl.textContent = `${m}:${s}`;
         }, 1000);
       }
-
-      const isBomb = cell.dataset.bomb === '1';
-      const neighbors = parseInt(cell.dataset.neighbors || '0', 10);
-      const comboEl = document.getElementById('defuse-combo');
-
-      if (_defuseCurrentAction === 'inspect') {
-        if (isBomb) {
-          // Revelou uma bomba → +5s de punição
-          cell.classList.add('exploded'); cell.textContent = '💣';
-          _defuseBombsResolved++;
-          document.getElementById('defuse-bombs-counter').textContent = `${_defuseTotalBombs - _defuseBombsResolved}`;
-          if (_defuseCurrentCombo > 0) {
-            _defuseCurrentCombo = 0;
-            comboEl.textContent = '0';
-            comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
-          }
-          _showDefuseTimePenalty(cell, 5);
-        } else {
-          // Célula segura → mostra número ou ponto
-          cell.classList.add('revealed');
-          if (neighbors > 0) { cell.textContent = String(neighbors); cell.classList.add(`num-${neighbors}`); }
-        }
-      } else {
-        // Ação: Desarmar
-        if (isBomb) {
-          // Acertou! Bomba desarmada → verde
-          cell.classList.add('defused'); cell.textContent = '💣';
-          _defuseCurrentCombo++; _defuseBombsResolved++;
-          comboEl.textContent = `x${_defuseCurrentCombo}`;
-          document.getElementById('defuse-bombs-counter').textContent = `${_defuseTotalBombs - _defuseBombsResolved}`;
-          comboEl.style.color = 'var(--teal)'; setTimeout(() => comboEl.style.color = '', 400);
-        } else {
-          // Errou! Não era bomba → revela célula + 10s
-          cell.classList.add('revealed');
-          if (neighbors > 0) { cell.textContent = String(neighbors); cell.classList.add(`num-${neighbors}`); }
-          if (_defuseCurrentCombo > 0) {
-            _defuseCurrentCombo = 0;
-            comboEl.textContent = '0';
-            comboEl.style.color = 'var(--coral)'; setTimeout(() => comboEl.style.color = '', 600);
-          }
-          _showDefuseTimePenalty(cell, 10);
-        }
+      if (startedAt) {
+        // Resync elapsed time (corrects drift and reconnects)
+        _defuseSeconds = Math.floor((Date.now() - startedAt + totalPenalties) / 1000);
+        const m = String(Math.floor(_defuseSeconds / 60)).padStart(2, '0');
+        const s = String(_defuseSeconds % 60).padStart(2, '0');
+        const timerEl = document.getElementById('defuse-timer');
+        if (timerEl) timerEl.textContent = `${m}:${s}`;
       }
+
+      // Finished
+      if (status === 'finished') {
+        clearInterval(_defuseTimer);
+        _defuseStarted = false;
+        const won = finalTime !== null && finalTime < 1_200_000;
+        _defuseGameOver(won ? 'win' : 'timeout', { finalTimeMs: finalTime, highestCombo });
+      }
+    }
+
+    function _defuseGameOver(reason, opts = {}) {
+      const won = reason === 'win';
+      // disable all cells
+      document.querySelectorAll('.defuse-cell:not(.revealed):not(.defused):not(.exploded)').forEach(c => {
+        c.style.pointerEvents = 'none';
+      });
+      const modal = document.getElementById('defuse-result-modal');
+      const titleEl = document.getElementById('defuse-result-title');
+      const bodyEl = document.getElementById('defuse-result-body');
+      const restartBtn = document.getElementById('btn-defuse-result-restart');
+      const rankBtn = document.getElementById('btn-defuse-result-ranking');
+      if (!modal) return;
+      const tl = t || {};
+      titleEl.className = 'ranking-title ' + (won ? 'defuse-result-title-won' : 'defuse-result-title-timeout');
+      titleEl.textContent = won
+        ? (tl.defuse_won_title || 'Mission complete! 🏆')
+        : (tl.defuse_timeout_title || "Time's up! ⏰");
+      const finalSec = opts.finalTimeMs != null ? Math.floor(opts.finalTimeMs / 1000) : _defuseSeconds;
+      const bestCombo = opts.highestCombo != null ? opts.highestCombo : _defuseCurrentCombo;
+      const bombasRestantes = _defuseTotalBombs - _defuseBombsResolved;
+      function statCard(icon, label, value) {
+        return `<div style="background:var(--bg-secondary);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:2px;">
+          <div style="font-size:10px;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.5px;">${icon} ${label}</div>
+          <div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.5px;">${value}</div>
+        </div>`;
+      }
+      let bodyHtml = statCard('⏰', tl.defuse_result_final_time || 'Tempo final', fmtMs(finalSec * 1000));
+      if (won) {
+        bodyHtml += statCard('🎯', tl.defuse_result_combo || 'Melhor combo', `×${bestCombo}`);
+      } else {
+        const bombs = tl.defuse_result_bombs_left ? tl.defuse_result_bombs_left(bombasRestantes) : `${bombasRestantes} bombas`;
+        bodyHtml += statCard('💣', tl.defuse_timeout_title || 'Restaram', bombs);
+      }
+      if (!won && tl.defuse_timeout_desc) {
+        bodyHtml += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-subtle);text-align:center;">${tl.defuse_timeout_desc}</div>`;
+      }
+      bodyEl.innerHTML = bodyHtml;
+      if (restartBtn) restartBtn.textContent = tl.defuse_result_play_again || 'Play again';
+      if (rankBtn) rankBtn.textContent = tl.defuse_result_ranking_btn || 'Leaderboard';
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
     }
 
     // Called by server integration to update the players strip
@@ -6678,6 +7103,7 @@
       });
       document.getElementById('btn-defuse-leave')?.addEventListener('click', () => {
         clearInterval(_defuseTimer); _defuseStarted = false;
+        if (_defuseSocket) { try { _defuseSocket.close(); } catch {} _defuseSocket = null; }
         showScreen('screen-create');
       });
       document.getElementById('btn-defuse-restart')?.addEventListener('click', () => {
