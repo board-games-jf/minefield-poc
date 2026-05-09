@@ -2797,6 +2797,14 @@
       box-shadow: 0 0 0 1px var(--teal);
     }
     .defuse-action-btn .dab-icon { font-size: 18px; }
+    .defuse-action-btn.defuse-btn-hint {
+      animation: defuse-btn-hint-glow 0.5s ease-in-out 3;
+    }
+    @keyframes defuse-btn-hint-glow {
+      0%   { border-color: var(--border); box-shadow: none; transform: scale(1); }
+      50%  { border-color: #e05c3a; box-shadow: 0 0 0 3px rgba(224, 92, 58, 0.4); transform: scale(1.05); }
+      100% { border-color: var(--border); box-shadow: none; transform: scale(1); }
+    }
     .defuse-pregame-hint {
       text-align: center;
       font-size: 14px;
@@ -7136,6 +7144,16 @@
         board.classList.add('defuse-board-shake');
         board.addEventListener('animationend', () => board.classList.remove('defuse-board-shake'), { once: true });
       }
+      const hintId = seconds === 30 ? 'defuse-btn-defuse-action' : seconds === 20 ? 'defuse-btn-inspect' : null;
+      if (hintId) {
+        const hintBtn = document.getElementById(hintId);
+        if (hintBtn) {
+          hintBtn.classList.remove('defuse-btn-hint');
+          void hintBtn.offsetWidth;
+          hintBtn.classList.add('defuse-btn-hint');
+          hintBtn.addEventListener('animationend', () => hintBtn.classList.remove('defuse-btn-hint'), { once: true });
+        }
+      }
     }
 
     function _onDefuseCellClick(e) {
@@ -7238,6 +7256,10 @@
             _defuseSeconds = 1200;
             clearInterval(_defuseTimer);
             _defuseStarted = false;
+            // Ask server to validate/confirm the current state (server alarm is the source of truth)
+            if (_defuseSocket && _defuseSocket.readyState === WebSocket.OPEN) {
+              _defuseSocket.send(JSON.stringify({ type: 'defuse-sync' }));
+            }
           }
           const m = String(Math.floor(_defuseSeconds / 60)).padStart(2, '0');
           const s = String(_defuseSeconds % 60).padStart(2, '0');

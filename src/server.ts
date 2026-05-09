@@ -40,6 +40,109 @@ export const COOP_CONFIGS: Record<Difficulty, DifficultyConfig> = {
   hard: { rows: 10, cols: 10, bombs: 20 },
 };
 
+function getModeDebugPreset(mode: "coop" | "versus" | "explosive" | "defuse") {
+  const perDifficulty = {
+    easy:
+      mode === "coop"
+        ? {
+            rows: COOP_CONFIGS.easy.rows,
+            cols: COOP_CONFIGS.easy.cols,
+            bombs: COOP_CONFIGS.easy.bombs,
+            algorithm: "epa",
+            params: ENERGY_PRESETS.easy,
+          }
+        : mode === "versus"
+          ? {
+              rows: CONFIGS.easy.rows,
+              cols: CONFIGS.easy.cols,
+              bombs: CONFIGS.easy.bombs,
+              algorithm: "weighted",
+              params: VERSUS_ENERGY_PRESETS.easy,
+            }
+          : mode === "explosive"
+            ? {
+                rows: CONFIGS.easy.rows,
+                cols: CONFIGS.easy.cols,
+                bombs: CONFIGS.easy.bombs,
+                algorithm: "epa",
+                params: ENERGY_PRESETS.easy,
+              }
+            : {
+                rows: DEFUSE_CONFIGS.easy.rows,
+                cols: DEFUSE_CONFIGS.easy.cols,
+                bombs: DEFUSE_CONFIGS.easy.bombs,
+                algorithm: "epa",
+                params: ENERGY_PRESETS.easy,
+              },
+    medium:
+      mode === "coop"
+        ? {
+            rows: COOP_CONFIGS.medium.rows,
+            cols: COOP_CONFIGS.medium.cols,
+            bombs: COOP_CONFIGS.medium.bombs,
+            algorithm: "epa",
+            params: ENERGY_PRESETS.medium,
+          }
+        : mode === "versus"
+          ? {
+              rows: CONFIGS.medium.rows,
+              cols: CONFIGS.medium.cols,
+              bombs: CONFIGS.medium.bombs,
+              algorithm: "weighted",
+              params: VERSUS_ENERGY_PRESETS.medium,
+            }
+          : mode === "explosive"
+            ? {
+                rows: CONFIGS.medium.rows,
+                cols: CONFIGS.medium.cols,
+                bombs: CONFIGS.medium.bombs,
+                algorithm: "epa",
+                params: ENERGY_PRESETS.medium,
+              }
+            : {
+                rows: DEFUSE_CONFIGS.medium.rows,
+                cols: DEFUSE_CONFIGS.medium.cols,
+                bombs: DEFUSE_CONFIGS.medium.bombs,
+                algorithm: "epa",
+                params: ENERGY_PRESETS.medium,
+              },
+    hard:
+      mode === "coop"
+        ? {
+            rows: COOP_CONFIGS.hard.rows,
+            cols: COOP_CONFIGS.hard.cols,
+            bombs: COOP_CONFIGS.hard.bombs,
+            algorithm: "epa",
+            params: ENERGY_PRESETS.hard,
+          }
+        : mode === "versus"
+          ? {
+              rows: CONFIGS.hard.rows,
+              cols: CONFIGS.hard.cols,
+              bombs: CONFIGS.hard.bombs,
+              algorithm: "weighted",
+              params: VERSUS_ENERGY_PRESETS.hard,
+            }
+          : mode === "explosive"
+            ? {
+                rows: CONFIGS.hard.rows,
+                cols: CONFIGS.hard.cols,
+                bombs: CONFIGS.hard.bombs,
+                algorithm: "epa",
+                params: ENERGY_PRESETS.hard,
+              }
+            : {
+                rows: DEFUSE_CONFIGS.hard.rows,
+                cols: DEFUSE_CONFIGS.hard.cols,
+                bombs: DEFUSE_CONFIGS.hard.bombs,
+                algorithm: "epa",
+                params: ENERGY_PRESETS.hard,
+              },
+  };
+
+  return perDifficulty;
+}
+
 export type GameStatus = "waiting" | "playing" | "finished";
 
 export interface Player {
@@ -177,7 +280,8 @@ export type ClientMessage =
   | { type: "defuse-inspect"; row: number; col: number }
   | { type: "defuse-defuse"; row: number; col: number }
   | { type: "defuse-restart" }
-  | { type: "defuse-play-again" };
+  | { type: "defuse-play-again" }
+  | { type: "defuse-sync" };
 
 // Server → Client
 export type ServerMessage =
@@ -613,6 +717,88 @@ export default class GameRoom implements Party.Server {
   static async onFetch(req: Party.Request, lobby: Party.FetchLobby) {
     try {
       const url = new URL(req.url);
+      if (url.pathname === "/api/epa-debug-presets") {
+        return Response.json({
+          modes: {
+            coop: getModeDebugPreset("coop"),
+            versus: getModeDebugPreset("versus"),
+            explosive: getModeDebugPreset("explosive"),
+            defuse: getModeDebugPreset("defuse"),
+          },
+        });
+      }
+
+      if (req.method === "POST" && url.pathname === "/api/epa-debug-generate") {
+        const body = (await req.json()) as {
+          generator?: "epa" | "weighted";
+          rows: number;
+          cols: number;
+          bombs: number;
+          seed?: number;
+          firstClick?: { row: number; col: number };
+          safeEnergy?: number;
+          dangerSources?: number;
+          dangerEnergyMax?: number;
+          reliefPockets?: number;
+          reliefEnergyMax?: number;
+          reliefWeightMultiplier?: number;
+          dangerWeightMultiplier?: number;
+        };
+
+        if (body.generator === "weighted") {
+          const result = generateVersusGrid({
+            rows: body.rows,
+            cols: body.cols,
+            bombs: body.bombs,
+            seed: body.seed,
+            dangerSources: body.dangerSources ?? 3,
+            dangerEnergyMax: body.dangerEnergyMax ?? 4,
+            reliefPockets: body.reliefPockets ?? 1,
+            reliefEnergyMax: body.reliefEnergyMax ?? 2,
+            reliefWeightMultiplier: body.reliefWeightMultiplier ?? 0.72,
+            dangerWeightMultiplier: body.dangerWeightMultiplier ?? 1.15,
+          });
+
+          return Response.json({
+            ok: true,
+            generator: "weighted",
+            grid: result.grid,
+            dangerMap: result.dangerMap,
+            reliefMap: result.reliefMap,
+            safeZone: Array.from(result.safeZone),
+          });
+        }
+
+        const firstClick = body.firstClick ?? {
+          row: Math.floor(body.rows / 2),
+          col: Math.floor(body.cols / 2),
+        };
+        const result = generateCoopGrid({
+          rows: body.rows,
+          cols: body.cols,
+          bombs: body.bombs,
+          firstClick,
+          safeEnergy: body.safeEnergy ?? 1,
+          dangerSources: body.dangerSources ?? 3,
+          dangerEnergyMax: body.dangerEnergyMax ?? 4,
+          reliefPockets: body.reliefPockets ?? 1,
+          reliefEnergyMax: body.reliefEnergyMax ?? 2,
+          reliefWeightMultiplier: body.reliefWeightMultiplier ?? 0.35,
+          dangerWeightMultiplier: body.dangerWeightMultiplier ?? 1.1,
+          seed: body.seed,
+        });
+
+        return Response.json({
+          ok: true,
+          generator: "epa",
+          grid: result.grid,
+          dangerMap: result.dangerMap,
+          reliefMap: result.reliefMap,
+          safeZone: Array.from(result.safeZone),
+          firstClick,
+        });
+      }
+
       if (url.pathname === "/api/ranking") {
         const partyName = Object.keys(lobby.parties)[0];
         if (!partyName)
@@ -895,6 +1081,21 @@ export default class GameRoom implements Party.Server {
     }
     if (msg.type === "defuse-play-again") {
       await this.handleDefusePlayAgain(sender);
+      return;
+    }
+    if (msg.type === "defuse-sync") {
+      if (!this.defuseState) return;
+      await this.ensureDefuseTimeout();
+      sender.send(
+        JSON.stringify({
+          type: "defuse-state",
+          state: this.maskedDefuseState(),
+        } satisfies ServerMessage),
+      );
+      if (this.defuseState.status === "finished") {
+        await this.persistDefuse();
+        await this.finalizeDefuseMatch();
+      }
       return;
     }
     if (msg.type === "join")
@@ -2159,6 +2360,8 @@ export default class GameRoom implements Party.Server {
     if (s.startedAt === null) {
       s.startedAt = Date.now();
       s.status = "playing";
+      // Schedule server-side hard cap: alarm fires exactly at the 20-minute mark
+      await this.room.storage.setAlarm(s.startedAt + 1_200_000);
     }
     this.ensureDefuseGridReady({ row, col });
 
@@ -2345,6 +2548,17 @@ export default class GameRoom implements Party.Server {
     return this.room.context.parties[this.room.name].get(
       DEFUSE_RANKING_ROOM_ID,
     );
+  }
+
+  // ── Ranking finalization ───────────────────────────────────────────────
+
+  async onAlarm() {
+    if (!this.defuseState || this.defuseState.status === "finished") return;
+    await this.ensureDefuseTimeout();
+    if (this.defuseState?.status === "finished") {
+      this.broadcastDefuse();
+      await this.finalizeDefuseMatch();
+    }
   }
 
   // ── Ranking finalization ───────────────────────────────────────────────
