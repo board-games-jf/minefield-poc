@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>EPA Debug Playground</title>
+  <style>
+    :root {
+      --bg: #f2ede4;
+      --panel: rgba(255, 250, 242, 0.9);
+      --line: rgba(57, 42, 31, 0.16);
+      --text: #2b2018;
+      --muted: #6d5b4d;
+      --accent: #c4572e;
+      --accent-strong: #9f3b18;
+      --safe: #2c8a68;
+      --danger: #b5482e;
+      --amber: #d49b1d;
+      --shadow: 0 18px 40px rgba(69, 44, 22, 0.12);
+      --cell: 34px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      font-family: Georgia, "Iowan Old Style", "Palatino Linotype", serif;
+      background:
+        radial-gradient(circle at top left, rgba(212, 155, 29, 0.18), transparent 28%),
+        radial-gradient(circle at top right, rgba(196, 87, 46, 0.12), transparent 24%),
+        linear-gradient(180deg, #f7f1e8, var(--bg));
+    }
+
+    .shell {
+      width: min(1380px, calc(100vw - 32px));
+      margin: 24px auto 48px;
+      display: grid;
+      gap: 18px;
+    }
+
+    .hero, .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .hero {
+      padding: 24px 28px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 42px);
+      line-height: 1;
+      letter-spacing: -0.03em;
+    }
+
+    .hero p, .meta, .hint {
+      margin: 0;
+      color: var(--muted);
+      font-family: ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .card {
+      padding: 18px;
+    }
+
+    .controls {
+      display: grid;
+      gap: 16px;
+      position: sticky;
+      top: 16px;
+    }
+
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      color: var(--muted);
+    }
+
+    .toggle-row, .grid-two, .grid-three, .actions, .legend {
+      display: grid;
+      gap: 10px;
+    }
+
+    .toggle-row {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-two {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-three {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font: 600 12px/1.2 ui-sans-serif, system-ui, sans-serif;
+      color: var(--muted);
+    }
+
+    input, select, button {
+      font: 500 14px/1.2 ui-sans-serif, system-ui, sans-serif;
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.75);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 12px;
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(196, 87, 46, 0.55);
+      box-shadow: 0 0 0 3px rgba(196, 87, 46, 0.12);
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: transform 120ms ease, opacity 120ms ease, background 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .toggle {
+      background: rgba(57, 42, 31, 0.06);
+      color: var(--text);
+      border: 1px solid transparent;
+    }
+
+    .toggle.active {
+      background: rgba(196, 87, 46, 0.12);
+      border-color: rgba(196, 87, 46, 0.35);
+      color: var(--accent-strong);
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff7f2;
+    }
+
+    .secondary {
+      background: rgba(57, 42, 31, 0.08);
+      color: var(--text);
+    }
+
+    .actions {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .mode-fields[hidden], .custom-fields[hidden] {
+      display: none;
+    }
+
+    .results {
+      display: grid;
+      gap: 18px;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.72);
+      font: 600 12px/1 ui-sans-serif, system-ui, sans-serif;
+      color: var(--muted);
+    }
+
+    .boards {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: 1fr;
+    }
+
+    .board-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .board-tab {
+      background: rgba(57, 42, 31, 0.06);
+      color: var(--text);
+      border: 1px solid transparent;
+    }
+
+    .board-tab.active {
+      background: rgba(196, 87, 46, 0.12);
+      border-color: rgba(196, 87, 46, 0.35);
+      color: var(--accent-strong);
+    }
+
+    .board-card {
+      display: grid;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .board-card[hidden] {
+      display: none;
+    }
+
+    .board-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+    }
+
+    .board-head h2 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .board-wrap {
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      padding: 14px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.7), rgba(255,255,255,0.5));
+      min-height: 280px;
+    }
+
+    .board-grid {
+      display: grid;
+      gap: 4px;
+      justify-content: start;
+    }
+
+    .cell {
+      width: var(--cell);
+      height: var(--cell);
+      border-radius: 10px;
+      border: 1px solid rgba(57, 42, 31, 0.12);
+      display: grid;
+      place-items: center;
+      font: 700 15px/1 ui-sans-serif, system-ui, sans-serif;
+      user-select: none;
+      position: relative;
+    }
+
+    .cell.safe-zone::after {
+      content: "";
+      position: absolute;
+      inset: 2px;
+      border-radius: 8px;
+      border: 2px solid rgba(44, 138, 104, 0.85);
+      pointer-events: none;
+    }
+
+    .cell.bomb {
+      background: rgba(181, 72, 46, 0.15);
+      color: var(--danger);
+    }
+
+    .cell.zero {
+      color: rgba(43, 32, 24, 0.38);
+    }
+
+    .cell.pick {
+      outline: 3px solid rgba(212, 155, 29, 0.55);
+      outline-offset: 1px;
+    }
+
+    .heat {
+      color: #fff;
+      font-size: 12px;
+      letter-spacing: -0.02em;
+    }
+
+    .legend {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .legend-item {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font: 600 12px/1.2 ui-sans-serif, system-ui, sans-serif;
+      color: var(--muted);
+    }
+
+    .legend-swatch {
+      width: 12px;
+      height: 12px;
+      border-radius: 4px;
+    }
+
+    .error {
+      color: var(--danger);
+      font: 600 13px/1.4 ui-sans-serif, system-ui, sans-serif;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 1180px) {
+      .layout, .boards {
+        grid-template-columns: 1fr;
+      }
+      .controls {
+        position: static;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <h1>EPA Playground</h1>
+      <p>Simulacao paralela para inspecionar distribuicao de bombas, safe zone, danger map e relief map.</p>
+    </section>
+
+    <section class="layout">
+      <aside class="controls">
+        <section class="card">
+          <div class="section-title">Origem da Config</div>
+          <div class="toggle-row">
+            <button class="toggle active" id="source-mode" type="button">Modos</button>
+            <button class="toggle" id="source-custom" type="button">Custom</button>
+          </div>
+        </section>
+
+        <section class="card mode-fields" id="mode-fields">
+          <div class="section-title">Modo Preset</div>
+          <div class="grid-two">
+            <label>Modo
+              <select id="mode-select">
+                <option value="coop">Coop</option>
+                <option value="versus">Versus</option>
+                <option value="explosive">Explosive</option>
+                <option value="defuse">Defuse</option>
+              </select>
+            </label>
+            <label>Dificuldade
+              <select id="difficulty-select">
+                <option value="easy">Easy</option>
+                <option value="medium" selected>Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+          </div>
+          <p class="hint" id="mode-summary"></p>
+        </section>
+
+        <section class="card custom-fields" id="custom-fields" hidden>
+          <div class="section-title">Config Custom</div>
+          <div class="grid-two">
+            <label>Algoritmo
+              <select id="generator-select">
+                <option value="epa">EPA completo</option>
+                <option value="weighted">Weighted only</option>
+              </select>
+            </label>
+            <label>Seed
+              <input id="seed-input" type="number" placeholder="Opcional">
+            </label>
+          </div>
+          <div class="grid-three">
+            <label>Rows
+              <input id="rows-input" type="number" min="2" max="30" value="8">
+            </label>
+            <label>Cols
+              <input id="cols-input" type="number" min="2" max="30" value="8">
+            </label>
+            <label>Bombs
+              <input id="bombs-input" type="number" min="1" max="300" value="12">
+            </label>
+          </div>
+          <div class="grid-three">
+            <label>First click row
+              <input id="first-row-input" type="number" min="0" value="4">
+            </label>
+            <label>First click col
+              <input id="first-col-input" type="number" min="0" value="4">
+            </label>
+            <label>Safe energy
+              <input id="safe-energy-input" type="number" min="0" max="8" value="2">
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-title">Parametros</div>
+          <div class="grid-two">
+            <label>Danger sources
+              <input id="danger-sources-input" type="number" min="0" max="20" value="3">
+            </label>
+            <label>Danger energy max
+              <input id="danger-energy-input" type="number" min="1" max="20" value="5">
+            </label>
+            <label>Relief pockets
+              <input id="relief-pockets-input" type="number" min="0" max="20" value="2">
+            </label>
+            <label>Relief energy max
+              <input id="relief-energy-input" type="number" min="1" max="20" value="3">
+            </label>
+            <label>Relief weight mult
+              <input id="relief-weight-input" type="number" min="0" max="2" step="0.01" value="0.32">
+            </label>
+            <label>Danger weight mult
+              <input id="danger-weight-input" type="number" min="0" max="3" step="0.01" value="1.2">
+            </label>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="actions">
+            <button class="primary" id="generate-btn" type="button">Gerar mapa</button>
+            <button class="secondary" id="center-pick-btn" type="button">Centralizar pick</button>
+          </div>
+        </section>
+      </aside>
+
+      <section class="results">
+        <section class="card">
+          <div class="section-title">Resumo</div>
+          <div class="stats" id="stats"></div>
+          <p class="error" id="error"></p>
+        </section>
+
+        <section class="card">
+          <div class="section-title">Mapas</div>
+          <div class="board-tabs">
+            <button class="board-tab toggle active" id="tab-grid" type="button">Mapa Final</button>
+            <button class="board-tab toggle" id="tab-danger" type="button">Danger Map</button>
+            <button class="board-tab toggle" id="tab-relief" type="button">Relief Map</button>
+          </div>
+        </section>
+
+        <section class="boards">
+          <article class="card board-card" id="card-grid">
+            <div class="board-head">
+              <h2>Mapa Final</h2>
+              <span class="meta">Clique numa celula para mover o first click</span>
+            </div>
+            <div class="board-wrap"><div id="grid-board" class="board-grid"></div></div>
+          </article>
+          <article class="card board-card" id="card-danger" hidden>
+            <div class="board-head">
+              <h2>Danger Map</h2>
+              <span class="meta">Mais quente = mais pressao de bomba</span>
+            </div>
+            <div class="board-wrap"><div id="danger-board" class="board-grid"></div></div>
+          </article>
+          <article class="card board-card" id="card-relief" hidden>
+            <div class="board-head">
+              <h2>Relief Map</h2>
+              <span class="meta">Mais quente = mais alivio</span>
+            </div>
+            <div class="board-wrap"><div id="relief-board" class="board-grid"></div></div>
+          </article>
+        </section>
+
+        <section class="card legend">
+          <div class="legend-item"><span class="legend-swatch" style="background: rgba(44,138,104,.9)"></span> Safe zone</div>
+          <div class="legend-item"><span class="legend-swatch" style="background: rgba(181,72,46,.85)"></span> Bombs</div>
+          <div class="legend-item"><span class="legend-swatch" style="background: rgba(212,155,29,.9)"></span> First click</div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const sourceModeBtn = document.getElementById("source-mode");
+    const sourceCustomBtn = document.getElementById("source-custom");
+    const modeFields = document.getElementById("mode-fields");
+    const customFields = document.getElementById("custom-fields");
+    const modeSelect = document.getElementById("mode-select");
+    const difficultySelect = document.getElementById("difficulty-select");
+    const modeSummary = document.getElementById("mode-summary");
+    const generatorSelect = document.getElementById("generator-select");
+    const rowsInput = document.getElementById("rows-input");
+    const colsInput = document.getElementById("cols-input");
+    const bombsInput = document.getElementById("bombs-input");
+    const seedInput = document.getElementById("seed-input");
+    const firstRowInput = document.getElementById("first-row-input");
+    const firstColInput = document.getElementById("first-col-input");
+    const safeEnergyInput = document.getElementById("safe-energy-input");
+    const dangerSourcesInput = document.getElementById("danger-sources-input");
+    const dangerEnergyInput = document.getElementById("danger-energy-input");
+    const reliefPocketsInput = document.getElementById("relief-pockets-input");
+    const reliefEnergyInput = document.getElementById("relief-energy-input");
+    const reliefWeightInput = document.getElementById("relief-weight-input");
+    const dangerWeightInput = document.getElementById("danger-weight-input");
+    const generateBtn = document.getElementById("generate-btn");
+    const centerPickBtn = document.getElementById("center-pick-btn");
+    const statsEl = document.getElementById("stats");
+    const errorEl = document.getElementById("error");
+    const tabGrid = document.getElementById("tab-grid");
+    const tabDanger = document.getElementById("tab-danger");
+    const tabRelief = document.getElementById("tab-relief");
+    const cardGrid = document.getElementById("card-grid");
+    const cardDanger = document.getElementById("card-danger");
+    const cardRelief = document.getElementById("card-relief");
+    const gridBoard = document.getElementById("grid-board");
+    const dangerBoard = document.getElementById("danger-board");
+    const reliefBoard = document.getElementById("relief-board");
+
+    let presets = null;
+    let source = "mode";
+    let lastResult = null;
+    let activeBoard = "grid";
+
+    function setSource(next) {
+      source = next;
+      sourceModeBtn.classList.toggle("active", next === "mode");
+      sourceCustomBtn.classList.toggle("active", next === "custom");
+      modeFields.hidden = next !== "mode";
+      customFields.hidden = next !== "custom";
+      syncControlsFromMode();
+    }
+
+    function readNumber(input, fallback = null) {
+      const value = input.value.trim();
+      if (value === "") return fallback;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+
+    function syncControlsFromMode() {
+      if (!presets || source !== "mode") return;
+      const modePreset = presets.modes[modeSelect.value]?.[difficultySelect.value];
+      if (!modePreset) return;
+
+      rowsInput.value = modePreset.rows;
+      colsInput.value = modePreset.cols;
+      bombsInput.value = modePreset.bombs;
+      generatorSelect.value = modePreset.algorithm;
+      safeEnergyInput.value = modePreset.params.safeEnergy ?? 0;
+      dangerSourcesInput.value = modePreset.params.dangerSources;
+      dangerEnergyInput.value = modePreset.params.dangerEnergyMax;
+      reliefPocketsInput.value = modePreset.params.reliefPockets ?? 0;
+      reliefEnergyInput.value = modePreset.params.reliefEnergyMax ?? 1;
+      reliefWeightInput.value = modePreset.params.reliefWeightMultiplier ?? 0.35;
+      dangerWeightInput.value = modePreset.params.dangerWeightMultiplier ?? 1;
+      centerFirstClick();
+      modeSummary.textContent = `${modePreset.algorithm.toUpperCase()} | ${modePreset.rows}x${modePreset.cols} | ${modePreset.bombs} bombs`;
+      updateGeneratorUi();
+    }
+
+    function centerFirstClick() {
+      firstRowInput.value = Math.floor(readNumber(rowsInput, 8) / 2);
+      firstColInput.value = Math.floor(readNumber(colsInput, 8) / 2);
+    }
+
+    function updateGeneratorUi() {
+      const isWeighted = generatorSelect.value === "weighted";
+      safeEnergyInput.disabled = isWeighted;
+      firstRowInput.disabled = isWeighted;
+      firstColInput.disabled = isWeighted;
+    }
+
+    function setActiveBoard(next) {
+      activeBoard = next;
+      tabGrid.classList.toggle("active", next === "grid");
+      tabDanger.classList.toggle("active", next === "danger");
+      tabRelief.classList.toggle("active", next === "relief");
+      cardGrid.hidden = next !== "grid";
+      cardDanger.hidden = next !== "danger";
+      cardRelief.hidden = next !== "relief";
+    }
+
+    function cellKey(row, col) {
+      return `${row},${col}`;
+    }
+
+    function renderStats(payload, request) {
+      const safeZoneCount = payload.safeZone?.length ?? 0;
+      const bombCount = payload.grid.flat().filter((value) => value === -1).length;
+      statsEl.innerHTML = [
+        `<span class="pill">Generator: ${payload.generator}</span>`,
+        `<span class="pill">Grid: ${request.rows}x${request.cols}</span>`,
+        `<span class="pill">Bombs: ${bombCount}</span>`,
+        `<span class="pill">Safe zone cells: ${safeZoneCount}</span>`,
+        request.seed != null ? `<span class="pill">Seed: ${request.seed}</span>` : "",
+        payload.firstClick ? `<span class="pill">First click: ${payload.firstClick.row}, ${payload.firstClick.col}</span>` : "",
+      ].join("");
+    }
+
+    function numberColor(value) {
+      return {
+        1: "#3a83d8",
+        2: "#5d9b2f",
+        3: "#c95f2c",
+        4: "#7256c8",
+        5: "#b34355",
+        6: "#157a87",
+        7: "#714b38",
+        8: "#4d4d4d",
+      }[value] || "rgba(43,32,24,.38)";
+    }
+
+    function heatColor(value, max, hue) {
+      if (max <= 0) return "rgba(57,42,31,0.06)";
+      const alpha = Math.max(0.08, Math.min(0.95, value / max));
+      return `hsla(${hue}, 75%, 48%, ${alpha})`;
+    }
+
+    function renderMatrix(container, rows, cols, renderer) {
+      container.innerHTML = "";
+      container.style.gridTemplateColumns = `repeat(${cols}, var(--cell))`;
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          container.appendChild(renderer(row, col));
+        }
+      }
+    }
+
+    function renderBoards(payload, request) {
+      const rows = payload.grid.length;
+      const cols = payload.grid[0]?.length || 0;
+      const safeZone = new Set(payload.safeZone || []);
+      const firstClick = payload.firstClick ? cellKey(payload.firstClick.row, payload.firstClick.col) : null;
+
+      renderMatrix(gridBoard, rows, cols, (row, col) => {
+        const value = payload.grid[row][col];
+        const el = document.createElement("button");
+        el.type = "button";
+        el.className = "cell";
+        if (value === -1) {
+          el.classList.add("bomb");
+          el.textContent = "💣";
+        } else if (value === 0) {
+          el.classList.add("zero");
+          el.textContent = "0";
+        } else {
+          el.textContent = String(value);
+          el.style.color = numberColor(value);
+        }
+        if (safeZone.has(cellKey(row, col))) el.classList.add("safe-zone");
+        if (firstClick && firstClick === cellKey(row, col)) el.classList.add("pick");
+        el.addEventListener("click", () => {
+          firstRowInput.value = row;
+          firstColInput.value = col;
+          if (generatorSelect.value === "epa") generate();
+        });
+        return el;
+      });
+
+      const maxDanger = Math.max(...payload.dangerMap.flat(), 0);
+      const maxRelief = Math.max(...payload.reliefMap.flat(), 0);
+
+      renderMatrix(dangerBoard, rows, cols, (row, col) => {
+        const value = payload.dangerMap[row][col];
+        const el = document.createElement("div");
+        el.className = "cell heat";
+        el.style.background = heatColor(value, maxDanger, 10);
+        el.textContent = value ? value.toFixed(1) : "";
+        return el;
+      });
+
+      renderMatrix(reliefBoard, rows, cols, (row, col) => {
+        const value = payload.reliefMap[row][col];
+        const el = document.createElement("div");
+        el.className = "cell heat";
+        el.style.background = heatColor(value, maxRelief, 160);
+        el.textContent = value ? value.toFixed(1) : "";
+        return el;
+      });
+    }
+
+    function buildRequest() {
+      const rows = readNumber(rowsInput, 8);
+      const cols = readNumber(colsInput, 8);
+      const bombs = readNumber(bombsInput, 12);
+      const generator = source === "mode"
+        ? presets.modes[modeSelect.value][difficultySelect.value].algorithm
+        : generatorSelect.value;
+
+      return {
+        generator,
+        rows,
+        cols,
+        bombs,
+        seed: readNumber(seedInput),
+        firstClick: generator === "epa"
+          ? { row: readNumber(firstRowInput, Math.floor(rows / 2)), col: readNumber(firstColInput, Math.floor(cols / 2)) }
+          : undefined,
+        safeEnergy: generator === "epa" ? readNumber(safeEnergyInput, 1) : undefined,
+        dangerSources: readNumber(dangerSourcesInput, 3),
+        dangerEnergyMax: readNumber(dangerEnergyInput, 5),
+        reliefPockets: readNumber(reliefPocketsInput, 1),
+        reliefEnergyMax: readNumber(reliefEnergyInput, 2),
+        reliefWeightMultiplier: readNumber(reliefWeightInput, 0.35),
+        dangerWeightMultiplier: readNumber(dangerWeightInput, 1.1),
+      };
+    }
+
+    async function generate() {
+      errorEl.textContent = "";
+      const request = buildRequest();
+      try {
+        const res = await fetch("/api/epa-debug-generate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(request),
+        });
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload?.message || "Failed to generate");
+        lastResult = payload;
+        renderStats(payload, request);
+        renderBoards(payload, request);
+      } catch (err) {
+        errorEl.textContent = err?.message || String(err);
+      }
+    }
+
+    async function init() {
+      const res = await fetch("/api/epa-debug-presets");
+      presets = await res.json();
+      syncControlsFromMode();
+      generate();
+    }
+
+    sourceModeBtn.addEventListener("click", () => setSource("mode"));
+    sourceCustomBtn.addEventListener("click", () => setSource("custom"));
+    tabGrid.addEventListener("click", () => setActiveBoard("grid"));
+    tabDanger.addEventListener("click", () => setActiveBoard("danger"));
+    tabRelief.addEventListener("click", () => setActiveBoard("relief"));
+    modeSelect.addEventListener("change", syncControlsFromMode);
+    difficultySelect.addEventListener("change", syncControlsFromMode);
+    generatorSelect.addEventListener("change", updateGeneratorUi);
+    centerPickBtn.addEventListener("click", centerFirstClick);
+    generateBtn.addEventListener("click", generate);
+
+    init().catch((err) => {
+      errorEl.textContent = err?.message || String(err);
+    });
+  </script>
+</body>
+</html>
