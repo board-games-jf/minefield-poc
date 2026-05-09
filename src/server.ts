@@ -165,7 +165,8 @@ export type ClientMessage =
   | { type: "defuse-join"; name: string; difficulty: Difficulty; squadName?: string; isMulti?: boolean }
   | { type: "defuse-inspect"; row: number; col: number }
   | { type: "defuse-defuse"; row: number; col: number }
-  | { type: "defuse-restart" };
+  | { type: "defuse-restart" }
+  | { type: "defuse-play-again" };
 
 // Server → Client
 export type ServerMessage =
@@ -791,6 +792,7 @@ export default class GameRoom implements Party.Server {
     if (msg.type === "defuse-inspect") { await this.handleDefuseAction(sender, msg.row, msg.col, "inspect"); return; }
     if (msg.type === "defuse-defuse") { await this.handleDefuseAction(sender, msg.row, msg.col, "defuse"); return; }
     if (msg.type === "defuse-restart") { await this.handleDefuseRestart(sender); return; }
+    if (msg.type === "defuse-play-again") { await this.handleDefusePlayAgain(sender); return; }
     if (msg.type === "join")
       await this.handleJoin(sender, msg.name, msg.difficulty, msg.mode, msg.ft, msg.ai);
     if (msg.type === "reveal")
@@ -1921,6 +1923,9 @@ export default class GameRoom implements Party.Server {
 
   private async handleDefuseRestart(conn: Party.Connection) {
     if (!this.defuseState) return;
+    if (this.defuseState.isMulti) {
+      return;
+    }
     const requesterName = this.defuseConnectionToName.get(conn.id);
     if (!requesterName) {
       return;
@@ -1928,9 +1933,32 @@ export default class GameRoom implements Party.Server {
     const isOwner =
       normalizeRankingName(requesterName) ===
       normalizeRankingName(this.defuseState.playerName);
-    if (this.defuseState.status !== "finished" && !isOwner) {
+    if (!isOwner) {
       return;
     }
+    await this.resetDefuseState();
+  }
+
+  private async handleDefusePlayAgain(conn: Party.Connection) {
+    if (!this.defuseState) return;
+    if (this.defuseState.status !== "finished") {
+      return;
+    }
+    const requesterName = this.defuseConnectionToName.get(conn.id);
+    if (!requesterName) {
+      return;
+    }
+    const isParticipant = (this.defuseState.squadMembers ?? [this.defuseState.playerName]).some(
+      (name) => normalizeRankingName(name) === normalizeRankingName(requesterName),
+    );
+    if (!isParticipant) {
+      return;
+    }
+    await this.resetDefuseState();
+  }
+
+  private async resetDefuseState() {
+    if (!this.defuseState) return;
     const { difficulty, playerName, isMulti, squadName, squadMembers } = this.defuseState;
     this.defuseState = createDefuseState(difficulty, playerName, { deferGrid: true });
     this.defuseState.isMulti = isMulti;

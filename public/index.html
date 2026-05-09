@@ -6860,7 +6860,7 @@
 
     document.getElementById("btn-defuse-result-restart")?.addEventListener("click", () => {
       if (_defuseSocket) {
-        _defuseSocket.send(JSON.stringify({ type: 'defuse-restart' }));
+        _defuseSocket.send(JSON.stringify({ type: 'defuse-play-again' }));
       }
     });
     document.getElementById("btn-defuse-result-ranking")?.addEventListener("click", () => {
@@ -6977,7 +6977,7 @@
       const shareBtn = document.getElementById('btn-defuse-share');
       if (shareBtn) shareBtn.style.display = '';
       const restartBtn = document.getElementById('btn-defuse-restart');
-      if (restartBtn) restartBtn.style.display = 'none';
+      if (restartBtn) restartBtn.style.display = isMulti ? 'none' : '';
       const stickerWrap = document.getElementById('defuse-sticker-launcher')?.closest('.sticker-launcher-wrap');
       if (stickerWrap) stickerWrap.style.display = isMulti ? '' : 'none';
 
@@ -7162,8 +7162,7 @@
       const shareBtn = document.getElementById('btn-defuse-share');
       if (shareBtn) shareBtn.style.display = '';
       const restartBtn = document.getElementById('btn-defuse-restart');
-      const isDefuseOwner = !!myName && !!playerName && isSamePlayerName(myName, playerName);
-      if (restartBtn) restartBtn.style.display = status === 'finished' ? '' : 'none';
+      if (restartBtn) restartBtn.style.display = isMulti ? 'none' : '';
       const playersStrip = document.getElementById('defuse-players-strip');
       if (playersStrip) {
         if (isMulti) {
@@ -7247,7 +7246,7 @@
         c.style.pointerEvents = 'none';
       });
       const topRestartBtn = document.getElementById('btn-defuse-restart');
-      if (topRestartBtn) topRestartBtn.style.display = '';
+      if (topRestartBtn) topRestartBtn.style.display = _defuseCurrentState?.isMulti ? 'none' : '';
       const modal = document.getElementById('defuse-result-inline');
       const titleEl = document.getElementById('defuse-result-title');
       const bodyEl = document.getElementById('defuse-result-body');
