@@ -2798,6 +2798,18 @@
       color: var(--text);
       animation: defuse-hint-pulse 2s ease-in-out infinite;
     }
+    .defuse-result-inline {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      padding: 14px;
+      background: var(--bg-secondary);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+    }
+    .defuse-result-inline.open {
+      display: flex;
+    }
     @keyframes defuse-hint-pulse {
       0%, 100% { opacity: 0.5; }
       50% { opacity: 1; }
@@ -2923,14 +2935,15 @@
     .defuse-player-chip {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 6px;
       background: var(--bg-card);
       border: 0.5px solid var(--border);
-      border-radius: 999px;
-      padding: 3px 10px 3px 6px;
+      border-radius: 14px;
+      padding: 5px 12px;
       font-size: 12px;
       font-weight: 600;
       color: var(--text);
+      line-height: 1;
     }
 
     .defuse-player-chip .chip-dot {
@@ -2954,6 +2967,11 @@
       display: flex;
       align-items: center;
       gap: 6px;
+    }
+    .defuse-player-chip.is-self {
+      border-color: var(--teal);
+      background: var(--teal-light);
+      box-shadow: 0 0 0 1px var(--teal);
     }
     #screen-defuse-game { gap: 10px; }
 
@@ -3358,7 +3376,7 @@
           <button class="mode-status-pill" id="btn-defuse-mode-info" type="button" style="background:none;flex-shrink:0;">
             <span>🛠️</span>
             <span data-i18n="mode_defuse">Defuse</span>
-            <span id="defuse-game-type-badge" style="font-size:11px; color:var(--text-subtle); background:var(--bg-card); border:0.5px solid var(--border); border-radius:6px; padding:1px 7px;">Solo</span>
+            <span id="defuse-game-type-badge" style="font-size:11px; color:var(--text-subtle); background:var(--bg-card); border:0.5px solid var(--border); border-radius:6px; padding:1px 7px;" data-i18n="defuse_solo">Solo</span>
           </button>
           <span id="defuse-player-label" style="font-size:13px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></span>
         </div>
@@ -3380,10 +3398,10 @@
               </div>
             </div>
           </div>
-          <button class="icon-toggle" id="btn-defuse-restart" type="button" title="Novo mapa" aria-label="Novo mapa">
+          <button class="icon-toggle" id="btn-defuse-restart" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,4C14.1,4 16.1,4.8 17.6,6.3C20.7,9.4 20.7,14.5 17.6,17.6C15.8,19.5 13.3,20.2 10.9,19.9L11.4,17.9C13.1,18.1 14.9,17.5 16.2,16.2C18.5,13.9 18.5,10.1 16.2,7.7C15.1,6.6 13.5,6 12,6V10.6L7,5.6L12,0.6V4M6.3,17.6C3.7,15 3.3,11 5.1,7.9L6.6,9.4C5.5,11.6 5.9,14.4 7.8,16.2C8.3,16.7 8.9,17.1 9.6,17.4L9,19.4C8,19 7.1,18.4 6.3,17.6Z" /></svg>
           </button>
-          <button class="icon-toggle" id="btn-defuse-share" type="button" style="display:none;" title="Compartilhar" aria-label="Compartilhar">
+          <button class="icon-toggle" id="btn-defuse-share" type="button" style="display:none;">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
               <!-- connecting lines -->
               <line x1="8.4" y1="10.8" x2="15.6" y2="6.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
@@ -3423,6 +3441,14 @@
       </div>
       <div id="defuse-players-strip" style="display:none;"></div>
       <div class="defuse-pregame-hint" id="defuse-pregame-hint" data-i18n="defuse_pregame_hint"></div>
+      <div class="defuse-result-inline" id="defuse-result-inline" aria-hidden="true">
+        <div class="ranking-title" id="defuse-result-title"></div>
+        <div id="defuse-result-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <button class="btn btn-primary" id="btn-defuse-result-restart" type="button"></button>
+          <button class="btn btn-secondary" id="btn-defuse-result-ranking" type="button"></button>
+        </div>
+      </div>
       <div class="defuse-board-wrap">
         <div class="defuse-board" id="defuse-board"></div>
       </div>
@@ -3472,7 +3498,7 @@
         <div class="ranking-defuse-filters">
           <button class="ranking-diff-btn active" data-diff="easy">
             <span data-i18n="diff_easy_name"></span>
-            <span class="ranking-diff-sub">💣 23</span>
+            <span class="ranking-diff-sub">💣 22</span>
           </button>
           <button class="ranking-diff-btn" data-diff="medium">
             <span data-i18n="diff_medium_name"></span>
@@ -3633,6 +3659,18 @@
         rankClose.setAttribute("aria-label", label);
         rankClose.setAttribute("title", label);
       }
+      const defuseRestartBtn = document.getElementById("btn-defuse-restart");
+      if (defuseRestartBtn) {
+        const label = t.defuse_restart_label || "Restart";
+        defuseRestartBtn.setAttribute("aria-label", label);
+        defuseRestartBtn.setAttribute("title", label);
+      }
+      const defuseShareBtn = document.getElementById("btn-defuse-share");
+      if (defuseShareBtn) {
+        const label = t.defuse_share_label || "Share";
+        defuseShareBtn.setAttribute("aria-label", label);
+        defuseShareBtn.setAttribute("title", label);
+      }
       syncStickerUi();
       syncSoundToggleUi();
       // Update dynamic labels that are not driven by data-i18n attributes.
@@ -3645,6 +3683,7 @@
 
       // Re-render dynamic content if game is active
       if (currentState) renderGame(currentState);
+      try { if (_defuseCurrentState) _applyDefuseState(_defuseCurrentState); } catch { }
       try { syncRematchModalLocale(); } catch { }
       try { syncExplosiveOverlayLocale(); } catch { }
 
@@ -4363,6 +4402,17 @@
     function getRoomIdFromUrl() { return location.hash.replace("#", "") || null; }
     function setRoomIdInUrl(id) { location.hash = id; }
     function generateRoomId() { return Math.random().toString(36).slice(2, 8); }
+    function _defuseOwnerKey(id) { return id ? `mf-defuse-owner:${id}` : null; }
+    function _markDefuseOwner(id) {
+      const key = _defuseOwnerKey(id);
+      if (!key) return;
+      try { localStorage.setItem(key, "1"); } catch { }
+    }
+    function _isDefuseOwner(id) {
+      const key = _defuseOwnerKey(id);
+      if (!key) return false;
+      try { return localStorage.getItem(key) === "1"; } catch { return false; }
+    }
     function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = "block"; }
     function hideError(id) { document.getElementById(id).style.display = "none"; }
     function normalizeNameForCompare(name) {
@@ -4375,6 +4425,7 @@
       if (!a || !b) return false;
       return normalizeNameForCompare(a) === normalizeNameForCompare(b);
     }
+
     function syncNameInput(inputId) {
       const input = document.getElementById(inputId);
       input.addEventListener("input", () => {
@@ -4468,7 +4519,9 @@
       const aiEnabled = isAiEnabled();
       const aiLevel = "hard";
       const ft = Number.parseInt(document.getElementById("ft-select")?.value ?? "5", 10);
-      return { mode, diff, aiEnabled, aiLevel, ft };
+      const defuseMode = document.getElementById('defuse-btn-multi')?.classList.contains('selected') ? 'multi' : 'solo';
+      const defuseSquad = document.getElementById('defuse-squad')?.value?.trim?.() ?? '';
+      return { mode, diff, aiEnabled, aiLevel, ft, defuseMode, defuseSquad };
     }
 
     function persistCreatePrefs() {
@@ -4522,6 +4575,21 @@
         const on = !!prefs.aiEnabled;
         soloToggle.classList.toggle("on", on);
         soloToggle.setAttribute("aria-checked", on ? "true" : "false");
+      }
+
+      const btnSolo = document.getElementById('defuse-btn-solo');
+      const btnMulti = document.getElementById('defuse-btn-multi');
+      const squadField = document.getElementById('defuse-squad-field');
+      const squadInput = document.getElementById('defuse-squad');
+      const defuseMode = prefs.defuseMode === 'multi' ? 'multi' : 'solo';
+      if (btnSolo && btnMulti) {
+        btnSolo.classList.toggle('selected', defuseMode === 'solo');
+        btnMulti.classList.toggle('selected', defuseMode === 'multi');
+      }
+      if (squadField) squadField.style.display = defuseMode === 'multi' ? '' : 'none';
+      if (squadInput && typeof prefs.defuseSquad === 'string') {
+        squadInput.value = prefs.defuseSquad;
+        squadInput.dataset.edited = prefs.defuseSquad ? '1' : '';
       }
     }
 
@@ -4994,6 +5062,70 @@
             }
           }
         }
+        if (msg.type === "defuse-state") {
+          const state = msg.state;
+          tempSocket.close();
+
+          const isMulti = !!state.isMulti;
+          const invitedByEl = document.getElementById("join-invited-by");
+          if (invitedByEl) {
+            const hostName = isMulti ? (state.squadName || state.playerName) : state.playerName;
+            invitedByEl.dataset.playerName = hostName || "";
+            invitedByEl.innerHTML = `${t.invited_by} <strong style="color:var(--text)">${hostName}</strong>`;
+          }
+
+          const diffEl = document.getElementById("join-diff-info");
+          if (diffEl) {
+            const diffDesc = {
+              easy: t.diff_easy_desc,
+              medium: t.diff_medium_desc,
+              hard: t.diff_hard_desc,
+            };
+            diffEl.dataset.difficulty = state.difficulty;
+            diffEl.textContent = diffDesc[state.difficulty] ?? "";
+            diffEl.style.display = "";
+          }
+
+          const modeCard = document.getElementById("join-mode-card");
+          const modeIconEl = document.getElementById("join-mode-icon");
+          const modeNameEl = document.getElementById("join-mode-name");
+          const modeDescEl = document.getElementById("join-mode-desc");
+          const modeExpandEl = document.getElementById("join-mode-expand");
+          if (modeCard && modeIconEl && modeNameEl && modeDescEl && modeExpandEl) {
+            modeCard.dataset.mode = "defuse";
+            modeIconEl.textContent = "🛠️";
+            modeNameEl.textContent = t.mode_defuse ?? "Defuse";
+            modeDescEl.textContent = t.mode_defuse_desc ?? "";
+            modeCard.style.display = "";
+            const defusePreview = [
+              ["hidden", ""], ["hidden", ""], ["revealed n1", "1"], ["hidden", ""],
+              ["revealed", "·"], ["revealed n2", "2"], ["hidden", ""], ["hidden", ""],
+              ["hidden", ""], ["bomb-exploded", "💣"], ["hidden", ""], ["revealed n1", "1"],
+              ["revealed", "·"], ["revealed n1", "1"], ["bomb-defused", "💣"], ["hidden", ""],
+            ].map(([cls, content]) => `<div class="mp-cell ${cls}">${content}</div>`);
+            modeExpandEl.innerHTML = `<div class="mode-preview"><div class="mode-preview-grid">${defusePreview.join("")}</div><div class="mode-preview-caption">${t.briefing_defuse_caption ?? ""}</div></div>`;
+            if (!modeCard.dataset.clickBound) {
+              modeCard.dataset.clickBound = "1";
+              modeCard.addEventListener("click", () => modeCard.classList.toggle("open"));
+            }
+          }
+
+          if (savedName) {
+            myName = savedName;
+            _connectToDefuseRoom(id);
+            return;
+          }
+
+          document.getElementById("btn-join").onclick = () => {
+            const name = document.getElementById("join-name").value.trim();
+            if (!name) { showError("join-error", t.error_name_required); return; }
+            if (isReservedName(name)) { showError("join-error", t.error_name_reserved); return; }
+            hideError("join-error");
+            myName = name;
+            localStorage.setItem(NAME_STORAGE_KEY, name);
+            _connectToDefuseRoom(id);
+          };
+        }
         if (msg.type === "error") {
           tempSocket.close();
           showScreen("screen-error");
@@ -5010,6 +5142,41 @@
         localStorage.setItem(NAME_STORAGE_KEY, name);
         connectToRoom(id, name, null);
       };
+    }
+
+    function _connectToDefuseRoom(defuseId) {
+      // Close any old socket
+      if (_defuseSocket) { try { _defuseSocket.close(); } catch { } _defuseSocket = null; }
+
+      _defuseRoomId = defuseId;
+      setRoomIdInUrl(defuseId);
+
+      // Show loading board and open WS; state will be fully server-driven.
+      _buildDefuseGrid(12, 12);
+      showScreen('screen-defuse-game');
+
+      _defuseSocket = new PartySocket({ host: PARTYKIT_HOST, room: _defuseRoomId });
+      _defuseSocket.addEventListener('open', () => {
+        // NOTE: difficulty is only used if the room has no state yet.
+        _defuseSocket.send(JSON.stringify({
+          type: 'defuse-join',
+          name: myName,
+          difficulty: 'medium',
+        }));
+      });
+      _defuseSocket.addEventListener('message', (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'defuse-state') _applyDefuseState(msg.state);
+        if (msg.type === 'defuse-penalty') {
+          const board = document.getElementById('defuse-board');
+          const cellEl = board?.querySelector(`[data-row='${msg.row}'][data-col='${msg.col}']`);
+          _showDefuseTimePenalty(cellEl, msg.seconds);
+        }
+        if (msg.type === 'sticker') {
+          if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
+          else showStickerToast(msg.from, msg.id);
+        }
+      });
     }
 
     // ── WebSocket ──────────────────────────────────────────────────────────────
@@ -5366,6 +5533,21 @@
       stickerLockedUntil = Math.max(stickerLockedUntil, now + STICKER_DISPLAY_MS);
       socket.send(JSON.stringify({ type: "sticker", id }));
       closeStickerPalette();
+    }
+
+    function sendDefuseSticker(id) {
+      if (!_defuseSocket) return;
+      ensureAudioUnlocked();
+      const now = Date.now();
+      if (now < stickerLockedUntil) return;
+      if (now - lastStickerSentAt < 250) return;
+      lastStickerSentAt = now;
+      stickerLockedUntil = Math.max(stickerLockedUntil, now + STICKER_DISPLAY_MS);
+      _defuseSocket.send(JSON.stringify({ type: "sticker", id }));
+      const palette = document.getElementById('defuse-sticker-palette');
+      const launcher = document.getElementById('defuse-sticker-launcher');
+      palette?.classList.remove('open');
+      launcher?.setAttribute('aria-expanded', 'false');
     }
 
     function modeIconSvg(mode, size = 20) {
@@ -6455,8 +6637,8 @@
           }).join('')}</div>`
         : '';
       const penParts = [
-        entry.triggeredBombs > 0 ? `<span class="badge defuse-rank-penalty-pill">🔎 +${entry.triggeredBombs * 5}s</span>` : '',
-        entry.wrongDefuses > 0   ? `<span class="badge defuse-rank-penalty-pill">🛠️ +${entry.wrongDefuses * 10}s</span>` : '',
+        entry.triggeredBombs > 0 ? `<span class="badge defuse-rank-penalty-pill">🔎 +${entry.triggeredBombs * 30}s</span>` : '',
+        entry.wrongDefuses > 0   ? `<span class="badge defuse-rank-penalty-pill">🛠️ +${entry.wrongDefuses * 20}s</span>` : '',
       ].filter(Boolean).join('');
       const penLine = penParts ? `<div class="defuse-rank-penalties">${penParts}${members}</div>` : members ? `<div class="defuse-rank-penalties">${members}</div>` : '';
       return `
@@ -6550,6 +6732,23 @@
       const prevRoomId = roomId;
       roomId = "";
       // Coop progress is server-driven; nothing to clear client-side.
+      document.getElementById("reconnecting-bar").classList.remove("visible");
+      location.hash = "";
+      showScreen("screen-create");
+      setupCreateScreen();
+    }
+
+    function leaveDefuseRoom() {
+      clearInterval(_defuseTimer);
+      _defuseStarted = false;
+      _defuseSeconds = 0;
+      _defuseCurrentCombo = 0;
+      _defuseBombsResolved = 0;
+      _defuseRoomId = null;
+      if (_defuseSocket) {
+        try { _defuseSocket.close(); } catch {}
+        _defuseSocket = null;
+      }
       document.getElementById("reconnecting-bar").classList.remove("visible");
       location.hash = "";
       showScreen("screen-create");
@@ -6659,24 +6858,12 @@
       btn.addEventListener("click", () => loadDefuseRankingTab(btn.dataset.diff));
     });
 
-    // Defuse result modal buttons
-    document.getElementById("btn-defuse-result-close")?.addEventListener("click", () => {
-      const m = document.getElementById("defuse-result-modal");
-      if (m) { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); }
-    });
-    document.getElementById("defuse-result-modal")?.addEventListener("click", (e) => {
-      if (e.target.id === "defuse-result-modal") {
-        e.target.classList.remove("open"); e.target.setAttribute("aria-hidden", "true");
+    document.getElementById("btn-defuse-result-restart")?.addEventListener("click", () => {
+      if (_defuseSocket) {
+        _defuseSocket.send(JSON.stringify({ type: 'defuse-restart' }));
       }
     });
-    document.getElementById("btn-defuse-result-restart")?.addEventListener("click", () => {
-      const m = document.getElementById("defuse-result-modal");
-      if (m) { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); }
-      if (_defuseLastParams) _startDefuseGame(_defuseLastParams);
-    });
     document.getElementById("btn-defuse-result-ranking")?.addEventListener("click", () => {
-      const m = document.getElementById("defuse-result-modal");
-      if (m) { m.classList.remove("open"); m.setAttribute("aria-hidden", "true"); }
       openRankingModalOnTab('defuse');
     });
 
@@ -6741,6 +6928,7 @@
     let _defuseCurrentCombo = 0;
     let _defuseSocket = null;
     let _defuseRoomId = null;
+    let _defuseCurrentState = null;
 
     function setupDefuseCreate() {
       const btnSolo = document.getElementById('defuse-btn-solo');
@@ -6751,6 +6939,7 @@
       btnSolo?.addEventListener('click', () => {
         btnSolo.classList.add('selected'); btnMulti.classList.remove('selected');
         if (squadField) squadField.style.display = 'none';
+        persistCreatePrefs();
       });
       btnMulti?.addEventListener('click', () => {
         btnMulti.classList.add('selected'); btnSolo.classList.remove('selected');
@@ -6759,15 +6948,17 @@
           const name = document.getElementById('create-name')?.value.trim();
           if (name) squadInput.value = `${name}'s Squad`;
         }
+        persistCreatePrefs();
       });
       // Keep squad name default fresh when player name changes
       document.getElementById('create-name')?.addEventListener('input', () => {
         if (btnMulti?.classList.contains('selected') && squadInput && !squadInput.dataset.edited) {
           const name = document.getElementById('create-name')?.value.trim();
           squadInput.value = name ? `${name}'s Squad` : '';
+          persistCreatePrefs();
         }
       });
-      if (squadInput) squadInput.addEventListener('input', () => { squadInput.dataset.edited = '1'; });
+      if (squadInput) squadInput.addEventListener('input', () => { squadInput.dataset.edited = '1'; persistCreatePrefs(); });
     }
 
     let _defuseLastParams = null;
@@ -6781,11 +6972,12 @@
       document.getElementById('defuse-timer').textContent = '00:00';
       document.getElementById('defuse-bombs-counter').textContent = `${totalBombs}`;
       document.getElementById('defuse-combo').textContent = '0';
-      document.getElementById('defuse-game-type-badge').textContent = isMulti ? 'Multi' : 'Solo';
-      const playerLabel = document.getElementById('defuse-player-label');
-      if (playerLabel) playerLabel.textContent = isMulti ? (squadName || '') : (myName || '');
+      document.getElementById('defuse-game-type-badge').textContent = isMulti ? (t.defuse_multi || 'Multi') : (t.defuse_solo || 'Solo');
+      _renderDefusePlayerLabel({ isMulti, squadName, playerName: myName || '' });
       const shareBtn = document.getElementById('btn-defuse-share');
-      if (shareBtn) shareBtn.style.display = isMulti ? '' : 'none';
+      if (shareBtn) shareBtn.style.display = '';
+      const restartBtn = document.getElementById('btn-defuse-restart');
+      if (restartBtn) restartBtn.style.display = 'none';
       const stickerWrap = document.getElementById('defuse-sticker-launcher')?.closest('.sticker-launcher-wrap');
       if (stickerWrap) stickerWrap.style.display = isMulti ? '' : 'none';
 
@@ -6830,7 +7022,10 @@
       // Close any old socket
       if (_defuseSocket) { try { _defuseSocket.close(); } catch {} _defuseSocket = null; }
 
-      _defuseRoomId = `defuse-${generateRoomId()}`;
+      const shortId = _defuseRoomId || generateRoomId();
+      _defuseRoomId = shortId;
+      setRoomIdInUrl(shortId);
+      _markDefuseOwner(shortId);
       _defuseSocket = new PartySocket({ host: PARTYKIT_HOST, room: _defuseRoomId });
       _defuseSocket.addEventListener('open', () => {
         _defuseSocket.send(JSON.stringify({
@@ -6848,6 +7043,10 @@
           const board = document.getElementById('defuse-board');
           const cellEl = board?.querySelector(`[data-row='${msg.row}'][data-col='${msg.col}']`);
           _showDefuseTimePenalty(cellEl, msg.seconds);
+        }
+        if (msg.type === 'sticker') {
+          if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
+          else showStickerToast(msg.from, msg.id);
         }
       });
     }
@@ -6896,7 +7095,6 @@
         board.classList.add('defuse-board-shake');
         board.addEventListener('animationend', () => board.classList.remove('defuse-board-shake'), { once: true });
       }
-      _defuseSeconds += seconds;
     }
 
     function _onDefuseCellClick(e) {
@@ -6909,9 +7107,20 @@
       _defuseSocket.send(JSON.stringify({ type: msgType, row, col }));
     }
 
+    function _renderDefusePlayerLabel({ isMulti, squadName, playerName }) {
+      const playerLabelEl = document.getElementById('defuse-player-label');
+      if (!playerLabelEl) return;
+      if (!isMulti) {
+        playerLabelEl.textContent = playerName || '';
+        return;
+      }
+      playerLabelEl.textContent = squadName || playerName || '';
+    }
+
     function _applyDefuseState(state) {
-      const { rows, cols, grid, revealed, defused, exploded, startedAt, totalPenalties,
-              bombsResolved, totalBombs, combo, highestCombo, status, finalTime } = state;
+      _defuseCurrentState = state;
+      const { rows, cols, grid, revealed, defused, exploded, startedAt, totalPenalties, serverNow, elapsedMs,
+              bombsResolved, totalBombs, combo, highestCombo, status, finalTime, isMulti, squadName, playerName, squadMembers } = state;
 
       // Rebuild grid if dimensions changed
       const board = document.getElementById('defuse-board');
@@ -6944,19 +7153,45 @@
       _defuseTotalBombs = totalBombs;
       _defuseBombsResolved = bombsResolved;
       _defuseCurrentCombo = combo;
+      const typeBadgeEl = document.getElementById('defuse-game-type-badge');
+      if (typeBadgeEl) typeBadgeEl.textContent = isMulti ? (t.defuse_multi || 'Multi') : (t.defuse_solo || 'Solo');
+      _renderDefusePlayerLabel({ isMulti, squadName, playerName });
+      const stickerWrap = document.getElementById('defuse-sticker-launcher')?.closest('.sticker-launcher-wrap');
+      if (stickerWrap) stickerWrap.style.display = isMulti ? '' : 'none';
+      const shareBtn = document.getElementById('btn-defuse-share');
+      if (shareBtn) shareBtn.style.display = '';
+      const restartBtn = document.getElementById('btn-defuse-restart');
+      const isDefuseOwner = !!myName && !!playerName && isSamePlayerName(myName, playerName);
+      if (restartBtn) restartBtn.style.display = isDefuseOwner ? '' : 'none';
+      const playersStrip = document.getElementById('defuse-players-strip');
+      if (playersStrip) {
+        if (isMulti) {
+          playersStrip.style.display = '';
+          const members = Array.isArray(squadMembers) && squadMembers.length ? squadMembers : [playerName || '?'];
+          _updateDefusePlayers(members.map((name) => ({ name, waiting: status === 'waiting', isSelf: !!myName && isSamePlayerName(name, myName) })));
+        } else {
+          playersStrip.style.display = 'none';
+          playersStrip.innerHTML = '';
+        }
+      }
       const comboEl = document.getElementById('defuse-combo');
       if (comboEl) comboEl.textContent = combo > 0 ? `x${combo}` : '0';
       const bombsEl = document.getElementById('defuse-bombs-counter');
       if (bombsEl) bombsEl.textContent = `${totalBombs - bombsResolved}`;
+      const hint = document.getElementById('defuse-pregame-hint');
 
       // Start / sync timer from server startedAt
       if (startedAt && !_defuseStarted) {
         _defuseStarted = true;
-        const hint = document.getElementById('defuse-pregame-hint');
         if (hint) { hint.style.opacity = '0'; setTimeout(() => hint.style.display = 'none', 300); }
         clearInterval(_defuseTimer);
         _defuseTimer = setInterval(() => {
           _defuseSeconds++;
+          if (_defuseSeconds >= 1200) {
+            _defuseSeconds = 1200;
+            clearInterval(_defuseTimer);
+            _defuseStarted = false;
+          }
           const m = String(Math.floor(_defuseSeconds / 60)).padStart(2, '0');
           const s = String(_defuseSeconds % 60).padStart(2, '0');
           const timerEl = document.getElementById('defuse-timer');
@@ -6965,11 +7200,34 @@
       }
       if (startedAt) {
         // Resync elapsed time (corrects drift and reconnects)
-        _defuseSeconds = Math.floor((Date.now() - startedAt + totalPenalties) / 1000);
+        const effectiveElapsedMs = elapsedMs ?? Math.max(0, (serverNow ?? startedAt) - startedAt + totalPenalties);
+        _defuseSeconds = Math.floor(effectiveElapsedMs / 1000);
         const m = String(Math.floor(_defuseSeconds / 60)).padStart(2, '0');
         const s = String(_defuseSeconds % 60).padStart(2, '0');
         const timerEl = document.getElementById('defuse-timer');
         if (timerEl) timerEl.textContent = `${m}:${s}`;
+      }
+      if (!startedAt) {
+        clearInterval(_defuseTimer);
+        _defuseStarted = false;
+        _defuseSeconds = 0;
+        _defuseCurrentAction = 'inspect';
+        const timerEl = document.getElementById('defuse-timer');
+        if (timerEl) timerEl.textContent = '00:00';
+        const inspectBtn = document.getElementById('defuse-btn-inspect');
+        const defuseBtn = document.getElementById('defuse-btn-defuse-action');
+        inspectBtn?.classList.add('active');
+        defuseBtn?.classList.remove('active');
+        if (hint) {
+          hint.style.display = '';
+          hint.style.opacity = '1';
+          if (t.defuse_pregame_hint) hint.textContent = t.defuse_pregame_hint;
+        }
+        const resultInline = document.getElementById('defuse-result-inline');
+        if (resultInline) {
+          resultInline.classList.remove('open');
+          resultInline.setAttribute('aria-hidden', 'true');
+        }
       }
 
       // Finished
@@ -6987,7 +7245,7 @@
       document.querySelectorAll('.defuse-cell:not(.revealed):not(.defused):not(.exploded)').forEach(c => {
         c.style.pointerEvents = 'none';
       });
-      const modal = document.getElementById('defuse-result-modal');
+      const modal = document.getElementById('defuse-result-inline');
       const titleEl = document.getElementById('defuse-result-title');
       const bodyEl = document.getElementById('defuse-result-body');
       const restartBtn = document.getElementById('btn-defuse-result-restart');
@@ -7001,23 +7259,7 @@
       const finalSec = opts.finalTimeMs != null ? Math.floor(opts.finalTimeMs / 1000) : _defuseSeconds;
       const bestCombo = opts.highestCombo != null ? opts.highestCombo : _defuseCurrentCombo;
       const bombasRestantes = _defuseTotalBombs - _defuseBombsResolved;
-      function statCard(icon, label, value) {
-        return `<div style="background:var(--bg-secondary);border:0.5px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;display:flex;flex-direction:column;gap:2px;">
-          <div style="font-size:10px;color:var(--text-subtle);text-transform:uppercase;letter-spacing:.5px;">${icon} ${label}</div>
-          <div style="font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.5px;">${value}</div>
-        </div>`;
-      }
-      let bodyHtml = statCard('⏰', tl.defuse_result_final_time || 'Tempo final', fmtMs(finalSec * 1000));
-      if (won) {
-        bodyHtml += statCard('🎯', tl.defuse_result_combo || 'Melhor combo', `×${bestCombo}`);
-      } else {
-        const bombs = tl.defuse_result_bombs_left ? tl.defuse_result_bombs_left(bombasRestantes) : `${bombasRestantes} bombas`;
-        bodyHtml += statCard('💣', tl.defuse_timeout_title || 'Restaram', bombs);
-      }
-      if (!won && tl.defuse_timeout_desc) {
-        bodyHtml += `<div style="grid-column:1/-1;font-size:11px;color:var(--text-subtle);text-align:center;">${tl.defuse_timeout_desc}</div>`;
-      }
-      bodyEl.innerHTML = bodyHtml;
+      bodyEl.innerHTML = '';
       if (restartBtn) restartBtn.textContent = tl.defuse_result_play_again || 'Play again';
       if (rankBtn) rankBtn.textContent = tl.defuse_result_ranking_btn || 'Leaderboard';
       modal.classList.add('open');
@@ -7032,7 +7274,7 @@
       strip.className = 'defuse-players-strip';
       players.forEach((p, i) => {
         const chip = document.createElement('div');
-        chip.className = 'defuse-player-chip' + (p.waiting ? ' waiting' : '');
+        chip.className = 'defuse-player-chip' + (p.waiting ? ' waiting' : '') + (p.isSelf ? ' is-self' : '');
         const dot = document.createElement('span');
         dot.className = 'chip-dot';
         const name = document.createElement('span');
@@ -7101,13 +7343,11 @@
         document.getElementById('defuse-btn-defuse-action').classList.add('active');
         document.getElementById('defuse-btn-inspect').classList.remove('active');
       });
-      document.getElementById('btn-defuse-leave')?.addEventListener('click', () => {
-        clearInterval(_defuseTimer); _defuseStarted = false;
-        if (_defuseSocket) { try { _defuseSocket.close(); } catch {} _defuseSocket = null; }
-        showScreen('screen-create');
-      });
+      document.getElementById('btn-defuse-leave')?.addEventListener('click', leaveDefuseRoom);
       document.getElementById('btn-defuse-restart')?.addEventListener('click', () => {
-        if (_defuseLastParams) _startDefuseGame(_defuseLastParams);
+        if (_defuseSocket) {
+          _defuseSocket.send(JSON.stringify({ type: 'defuse-restart' }));
+        }
       });
       const defuseStickerLauncher = document.getElementById('defuse-sticker-launcher');
       const defuseStickerPalette = document.getElementById('defuse-sticker-palette');
@@ -7115,6 +7355,11 @@
         e.stopPropagation();
         const open = defuseStickerPalette.classList.toggle('open');
         defuseStickerLauncher.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      defuseStickerPalette?.addEventListener('click', (e) => {
+        const btn = e.target.closest('.sticker-btn');
+        if (!btn) return;
+        sendDefuseSticker(btn.dataset.sticker);
       });
       document.addEventListener('click', (e) => {
         if (!defuseStickerLauncher?.contains(e.target)) {

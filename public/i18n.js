@@ -80,8 +80,10 @@ export const TRANSLATIONS = {
     defuse_result_penalties: "Punições",
     defuse_result_accuracy: "Precisão",
     defuse_result_combo: "Combo máx",
-    defuse_result_play_again: "Jogar de novo",
+    defuse_result_play_again: "Bora de novo",
     defuse_result_ranking_btn: "Ver ranking",
+    defuse_restart_label: "Novo mapa",
+    defuse_share_label: "Compartilhar",
     btn_back: "Voltar",
     mode_versus: "Arengueiro",
     mode_coop: "Mutirão",
@@ -90,7 +92,7 @@ export const TRANSLATIONS = {
     mode_coop_desc: "Dois cabra desenrolado pra abrir as caixa sem pisar nas mina.",
     mode_explosive_desc: "Quem pisar na mina primeiro perde a rodada. O primeiro a conquistar a FT vence o desafio!",
     mode_defuse_desc: "Curiar as casas até saber onde tão as minas. Quando tiver certeza, desarma. O mais rápido que conseguir!",
-    briefing_defuse_caption: "Curiar mina errada: +5s · Desarmar errado: +10s",
+    briefing_defuse_caption: "Curiar mina errada: +30s · Desarmar errado: +20s",
 
     // Points preview
     points_preview: (n) => `🏆 Se vencer: ${n} pts`,
@@ -258,6 +260,8 @@ export const TRANSLATIONS = {
     defuse_result_combo: "Combo máx.",
     defuse_result_play_again: "Jogar novamente",
     defuse_result_ranking_btn: "Ver ranking",
+    defuse_restart_label: "Novo mapa",
+    defuse_share_label: "Partilhar",
     btn_back: "Voltar",
     mode_versus: "Versus",
     mode_coop: "Coop",
@@ -266,7 +270,7 @@ export const TRANSLATIONS = {
     mode_coop_desc: "Trabalhem juntos para revelar todas as células sem explodir nenhuma bomba.",
     mode_explosive_desc: "Quem encontrar a primeira bomba perde a rodada. O primeiro a conquistar a FT vence.",
     mode_defuse_desc: "Inspecciona células até teres a certeza de onde estão as bombas. Quando souberes, desarma-as. O mais rápido que conseguires!",
-    briefing_defuse_caption: "Inspecionar bomba errada: +5s · Desarmar errado: +10s",
+    briefing_defuse_caption: "Inspecionar bomba errada: +30s · Desarmar errado: +20s",
 
     // Points preview
     points_preview: (n) => `🏆 Se vencer: ${n} pts`,
@@ -426,6 +430,8 @@ export const TRANSLATIONS = {
     defuse_result_combo: "Best combo",
     defuse_result_play_again: "Play again",
     defuse_result_ranking_btn: "Leaderboard",
+    defuse_restart_label: "New board",
+    defuse_share_label: "Share",
     btn_back: "Back",
     mode_versus: "Versus",
     mode_coop: "Coop",
@@ -434,7 +440,7 @@ export const TRANSLATIONS = {
     mode_coop_desc: "Work together to reveal all cells without hitting a single mine.",
     mode_explosive_desc: "First to hit a mine loses the round. First to the FT wins.",
     mode_defuse_desc: "Inspect cells until you know where the bombs are. When you're sure, defuse them. As fast as you can!",
-    briefing_defuse_caption: "Inspect a wrong bomb: +5s · Wrong defuse: +10s",
+    briefing_defuse_caption: "Inspect a wrong bomb: +30s · Wrong defuse: +20s",
 
     // Points preview
     points_preview: (n) => `🏆 Win: ${n} pts`,

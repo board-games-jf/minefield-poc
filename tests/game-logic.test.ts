@@ -845,7 +845,7 @@ describe("coop deferred grid — AI first click safety", () => {
 
 describe("DEFUSE_CONFIGS", () => {
   it("has correct bomb counts per difficulty", () => {
-    expect(DEFUSE_CONFIGS.easy.bombs).toBe(23);
+    expect(DEFUSE_CONFIGS.easy.bombs).toBe(22);
     expect(DEFUSE_CONFIGS.medium.bombs).toBe(29);
     expect(DEFUSE_CONFIGS.hard.bombs).toBe(36);
   });
