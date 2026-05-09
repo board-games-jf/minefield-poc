@@ -82,10 +82,13 @@ export interface GameState {
 
 // ── Defuse-specific types ─────────────────────────────────────────────────
 
-export const DEFUSE_CONFIGS: Record<Difficulty, { rows: number; cols: number; bombs: number }> = {
-  easy:   { rows: 12, cols: 12, bombs: 22 },
+export const DEFUSE_CONFIGS: Record<
+  Difficulty,
+  { rows: number; cols: number; bombs: number }
+> = {
+  easy: { rows: 12, cols: 12, bombs: 22 },
   medium: { rows: 12, cols: 12, bombs: 29 },
-  hard:   { rows: 12, cols: 12, bombs: 36 },
+  hard: { rows: 12, cols: 12, bombs: 36 },
 };
 
 export interface DefuseState {
@@ -103,12 +106,12 @@ export interface DefuseState {
   /** -1=bomb, 0-8=safe; -2=hidden on client for unrevealed cells */
   grid: number[][];
   revealed: boolean[][];
-  defused:  boolean[][]; // correctly defused bombs (green 💣)
+  defused: boolean[][]; // correctly defused bombs (green 💣)
   exploded: boolean[][]; // Inspect-hit bombs     (red 💣)
   startedAt: number | null;
   totalPenalties: number; // accumulated ms
   totalBombs: number;
-  bombsResolved: number;  // defused + exploded
+  bombsResolved: number; // defused + exploded
   combo: number;
   highestCombo: number;
   wrongDefuses: number;
@@ -118,16 +121,16 @@ export interface DefuseState {
 
 export interface DefuseRankingEntry {
   name: string;
-  finalTime: number;        // ms
-  realTime: number;         // ms (pure elapsed)
-  totalPenalties: number;   // ms
-  accuracy: number;         // 0–100
+  finalTime: number; // ms
+  realTime: number; // ms (pure elapsed)
+  totalPenalties: number; // ms
+  accuracy: number; // 0–100
   highestCombo: number;
-  triggeredBombs: number;   // Inspect mistakes (+30s each)
-  wrongDefuses: number;     // Defuse-wrong mistakes (+20s each)
+  triggeredBombs: number; // Inspect mistakes (+30s each)
+  wrongDefuses: number; // Defuse-wrong mistakes (+20s each)
   difficulty: Difficulty;
   timestamp: number;
-  squadMembers?: string[];  // present for multi rooms
+  squadMembers?: string[]; // present for multi rooms
 }
 
 const DEFUSE_RANKING_ROOM_ID = "__defuse-ranking__";
@@ -164,7 +167,13 @@ export type ClientMessage =
   | { type: "flag"; row: number; col: number }
   | { type: "rematch" }
   | { type: "sticker"; id: string }
-  | { type: "defuse-join"; name: string; difficulty: Difficulty; squadName?: string; isMulti?: boolean }
+  | {
+      type: "defuse-join";
+      name: string;
+      difficulty: Difficulty;
+      squadName?: string;
+      isMulti?: boolean;
+    }
   | { type: "defuse-inspect"; row: number; col: number }
   | { type: "defuse-defuse"; row: number; col: number }
   | { type: "defuse-restart" }
@@ -262,13 +271,16 @@ export function buildRankingPayload(
 
 // ── Defuse helpers ─────────────────────────────────────────────────────────
 
-export function sortDefuseRanking(entries: DefuseRankingEntry[]): DefuseRankingEntry[] {
-  return [...entries].sort((a, b) =>
-    a.finalTime - b.finalTime ||
-    b.highestCombo - a.highestCombo ||
-    a.triggeredBombs - b.triggeredBombs ||
-    a.wrongDefuses - b.wrongDefuses ||
-    a.timestamp - b.timestamp
+export function sortDefuseRanking(
+  entries: DefuseRankingEntry[],
+): DefuseRankingEntry[] {
+  return [...entries].sort(
+    (a, b) =>
+      a.finalTime - b.finalTime ||
+      b.highestCombo - a.highestCombo ||
+      a.triggeredBombs - b.triggeredBombs ||
+      a.wrongDefuses - b.wrongDefuses ||
+      a.timestamp - b.timestamp,
   );
 }
 
@@ -315,7 +327,7 @@ export function createDefuseState(
       ? Array.from({ length: rows }, () => Array(cols).fill(0))
       : generateDefuseGrid(rows, cols, bombs),
     revealed: Array.from({ length: rows }, () => Array(cols).fill(false)),
-    defused:  Array.from({ length: rows }, () => Array(cols).fill(false)),
+    defused: Array.from({ length: rows }, () => Array(cols).fill(false)),
     exploded: Array.from({ length: rows }, () => Array(cols).fill(false)),
     startedAt: null,
     totalPenalties: 0,
@@ -329,13 +341,22 @@ export function createDefuseState(
   };
 }
 
-function generateDefuseGrid(rows: number, cols: number, bombs: number): number[][] {
-  const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(0));
+function generateDefuseGrid(
+  rows: number,
+  cols: number,
+  bombs: number,
+): number[][] {
+  const grid: number[][] = Array.from({ length: rows }, () =>
+    Array(cols).fill(0),
+  );
   let placed = 0;
   while (placed < bombs) {
     const r = Math.floor(Math.random() * rows);
     const c = Math.floor(Math.random() * cols);
-    if (grid[r][c] !== -1) { grid[r][c] = -1; placed++; }
+    if (grid[r][c] !== -1) {
+      grid[r][c] = -1;
+      placed++;
+    }
   }
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
@@ -343,8 +364,16 @@ function generateDefuseGrid(rows: number, cols: number, bombs: number): number[]
       let count = 0;
       for (let dr = -1; dr <= 1; dr++)
         for (let dc = -1; dc <= 1; dc++) {
-          const nr = r + dr, nc = c + dc;
-          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === -1) count++;
+          const nr = r + dr,
+            nc = c + dc;
+          if (
+            nr >= 0 &&
+            nr < rows &&
+            nc >= 0 &&
+            nc < cols &&
+            grid[nr][nc] === -1
+          )
+            count++;
         }
       grid[r][c] = count;
     }
@@ -356,7 +385,8 @@ function maskDefuseGrid(state: DefuseState): number[][] {
   return state.grid.map((row, r) =>
     row.map((cell, c) => {
       if (state.status === "finished") return cell;
-      if (state.revealed[r][c] || state.defused[r][c] || state.exploded[r][c]) return cell;
+      if (state.revealed[r][c] || state.defused[r][c] || state.exploded[r][c])
+        return cell;
       return -2; // hidden
     }),
   );
@@ -589,9 +619,14 @@ export default class GameRoom implements Party.Server {
 
       if (url.pathname === "/api/defuse-ranking") {
         const partyName = Object.keys(lobby.parties)[0];
-        if (!partyName) return Response.json({ top: [], player: null } satisfies DefuseRankingPayload);
+        if (!partyName)
+          return Response.json({
+            top: [],
+            player: null,
+          } satisfies DefuseRankingPayload);
         const player = url.searchParams.get("player");
-        const difficulty = (url.searchParams.get("difficulty") || "medium") as Difficulty;
+        const difficulty = (url.searchParams.get("difficulty") ||
+          "medium") as Difficulty;
         const limit = url.searchParams.get("limit") || "10";
         return lobby.parties[partyName]
           .get(DEFUSE_RANKING_ROOM_ID)
@@ -670,8 +705,11 @@ export default class GameRoom implements Party.Server {
   constructor(readonly room: Party.Room) {}
 
   async onStart() {
-    this.defuseState = (await this.room.storage.get<DefuseState>("defuse-state")) ?? null;
-    this.defuseRankingRecorded = (await this.room.storage.get<boolean>("defuse-ranking-recorded")) ?? false;
+    this.defuseState =
+      (await this.room.storage.get<DefuseState>("defuse-state")) ?? null;
+    this.defuseRankingRecorded =
+      (await this.room.storage.get<boolean>("defuse-ranking-recorded")) ??
+      false;
     if (this.defuseState) return;
     this.state = (await this.room.storage.get<GameState>("state")) ?? null;
     const saved =
@@ -717,7 +755,10 @@ export default class GameRoom implements Party.Server {
 
   async onRequest(req: Party.Request) {
     try {
-      if (this.room.id !== RANKING_ROOM_ID && this.room.id !== DEFUSE_RANKING_ROOM_ID) {
+      if (
+        this.room.id !== RANKING_ROOM_ID &&
+        this.room.id !== DEFUSE_RANKING_ROOM_ID
+      ) {
         return new Response("Not found", { status: 404 });
       }
 
@@ -752,20 +793,39 @@ export default class GameRoom implements Party.Server {
 
       // Defuse ranking snapshot
       if (req.method === "GET" && url.pathname.endsWith("/defuse-snapshot")) {
-        const difficulty = (url.searchParams.get("difficulty") || "medium") as Difficulty;
-        const limit = Number.parseInt(url.searchParams.get("limit") || "10", 10);
+        const difficulty = (url.searchParams.get("difficulty") ||
+          "medium") as Difficulty;
+        const limit = Number.parseInt(
+          url.searchParams.get("limit") || "10",
+          10,
+        );
         const player = url.searchParams.get("player");
-        const entries = (await this.room.storage.get<DefuseRankingEntry[]>(DEFUSE_RANKING_KEY_PREFIX)) ?? [];
-        return Response.json(buildDefuseRankingPayload(entries, difficulty, player, Number.isFinite(limit) ? limit : 10));
+        const entries =
+          (await this.room.storage.get<DefuseRankingEntry[]>(
+            DEFUSE_RANKING_KEY_PREFIX,
+          )) ?? [];
+        return Response.json(
+          buildDefuseRankingPayload(
+            entries,
+            difficulty,
+            player,
+            Number.isFinite(limit) ? limit : 10,
+          ),
+        );
       }
 
       // Apply defuse match result
       if (req.method === "POST" && url.pathname.endsWith("/apply-defuse")) {
         const entry = (await req.json()) as DefuseRankingEntry;
-        const entries = (await this.room.storage.get<DefuseRankingEntry[]>(DEFUSE_RANKING_KEY_PREFIX)) ?? [];
+        const entries =
+          (await this.room.storage.get<DefuseRankingEntry[]>(
+            DEFUSE_RANKING_KEY_PREFIX,
+          )) ?? [];
         // Keep only best result per player per difficulty (lower finalTime wins)
         const existingIdx = entries.findIndex(
-          (e) => e.name.toLowerCase() === entry.name.toLowerCase() && e.difficulty === entry.difficulty
+          (e) =>
+            e.name.toLowerCase() === entry.name.toLowerCase() &&
+            e.difficulty === entry.difficulty,
         );
         if (existingIdx === -1) {
           entries.push(entry);
@@ -785,7 +845,12 @@ export default class GameRoom implements Party.Server {
 
   async onConnect(conn: Party.Connection) {
     if (this.defuseState) {
-      conn.send(JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage));
+      conn.send(
+        JSON.stringify({
+          type: "defuse-state",
+          state: this.maskedDefuseState(),
+        } satisfies ServerMessage),
+      );
       return;
     }
     if (!this.state) return;
@@ -794,13 +859,41 @@ export default class GameRoom implements Party.Server {
 
   async onMessage(message: string, sender: Party.Connection) {
     const msg = JSON.parse(message) as ClientMessage;
-    if (msg.type === "defuse-join") { await this.handleDefuseJoin(sender, msg.name, msg.difficulty, msg.squadName, msg.isMulti); return; }
-    if (msg.type === "defuse-inspect") { await this.handleDefuseAction(sender, msg.row, msg.col, "inspect"); return; }
-    if (msg.type === "defuse-defuse") { await this.handleDefuseAction(sender, msg.row, msg.col, "defuse"); return; }
-    if (msg.type === "defuse-restart") { await this.handleDefuseRestart(sender); return; }
-    if (msg.type === "defuse-play-again") { await this.handleDefusePlayAgain(sender); return; }
+    if (msg.type === "defuse-join") {
+      await this.handleDefuseJoin(
+        sender,
+        msg.name,
+        msg.difficulty,
+        msg.squadName,
+        msg.isMulti,
+      );
+      return;
+    }
+    if (msg.type === "defuse-inspect") {
+      await this.handleDefuseAction(sender, msg.row, msg.col, "inspect");
+      return;
+    }
+    if (msg.type === "defuse-defuse") {
+      await this.handleDefuseAction(sender, msg.row, msg.col, "defuse");
+      return;
+    }
+    if (msg.type === "defuse-restart") {
+      await this.handleDefuseRestart(sender);
+      return;
+    }
+    if (msg.type === "defuse-play-again") {
+      await this.handleDefusePlayAgain(sender);
+      return;
+    }
     if (msg.type === "join")
-      await this.handleJoin(sender, msg.name, msg.difficulty, msg.mode, msg.ft, msg.ai);
+      await this.handleJoin(
+        sender,
+        msg.name,
+        msg.difficulty,
+        msg.mode,
+        msg.ft,
+        msg.ai,
+      );
     if (msg.type === "reveal")
       await this.handleReveal(sender, msg.row, msg.col);
     if (msg.type === "flag") await this.handleFlag(sender, msg.row, msg.col);
@@ -1315,7 +1408,9 @@ export default class GameRoom implements Party.Server {
       if (this.state.players[1]?.id === "ai") {
         const rows = this.state.grid.length;
         const cols = this.state.grid[0]?.length ?? 0;
-        this.aiFlags = Array.from({ length: rows }, () => Array(cols).fill(false));
+        this.aiFlags = Array.from({ length: rows }, () =>
+          Array(cols).fill(false),
+        );
         await this.room.storage.put("aiFlags", this.aiFlags);
       } else {
         this.aiFlags = null;
@@ -1532,19 +1627,33 @@ export default class GameRoom implements Party.Server {
         // We do this by continuing with the rest of aiMove using these coords.
         // Inline the reveal here to avoid duplicating the rest of the function.
         this.state.lastClickedCell = { row: fcRow, col: fcCol, playerIndex: 1 };
-        this.state.lastPlayerClicks = [{ row: fcRow, col: fcCol, playerIndex: 1 }];
-        const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, fcRow, fcCol, rows, cols);
+        this.state.lastPlayerClicks = [
+          { row: fcRow, col: fcCol, playerIndex: 1 },
+        ];
+        const newlySafe = floodRevealWithAttribution(
+          this.state.grid,
+          this.state.revealed,
+          fcRow,
+          fcCol,
+          rows,
+          cols,
+        );
         if (this.state.flags) {
           for (const { row: r, col: c } of newlySafe) {
             if (this.state.flags[r]?.[c]) this.state.flags[r][c] = false;
           }
         }
         if (this.state.safeRevealedBy) {
-          for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(1);
+          for (let i = 0; i < newlySafe.length; i++)
+            this.state.safeRevealedBy.push(1);
         } else {
-          this.state.safeRevealedBy = Array.from({ length: newlySafe.length }, () => 1 as 0 | 1);
+          this.state.safeRevealedBy = Array.from(
+            { length: newlySafe.length },
+            () => 1 as 0 | 1,
+          );
         }
-        for (const { row: r, col: c } of newlySafe) this.state.foundBy[r][c] = 1;
+        for (const { row: r, col: c } of newlySafe)
+          this.state.foundBy[r][c] = 1;
         this.state.currentPlayer = 0;
         if (allSafeCellsRevealed(this.state)) {
           this.state.status = "finished";
@@ -1554,7 +1663,10 @@ export default class GameRoom implements Party.Server {
         await this.persist();
         await this.room.storage.put("aiFlags", this.aiFlags);
         this.broadcast();
-        if (this.state.status === "playing" && (this.state.currentPlayer as 0 | 1) === 1) {
+        if (
+          this.state.status === "playing" &&
+          (this.state.currentPlayer as 0 | 1) === 1
+        ) {
           this.scheduleAiMove(level);
         }
         return;
@@ -1575,14 +1687,28 @@ export default class GameRoom implements Party.Server {
       if (!this.state.revealed[fcRow][fcCol]) {
         // Inline reveal for explosive to avoid duplicating other mode logic.
         this.state.lastClickedCell = { row: fcRow, col: fcCol, playerIndex: 1 };
-        this.state.lastPlayerClicks = [{ row: fcRow, col: fcCol, playerIndex: 1 }];
-        const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, fcRow, fcCol, rows, cols);
+        this.state.lastPlayerClicks = [
+          { row: fcRow, col: fcCol, playerIndex: 1 },
+        ];
+        const newlySafe = floodRevealWithAttribution(
+          this.state.grid,
+          this.state.revealed,
+          fcRow,
+          fcCol,
+          rows,
+          cols,
+        );
         if (this.state.safeRevealedBy) {
-          for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(1);
+          for (let i = 0; i < newlySafe.length; i++)
+            this.state.safeRevealedBy.push(1);
         } else {
-          this.state.safeRevealedBy = Array.from({ length: newlySafe.length }, () => 1 as 0 | 1);
+          this.state.safeRevealedBy = Array.from(
+            { length: newlySafe.length },
+            () => 1 as 0 | 1,
+          );
         }
-        for (const { row: r, col: c } of newlySafe) this.state.foundBy[r][c] = 1;
+        for (const { row: r, col: c } of newlySafe)
+          this.state.foundBy[r][c] = 1;
         this.state.currentPlayer = 0;
         await this.finalizeMatchIfNeeded();
         await this.persist();
@@ -1602,7 +1728,8 @@ export default class GameRoom implements Party.Server {
     if (row < 0 || row >= rows || col < 0 || col >= cols) return;
 
     // Defensive guard: never reveal the coop placeholder.
-    if (this.state.mode === "coop" && this.state.coopGridReady === false) return;
+    if (this.state.mode === "coop" && this.state.coopGridReady === false)
+      return;
 
     if (this.state.revealed[row][col]) return;
 
@@ -1860,7 +1987,12 @@ export default class GameRoom implements Party.Server {
     const elapsedMs =
       this.defuseState.finalTime ??
       (this.defuseState.startedAt
-        ? Math.max(0, serverNow - this.defuseState.startedAt + this.defuseState.totalPenalties)
+        ? Math.max(
+            0,
+            serverNow -
+              this.defuseState.startedAt +
+              this.defuseState.totalPenalties,
+          )
         : 0);
     return {
       ...this.defuseState,
@@ -1886,23 +2018,40 @@ export default class GameRoom implements Party.Server {
 
   private broadcastDefuse() {
     if (!this.defuseState) return;
-    const msg = JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage);
+    const msg = JSON.stringify({
+      type: "defuse-state",
+      state: this.maskedDefuseState(),
+    } satisfies ServerMessage);
     this.room.broadcast(msg);
   }
 
   private async persistDefuse() {
     await this.room.storage.put("defuse-state", this.defuseState);
-    await this.room.storage.put("defuse-ranking-recorded", this.defuseRankingRecorded);
+    await this.room.storage.put(
+      "defuse-ranking-recorded",
+      this.defuseRankingRecorded,
+    );
   }
 
-  private async handleDefuseJoin(conn: Party.Connection, name: string, difficulty: Difficulty, squadName?: string, isMulti?: boolean) {
+  private async handleDefuseJoin(
+    conn: Party.Connection,
+    name: string,
+    difficulty: Difficulty,
+    squadName?: string,
+    isMulti?: boolean,
+  ) {
     this.defuseConnectionToName.set(conn.id, name);
     // Reconnect: send current state
     if (this.defuseState) {
       await this.ensureDefuseTimeout();
       if (this.defuseState.isMulti) {
-        const members = this.defuseState.squadMembers ?? [this.defuseState.playerName];
-        const exists = members.some((member) => normalizeRankingName(member) === normalizeRankingName(name));
+        const members = this.defuseState.squadMembers ?? [
+          this.defuseState.playerName,
+        ];
+        const exists = members.some(
+          (member) =>
+            normalizeRankingName(member) === normalizeRankingName(name),
+        );
         if (!exists) {
           this.defuseState.squadMembers = [...members, name];
           await this.persistDefuse();
@@ -1910,14 +2059,20 @@ export default class GameRoom implements Party.Server {
           return;
         }
       }
-      conn.send(JSON.stringify({ type: "defuse-state", state: this.maskedDefuseState() } satisfies ServerMessage));
+      conn.send(
+        JSON.stringify({
+          type: "defuse-state",
+          state: this.maskedDefuseState(),
+        } satisfies ServerMessage),
+      );
       return;
     }
     this.defuseState = createDefuseState(difficulty, name, { deferGrid: true });
     this.defuseState.status = "waiting";
     if (isMulti) {
       this.defuseState.isMulti = true;
-      this.defuseState.squadName = (squadName && squadName.trim()) ? squadName : name;
+      this.defuseState.squadName =
+        squadName && squadName.trim() ? squadName : name;
     }
     await this.persistDefuse();
     this.broadcastDefuse();
@@ -1938,7 +2093,8 @@ export default class GameRoom implements Party.Server {
     if (row < 0 || row >= rows || col < 0 || col >= cols) return;
 
     // Cell already resolved?
-    if (s.revealed[row][col] || s.defused[row][col] || s.exploded[row][col]) return;
+    if (s.revealed[row][col] || s.defused[row][col] || s.exploded[row][col])
+      return;
 
     // Start timer on first action
     if (s.startedAt === null) {
@@ -2001,12 +2157,14 @@ export default class GameRoom implements Party.Server {
     this.broadcastDefuse();
 
     if (penaltySeconds > 0) {
-      this.room.broadcast(JSON.stringify({
-        type: "defuse-penalty",
-        seconds: penaltySeconds as 20 | 30,
-        row,
-        col,
-      } satisfies ServerMessage));
+      this.room.broadcast(
+        JSON.stringify({
+          type: "defuse-penalty",
+          seconds: penaltySeconds as 20 | 30,
+          row,
+          col,
+        } satisfies ServerMessage),
+      );
     }
 
     if (s.status === "finished") {
@@ -2061,8 +2219,11 @@ export default class GameRoom implements Party.Server {
     if (!requesterName) {
       return;
     }
-    const isParticipant = (this.defuseState.squadMembers ?? [this.defuseState.playerName]).some(
-      (name) => normalizeRankingName(name) === normalizeRankingName(requesterName),
+    const isParticipant = (
+      this.defuseState.squadMembers ?? [this.defuseState.playerName]
+    ).some(
+      (name) =>
+        normalizeRankingName(name) === normalizeRankingName(requesterName),
     );
     if (!isParticipant) {
       return;
@@ -2072,8 +2233,11 @@ export default class GameRoom implements Party.Server {
 
   private async resetDefuseState() {
     if (!this.defuseState) return;
-    const { difficulty, playerName, isMulti, squadName, squadMembers } = this.defuseState;
-    this.defuseState = createDefuseState(difficulty, playerName, { deferGrid: true });
+    const { difficulty, playerName, isMulti, squadName, squadMembers } =
+      this.defuseState;
+    this.defuseState = createDefuseState(difficulty, playerName, {
+      deferGrid: true,
+    });
     this.defuseState.isMulti = isMulti;
     this.defuseState.squadName = squadName;
     this.defuseState.squadMembers = squadMembers ?? [playerName];
@@ -2089,9 +2253,14 @@ export default class GameRoom implements Party.Server {
     const s = this.defuseState;
     const realTime = s.startedAt ? (s.finalTime ?? 0) - s.totalPenalties : 0;
     const totalActions = s.totalBombs;
-    const accuracy = totalActions > 0
-      ? Math.round(((totalActions - s.wrongDefuses - s.triggeredBombs) / totalActions) * 100)
-      : 100;
+    const accuracy =
+      totalActions > 0
+        ? Math.round(
+            ((totalActions - s.wrongDefuses - s.triggeredBombs) /
+              totalActions) *
+              100,
+          )
+        : 100;
     const entry: DefuseRankingEntry = {
       name: s.isMulti && s.squadName ? s.squadName : s.playerName,
       finalTime: s.finalTime ?? 0,
@@ -2114,7 +2283,9 @@ export default class GameRoom implements Party.Server {
   }
 
   private getDefuseRankingParty() {
-    return this.room.context.parties[this.room.name].get(DEFUSE_RANKING_ROOM_ID);
+    return this.room.context.parties[this.room.name].get(
+      DEFUSE_RANKING_ROOM_ID,
+    );
   }
 
   // ── Ranking finalization ───────────────────────────────────────────────
@@ -2417,7 +2588,10 @@ function estimateBombProbabilities(
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const playerFlagged = state.flags?.[r]?.[c] ?? false;
-      if (aiFlags[r][c] || playerFlagged) { knownBombCount++; continue; }
+      if (aiFlags[r][c] || playerFlagged) {
+        knownBombCount++;
+        continue;
+      }
       if (!state.revealed[r][c]) hiddenCount++;
     }
   }

@@ -240,7 +240,7 @@ describe("countFoundBombs", () => {
   });
 });
 
-// ── allSafeCellsRevealed ───────────────────────────────────────────────────
+// ── allSafeCellsRevealed ────────────────────────────────────────────────────────
 
 describe("allSafeCellsRevealed", () => {
   it("returns false when safe cells remain hidden", () => {
@@ -830,20 +830,66 @@ describe("versus weighted generator", () => {
 describe("pickAiCell — certain-safe via flags deduction", () => {
   function makeBoardState(): GameState {
     // 10×10 all-unknown grid (no bomb positions needed — AI only reads revealed + numbers)
-    const rows = 10, cols = 10;
-    const grid: number[][] = Array.from({ length: rows }, () => Array(cols).fill(0));
-    const revealed: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
-    const foundBy: (0 | 1 | null)[][] = Array.from({ length: rows }, () => Array(cols).fill(null));
-    const flags: boolean[][] = Array.from({ length: rows }, () => Array(cols).fill(false));
+    const rows = 10,
+      cols = 10;
+    const grid: number[][] = Array.from({ length: rows }, () =>
+      Array(cols).fill(0),
+    );
+    const revealed: boolean[][] = Array.from({ length: rows }, () =>
+      Array(cols).fill(false),
+    );
+    const foundBy: (0 | 1 | null)[][] = Array.from({ length: rows }, () =>
+      Array(cols).fill(null),
+    );
+    const flags: boolean[][] = Array.from({ length: rows }, () =>
+      Array(cols).fill(false),
+    );
 
     // Revealed numbered cells (0-based)
     const numberedCells: [number, number, number][] = [
       // [row, col, value]
-      [5, 0, 1], [5, 1, 1], [5, 2, 1], [5, 3, 2], [5, 4, 3], [5, 6, 3], // L6 C1-C3,C4,C5,C7
-      [6, 0, 0], [6, 1, 0], [6, 2, 0], [6, 3, 0], [6, 4, 1], [6, 5, 1], [6, 6, 1], [6, 7, 3], // L7
-      [7, 0, 1], [7, 1, 1], [7, 2, 0], [7, 3, 0], [7, 4, 0], [7, 5, 0], [7, 6, 0], [7, 7, 2], [7, 9, 2], // L8
-      [8, 1, 1], [8, 2, 0], [8, 3, 0], [8, 4, 0], [8, 5, 0], [8, 6, 0], [8, 7, 1], [8, 8, 1], [8, 9, 1], // L9
-      [9, 0, 1], [9, 1, 1], [9, 2, 0], [9, 3, 0], [9, 4, 0], [9, 5, 0], [9, 6, 0], [9, 7, 0], [9, 8, 0], [9, 9, 0], // L10
+      [5, 0, 1],
+      [5, 1, 1],
+      [5, 2, 1],
+      [5, 3, 2],
+      [5, 4, 3],
+      [5, 6, 3], // L6 C1-C3,C4,C5,C7
+      [6, 0, 0],
+      [6, 1, 0],
+      [6, 2, 0],
+      [6, 3, 0],
+      [6, 4, 1],
+      [6, 5, 1],
+      [6, 6, 1],
+      [6, 7, 3], // L7
+      [7, 0, 1],
+      [7, 1, 1],
+      [7, 2, 0],
+      [7, 3, 0],
+      [7, 4, 0],
+      [7, 5, 0],
+      [7, 6, 0],
+      [7, 7, 2],
+      [7, 9, 2], // L8
+      [8, 1, 1],
+      [8, 2, 0],
+      [8, 3, 0],
+      [8, 4, 0],
+      [8, 5, 0],
+      [8, 6, 0],
+      [8, 7, 1],
+      [8, 8, 1],
+      [8, 9, 1], // L9
+      [9, 0, 1],
+      [9, 1, 1],
+      [9, 2, 0],
+      [9, 3, 0],
+      [9, 4, 0],
+      [9, 5, 0],
+      [9, 6, 0],
+      [9, 7, 0],
+      [9, 8, 0],
+      [9, 9, 0], // L10
     ];
     for (const [r, c, v] of numberedCells) {
       grid[r][c] = v;
@@ -862,7 +908,7 @@ describe("pickAiCell — certain-safe via flags deduction", () => {
       mode: "coop",
       players: [
         { id: "human", name: "Human", score: 0, bombs: 0 },
-        { id: "ai",    name: "NêmesisBot", score: 0, bombs: 0 },
+        { id: "ai", name: "NêmesisBot", score: 0, bombs: 0 },
       ],
       currentPlayer: 1,
       grid,
@@ -880,20 +926,29 @@ describe("pickAiCell — certain-safe via flags deduction", () => {
 
   it("deduces certain-safe cells via flag chain and picks one of them", () => {
     const state = makeBoardState();
-    const aiFlags: boolean[][] = Array.from({ length: 10 }, () => Array(10).fill(false));
+    const aiFlags: boolean[][] = Array.from({ length: 10 }, () =>
+      Array(10).fill(false),
+    );
 
     const pick = pickAiCell(state, aiFlags, "hard");
     expect(pick).not.toBeNull();
     // [5][7] (L6,C8): safe because [6][6]=1 has its only unknown neighbor here after flag at [5][5]
     // [6][9] (L7,C10): safe because [7][9]=2 accounts for flag[7][8] + aiFlag[6][8]
-    const certainSafeCells = [[5, 7], [6, 9]];
-    const isCertainSafe = certainSafeCells.some(([r, c]) => pick!.row === r && pick!.col === c);
+    const certainSafeCells = [
+      [5, 7],
+      [6, 9],
+    ];
+    const isCertainSafe = certainSafeCells.some(
+      ([r, c]) => pick!.row === r && pick!.col === c,
+    );
     expect(isCertainSafe).toBe(true);
   });
 
   it("marks [6][8] (L7,C9) as certain bomb in aiFlags", () => {
     const state = makeBoardState();
-    const aiFlags: boolean[][] = Array.from({ length: 10 }, () => Array(10).fill(false));
+    const aiFlags: boolean[][] = Array.from({ length: 10 }, () =>
+      Array(10).fill(false),
+    );
     pickAiCell(state, aiFlags, "hard");
     // After deduction, AI should have flagged [6][8] as a known bomb
     expect(aiFlags[6][8]).toBe(true);
@@ -906,7 +961,14 @@ describe("coop deferred grid — AI first click safety", () => {
   it("cell chosen to generate the grid is never a bomb (20 random positions)", () => {
     for (let i = 0; i < 20; i++) {
       const firstClick = { row: 1 + (i % 6), col: 1 + (i % 6) };
-      const { grid } = generateEnergyGrid({ rows: 8, cols: 8, bombs: 12, firstClick, ...ENERGY_PRESETS.medium, seed: i });
+      const { grid } = generateEnergyGrid({
+        rows: 8,
+        cols: 8,
+        bombs: 12,
+        firstClick,
+        ...ENERGY_PRESETS.medium,
+        seed: i,
+      });
       expect(grid[firstClick.row][firstClick.col]).not.toBe(-1);
     }
   });
@@ -975,8 +1037,16 @@ describe("createDefuseState", () => {
         let expected = 0;
         for (let dr = -1; dr <= 1; dr++)
           for (let dc = -1; dc <= 1; dc++) {
-            const nr = r + dr, nc = c + dc;
-            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === -1) expected++;
+            const nr = r + dr,
+              nc = c + dc;
+            if (
+              nr >= 0 &&
+              nr < rows &&
+              nc >= 0 &&
+              nc < cols &&
+              grid[nr][nc] === -1
+            )
+              expected++;
           }
         expect(grid[r][c]).toBe(expected);
       }
@@ -985,14 +1055,41 @@ describe("createDefuseState", () => {
 });
 
 describe("sortDefuseRanking", () => {
-  const base: Omit<DefuseRankingEntry, "finalTime" | "highestCombo" | "triggeredBombs" | "wrongDefuses" | "timestamp"> = {
-    name: "x", realTime: 0, totalPenalties: 0, accuracy: 100, difficulty: "medium",
+  const base: Omit<
+    DefuseRankingEntry,
+    | "finalTime"
+    | "highestCombo"
+    | "triggeredBombs"
+    | "wrongDefuses"
+    | "timestamp"
+  > = {
+    name: "x",
+    realTime: 0,
+    totalPenalties: 0,
+    accuracy: 100,
+    difficulty: "medium",
   };
 
   it("sorts by finalTime ascending", () => {
     const entries: DefuseRankingEntry[] = [
-      { ...base, name: "B", finalTime: 120_000, highestCombo: 3, triggeredBombs: 0, wrongDefuses: 0, timestamp: 1 },
-      { ...base, name: "A", finalTime: 90_000,  highestCombo: 3, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+      {
+        ...base,
+        name: "B",
+        finalTime: 120_000,
+        highestCombo: 3,
+        triggeredBombs: 0,
+        wrongDefuses: 0,
+        timestamp: 1,
+      },
+      {
+        ...base,
+        name: "A",
+        finalTime: 90_000,
+        highestCombo: 3,
+        triggeredBombs: 0,
+        wrongDefuses: 0,
+        timestamp: 2,
+      },
     ];
     const sorted = sortDefuseRanking(entries);
     expect(sorted[0].name).toBe("A");
@@ -1001,8 +1098,24 @@ describe("sortDefuseRanking", () => {
 
   it("breaks finalTime tie by highestCombo descending", () => {
     const entries: DefuseRankingEntry[] = [
-      { ...base, name: "Low",  finalTime: 60_000, highestCombo: 2, triggeredBombs: 0, wrongDefuses: 0, timestamp: 1 },
-      { ...base, name: "High", finalTime: 60_000, highestCombo: 5, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+      {
+        ...base,
+        name: "Low",
+        finalTime: 60_000,
+        highestCombo: 2,
+        triggeredBombs: 0,
+        wrongDefuses: 0,
+        timestamp: 1,
+      },
+      {
+        ...base,
+        name: "High",
+        finalTime: 60_000,
+        highestCombo: 5,
+        triggeredBombs: 0,
+        wrongDefuses: 0,
+        timestamp: 2,
+      },
     ];
     const sorted = sortDefuseRanking(entries);
     expect(sorted[0].name).toBe("High");
@@ -1010,8 +1123,24 @@ describe("sortDefuseRanking", () => {
 
   it("breaks further tie by triggeredBombs ascending", () => {
     const entries: DefuseRankingEntry[] = [
-      { ...base, name: "More", finalTime: 60_000, highestCombo: 3, triggeredBombs: 2, wrongDefuses: 0, timestamp: 1 },
-      { ...base, name: "Less", finalTime: 60_000, highestCombo: 3, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+      {
+        ...base,
+        name: "More",
+        finalTime: 60_000,
+        highestCombo: 3,
+        triggeredBombs: 2,
+        wrongDefuses: 0,
+        timestamp: 1,
+      },
+      {
+        ...base,
+        name: "Less",
+        finalTime: 60_000,
+        highestCombo: 3,
+        triggeredBombs: 0,
+        wrongDefuses: 0,
+        timestamp: 2,
+      },
     ];
     const sorted = sortDefuseRanking(entries);
     expect(sorted[0].name).toBe("Less");
@@ -1019,8 +1148,24 @@ describe("sortDefuseRanking", () => {
 
   it("does not mutate the original array", () => {
     const entries: DefuseRankingEntry[] = [
-      { ...base, name: "B", finalTime: 100, highestCombo: 1, triggeredBombs: 0, wrongDefuses: 0, timestamp: 1 },
-      { ...base, name: "A", finalTime: 50,  highestCombo: 1, triggeredBombs: 0, wrongDefuses: 0, timestamp: 2 },
+      {
+        ...base,
+        name: "B",
+        finalTime: 100,
+        highestCombo: 1,
+        triggeredBombs: 0,
+        wrongDefuses: 0,
+        timestamp: 1,
+      },
+      {
+        ...base,
+        name: "A",
+        finalTime: 50,
+        highestCombo: 1,
+        triggeredBombs: 0,
+        wrongDefuses: 0,
+        timestamp: 2,
+      },
     ];
     sortDefuseRanking(entries);
     expect(entries[0].name).toBe("B"); // original order unchanged
@@ -1028,14 +1173,26 @@ describe("sortDefuseRanking", () => {
 });
 
 describe("buildDefuseRankingPayload", () => {
-  const mkEntry = (name: string, finalTime: number, difficulty: "easy" | "medium" | "hard" = "medium"): DefuseRankingEntry => ({
-    name, finalTime, realTime: finalTime, totalPenalties: 0, accuracy: 100,
-    highestCombo: 1, triggeredBombs: 0, wrongDefuses: 0, difficulty, timestamp: 1,
+  const mkEntry = (
+    name: string,
+    finalTime: number,
+    difficulty: "easy" | "medium" | "hard" = "medium",
+  ): DefuseRankingEntry => ({
+    name,
+    finalTime,
+    realTime: finalTime,
+    totalPenalties: 0,
+    accuracy: 100,
+    highestCombo: 1,
+    triggeredBombs: 0,
+    wrongDefuses: 0,
+    difficulty,
+    timestamp: 1,
   });
 
   const entries: DefuseRankingEntry[] = [
     mkEntry("Alice", 90_000),
-    mkEntry("Bob",   60_000),
+    mkEntry("Bob", 60_000),
     mkEntry("Carol", 75_000),
     mkEntry("EasyPlayer", 30_000, "easy"),
   ];
@@ -1076,7 +1233,12 @@ describe("buildDefuseRankingPayload", () => {
   });
 
   it("returns player null when not found in that difficulty", () => {
-    const payload = buildDefuseRankingPayload(entries, "medium", "EasyPlayer", 10);
+    const payload = buildDefuseRankingPayload(
+      entries,
+      "medium",
+      "EasyPlayer",
+      10,
+    );
     expect(payload.player).toBeNull();
   });
 
