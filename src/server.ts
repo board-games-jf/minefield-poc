@@ -1082,12 +1082,10 @@ export default class GameRoom implements Party.Server {
         if (p && p.id !== "ai") p.score += newlySafe.length * CELL_BONUS;
       }
       this.state.currentPlayer = playerIndex === 0 ? 1 : 0;
-      if (allSafeCellsRevealed(this.state)) {
+      if (this.state.mode === "coop" && allSafeCellsRevealed(this.state)) {
         this.state.status = "finished";
-        if (this.state.mode === "coop") {
-          this.state.coopResult = "win";
-          // Base prize was already seeded into score at game start; nothing extra to add here.
-        }
+        this.state.coopResult = "win";
+        // Base prize was already seeded into score at game start; nothing extra to add here.
       }
     }
 
@@ -1563,6 +1561,37 @@ export default class GameRoom implements Party.Server {
       }
     }
 
+    // Explosive: if AI starts the match or a round, the board may be a placeholder.
+    // Generate the real board on the first AI click (guaranteed safe by construction).
+    if (
+      this.state.mode === "explosive" &&
+      this.state.explosiveGridReady === false
+    ) {
+      const firstClick = pickAiCell(this.state, this.aiFlags!, level);
+      if (!firstClick) return;
+      this.ensureExplosiveGridReady(firstClick);
+      // Click exactly the cell used as firstClick.
+      const { row: fcRow, col: fcCol } = firstClick;
+      if (!this.state.revealed[fcRow][fcCol]) {
+        // Inline reveal for explosive to avoid duplicating other mode logic.
+        this.state.lastClickedCell = { row: fcRow, col: fcCol, playerIndex: 1 };
+        this.state.lastPlayerClicks = [{ row: fcRow, col: fcCol, playerIndex: 1 }];
+        const newlySafe = floodRevealWithAttribution(this.state.grid, this.state.revealed, fcRow, fcCol, rows, cols);
+        if (this.state.safeRevealedBy) {
+          for (let i = 0; i < newlySafe.length; i++) this.state.safeRevealedBy.push(1);
+        } else {
+          this.state.safeRevealedBy = Array.from({ length: newlySafe.length }, () => 1 as 0 | 1);
+        }
+        for (const { row: r, col: c } of newlySafe) this.state.foundBy[r][c] = 1;
+        this.state.currentPlayer = 0;
+        await this.finalizeMatchIfNeeded();
+        await this.persist();
+        if (this.aiFlags) await this.room.storage.put("aiFlags", this.aiFlags);
+        this.broadcast();
+        return;
+      }
+    }
+
     this.ensureAiFlags();
 
     const pick = pickAiCell(this.state, this.aiFlags!, level);
@@ -1607,7 +1636,8 @@ export default class GameRoom implements Party.Server {
           if (pLose) pLose.score = 0;
           this.state.status = "finished";
         } else {
-          this.state.currentPlayer = winner;
+          // Loser starts the next round.
+          this.state.currentPlayer = 1;
           this.state.explosiveCooldownUntil = Date.now() + 5000;
           this.clearExplosiveCooldownTimer();
           this.explosiveCooldownTimer = setTimeout(

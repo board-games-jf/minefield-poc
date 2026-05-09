@@ -6931,6 +6931,19 @@
       if (document.hidden) return;
       if (!isGameScreenActive()) return;
       flushPendingStickers();
+      // If the tab was backgrounded, ensure we resync game state so end-of-round/end-of-game
+      // feedback shows immediately when returning.
+      try {
+        if (socket && currentState && myName) {
+          socket.send(JSON.stringify({
+            type: "join",
+            name: myName,
+            difficulty: currentState.difficulty,
+            mode: currentState.mode,
+            ft: currentState.mode === "explosive" ? (currentState.explosiveSeries?.target ?? 5) : undefined,
+          }));
+        }
+      } catch {}
     });
 
     init();
