@@ -6832,6 +6832,63 @@
       return "solo";
     }
 
+    function getLocalizedModeName(mode) {
+      if (mode === "defuse") return t.mode_defuse || "Defuse";
+      if (mode === "coop") return t.mode_coop || "Coop";
+      if (mode === "explosive") return t.mode_explosive || "Explosive";
+      return t.mode_versus || "Versus";
+    }
+
+    function getLocalizedDefusePartyName(party) {
+      return party === "multi" ? (t.defuse_multi || "Multi") : (t.defuse_solo || "Solo");
+    }
+
+    function buildGameShareText(meta) {
+      if (!meta?.mode) return location.href;
+      const modeName = getLocalizedModeName(meta.mode);
+      const difficultyName = getLocalizedDifficultyName(meta.difficulty || "medium");
+      const variantName = meta.mode === "defuse"
+        ? getLocalizedDefusePartyName(meta.party === "multi" ? "multi" : "solo")
+        : null;
+      if (typeof t.game_share_invite === "function") {
+        return t.game_share_invite(modeName, difficultyName, variantName, meta.ft ?? null);
+      }
+      return `${modeName} ${difficultyName}`;
+    }
+
+    function isShareAbort(error) {
+      return error?.name === "AbortError";
+    }
+
+    async function shareWithFallback({ text, url, copyValue, onShared, onCopied, onError }) {
+      const fallbackValue = copyValue ?? url ?? text ?? "";
+      try {
+        if (navigator.share && url) {
+          await navigator.share({ text, url });
+          onShared?.();
+          return true;
+        }
+        if (!fallbackValue || !navigator.clipboard?.writeText) throw new Error("share_unavailable");
+        await navigator.clipboard.writeText(fallbackValue);
+        onCopied?.();
+        return true;
+      } catch (error) {
+        if (isShareAbort(error)) return false;
+        if (navigator.share && fallbackValue && navigator.clipboard?.writeText) {
+          try {
+            await navigator.clipboard.writeText(fallbackValue);
+            onCopied?.();
+            return true;
+          } catch (clipboardError) {
+            onError?.(clipboardError);
+            return false;
+          }
+        }
+        onError?.(error);
+        return false;
+      }
+    }
+
     function setupDefuseRankingShareButton(entry) {
       const btn = document.getElementById("btn-defuse-ranking-share");
       if (!btn) return;
@@ -6846,25 +6903,23 @@
       btn.onclick = async () => {
         const text = buildDefuseShareText(entry);
         const url = getModeShareUrl("defuse", entry.difficulty, null, getCurrentDefuseShareParty(entry));
-        try {
-          if (navigator.share) {
-            await navigator.share({ text, url });
-          } else if (navigator.clipboard?.writeText) {
-            await navigator.clipboard.writeText(text);
-          } else {
-            throw new Error("share_unavailable");
-          }
-          btn.textContent = t.defuse_share_copied || "Copied";
-          setTimeout(() => {
-            btn.textContent = t.defuse_share_cta || "Share";
-          }, 1800);
-        } catch (err) {
-          if (err?.name === "AbortError") return;
-          btn.textContent = t.defuse_share_failed || "Try again";
-          setTimeout(() => {
-            btn.textContent = t.defuse_share_cta || "Share";
-          }, 1800);
-        }
+        const shared = await shareWithFallback({
+          text,
+          url,
+          copyValue: text,
+          onShared: () => { btn.textContent = t.defuse_share_copied || "Copied"; },
+          onCopied: () => { btn.textContent = t.defuse_share_copied || "Copied"; },
+          onError: () => {
+            btn.textContent = t.defuse_share_failed || "Try again";
+            setTimeout(() => {
+              btn.textContent = t.defuse_share_cta || "Share";
+            }, 1800);
+          },
+        });
+        if (!shared) return;
+        setTimeout(() => {
+          btn.textContent = t.defuse_share_cta || "Share";
+        }, 1800);
       };
     }
 
@@ -6955,14 +7010,42 @@
       }
     }
 
+    function getCurrentGameShareMeta() {
+      if (_defuseCurrentState || _defuseLastParams) {
+        const state = _defuseCurrentState || _defuseLastParams;
+        return {
+          mode: "defuse",
+          difficulty: state.difficulty || _defuseLastParams?.difficulty || "medium",
+          party: state.isMulti ? "multi" : "solo",
+        };
+      }
+      if (currentState) {
+        return {
+          mode: currentState.mode,
+          difficulty: currentState.difficulty || "medium",
+          ft: currentState.mode === "explosive" ? (currentState.explosiveSeries?.target ?? 5) : null,
+        };
+      }
+      return null;
+    }
+
     function setupCopyButton(url) {
       const btn = document.getElementById("btn-copy");
       btn.textContent = t.btn_copy;
-      btn.onclick = () => {
-        navigator.clipboard.writeText(url).then(() => {
-          btn.textContent = t.btn_copied;
-          setTimeout(() => { btn.textContent = t.btn_copy; }, 2000);
+      btn.onclick = async () => {
+        const shared = await shareWithFallback({
+          text: buildGameShareText(getCurrentGameShareMeta()),
+          url,
+          copyValue: url,
+          onShared: () => { btn.textContent = t.btn_copied; },
+          onCopied: () => { btn.textContent = t.btn_copied; },
+          onError: () => {
+            btn.textContent = t.share_failed || t.defuse_share_failed || "Try again";
+            setTimeout(() => { btn.textContent = t.btn_copy; }, 2000);
+          },
         });
+        if (!shared) return;
+        setTimeout(() => { btn.textContent = t.btn_copy; }, 2000);
       };
     }
 
@@ -7663,12 +7746,20 @@
       document.getElementById('btn-defuse-share')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-defuse-share');
         const originalHTML = btn?.innerHTML;
-        try {
-          await navigator.clipboard.writeText(location.href);
-          if (btn) { btn.innerHTML = '✅'; setTimeout(() => { btn.innerHTML = originalHTML; }, 1800); }
-        } catch {
-          if (btn) { btn.innerHTML = '❌'; setTimeout(() => { btn.innerHTML = originalHTML; }, 1800); }
-        }
+        await shareWithFallback({
+          text: buildGameShareText(getCurrentGameShareMeta()),
+          url: location.href,
+          copyValue: location.href,
+          onShared: () => {
+            if (btn) { btn.innerHTML = '✅'; setTimeout(() => { btn.innerHTML = originalHTML; }, 1800); }
+          },
+          onCopied: () => {
+            if (btn) { btn.innerHTML = '✅'; setTimeout(() => { btn.innerHTML = originalHTML; }, 1800); }
+          },
+          onError: () => {
+            if (btn) { btn.innerHTML = '❌'; setTimeout(() => { btn.innerHTML = originalHTML; }, 1800); }
+          },
+        });
       });
       document.addEventListener('keydown', (e) => {
         if (!document.getElementById('screen-defuse-game')?.classList.contains('active')) return;

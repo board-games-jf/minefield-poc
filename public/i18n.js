@@ -87,6 +87,12 @@ export const TRANSLATIONS = {
     defuse_share_cta: "Compartilhar resultado",
     defuse_share_copied: "Texto copiado",
     defuse_share_failed: "Tenta de novo",
+    share_failed: "Tenta de novo",
+    game_share_invite: (modeName, difficultyName, variantName, ft) => {
+      const variant = variantName ? ` ${variantName}` : "";
+      const ftLabel = ft ? ` (FT${ft})` : "";
+      return `Bora jogar ${modeName}${variant} na dificuldade "${difficultyName}"${ftLabel}?`;
+    },
     defuse_share_rank_top1: (position, difficulty, time) => `Meu tempo foi ${time} e to em #${position}. Duvido tu fazer melhor!`,
     defuse_share_rank_top3: (position, difficulty, time) => `Já tô em ${position} e meu tempo é ${time}. Tá com medo ou tá com frio?`,
     defuse_share_rank_default: (position, difficulty, time) => `Até agora meu tempo foi ${time} e estou em #${position}. Tu faz melhor?`,
@@ -271,6 +277,12 @@ export const TRANSLATIONS = {
     defuse_share_cta: "Partilhar resultado",
     defuse_share_copied: "Texto copiado",
     defuse_share_failed: "Tenta outra vez",
+    share_failed: "Tenta outra vez",
+    game_share_invite: (modeName, difficultyName, variantName, ft) => {
+      const variant = variantName ? ` ${variantName}` : "";
+      const ftLabel = ft ? ` (FT${ft})` : "";
+      return `Bora jogar ${modeName}${variant} na dificuldade "${difficultyName}"${ftLabel}?`;
+    },
     defuse_share_rank_top1: (position, difficulty, time) => `Completei em ${time} e estou em #${position}. Consegues bater isto?`,
     defuse_share_rank_top3: (position, difficulty, time) => `Entrei no top ${position} e meu tempo é ${time}. Achas que fazes melhor?`,
     defuse_share_rank_default: (position, difficulty, time) => `Completei em ${time} e estou em #${position}.`,
@@ -447,6 +459,12 @@ export const TRANSLATIONS = {
     defuse_share_cta: "Share result",
     defuse_share_copied: "Copied",
     defuse_share_failed: "Try again",
+    share_failed: "Try again",
+    game_share_invite: (modeName, difficultyName, variantName, ft) => {
+      const variant = variantName ? ` ${variantName}` : "";
+      const ftLabel = ft ? ` (FT${ft})` : "";
+      return `Want to play ${modeName}${variant} on "${difficultyName}"${ftLabel}?`;
+    },
     defuse_share_rank_top1: (position, difficulty, time) => `I cleared in ${time} and I'm at #${position}. Think you can beat it?`,
     defuse_share_rank_top3: (position, difficulty, time) => `I made top ${position} with ${time}. Can you top that?`,
     defuse_share_rank_default: (position, difficulty, time) => `I cleared in ${time} and I'm now #${position}.`,
