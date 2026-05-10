@@ -4498,11 +4498,13 @@
       const mode = params.get("mode");
       const difficulty = params.get("difficulty");
       const ft = params.get("ft");
+      const party = params.get("party");
       const validMode = ["versus", "coop", "explosive", "defuse"].includes(mode) ? mode : null;
       const validDifficulty = ["easy", "medium", "hard"].includes(difficulty) ? difficulty : null;
       const parsedFt = Number.parseInt(ft || "", 10);
       const validFt = [2, 3, 5, 10].includes(parsedFt) ? parsedFt : null;
-      return { mode: validMode, difficulty: validDifficulty, ft: validFt };
+      const validParty = ["solo", "multi"].includes(party) ? party : null;
+      return { mode: validMode, difficulty: validDifficulty, ft: validFt, party: validParty };
     }
 
     function replaceCreateQueryParams() {
@@ -4515,6 +4517,9 @@
       if (mode === "explosive") {
         const ft = Number.parseInt(document.getElementById("ft-select")?.value ?? "5", 10);
         if ([2, 3, 5, 10].includes(ft)) params.set("ft", String(ft));
+      } else if (mode === "defuse") {
+        const party = document.getElementById('defuse-btn-multi')?.classList.contains('selected') ? 'multi' : 'solo';
+        params.set("party", party);
       }
       const query = params.toString();
       const nextUrl = `${location.pathname}${query ? `?${query}` : ""}`;
@@ -4524,8 +4529,8 @@
     }
 
     function applyCreateQueryParams() {
-      const { mode, difficulty, ft } = parseCreateQueryParams();
-      if (!mode && !difficulty && !ft) return;
+      const { mode, difficulty, ft, party } = parseCreateQueryParams();
+      if (!mode && !difficulty && !ft && !party) return;
 
       const modeInput = document.getElementById("mode-select");
       if (modeInput && mode) {
@@ -4551,14 +4556,27 @@
 
       const ftSelect = document.getElementById("ft-select");
       if (ftSelect && ft) ftSelect.value = String(ft);
+
+      if (mode === "defuse" && party) {
+        const btnSolo = document.getElementById('defuse-btn-solo');
+        const btnMulti = document.getElementById('defuse-btn-multi');
+        const squadField = document.getElementById('defuse-squad-field');
+        if (btnSolo && btnMulti) {
+          btnSolo.classList.toggle('selected', party === 'solo');
+          btnMulti.classList.toggle('selected', party === 'multi');
+        }
+        if (squadField) squadField.style.display = party === 'multi' ? '' : 'none';
+      }
     }
 
-    function getModeShareUrl(mode, difficulty, ft) {
+    function getModeShareUrl(mode, difficulty, ft, party) {
       const params = new URLSearchParams();
       params.set("mode", mode);
       params.set("difficulty", difficulty);
       if (mode === "explosive" && [2, 3, 5, 10].includes(ft)) {
         params.set("ft", String(ft));
+      } else if (mode === "defuse" && ["solo", "multi"].includes(party)) {
+        params.set("party", party);
       }
       return `${location.origin}${location.pathname}?${params.toString()}`;
     }
@@ -6804,6 +6822,16 @@
       return `${difficultyName} ${time} #${entry.position}`;
     }
 
+    function getCurrentDefuseShareParty(entry) {
+      const activeName = getActivePlayerName();
+      if (!entry) return "solo";
+      if (Array.isArray(entry.squadMembers) && entry.squadMembers.length > 1) return "multi";
+      if (Array.isArray(entry.squadMembers) && entry.squadMembers.some((member) => isSamePlayerName(member, activeName))) {
+        return entry.squadMembers.length > 1 ? "multi" : "solo";
+      }
+      return "solo";
+    }
+
     function setupDefuseRankingShareButton(entry) {
       const btn = document.getElementById("btn-defuse-ranking-share");
       if (!btn) return;
@@ -6817,7 +6845,7 @@
       btn.textContent = t.defuse_share_cta || "Share";
       btn.onclick = async () => {
         const text = buildDefuseShareText(entry);
-        const url = getModeShareUrl("defuse", entry.difficulty);
+        const url = getModeShareUrl("defuse", entry.difficulty, null, getCurrentDefuseShareParty(entry));
         try {
           if (navigator.share) {
             await navigator.share({ text, url });
@@ -7180,6 +7208,7 @@
         btnSolo.classList.add('selected'); btnMulti.classList.remove('selected');
         if (squadField) squadField.style.display = 'none';
         persistCreatePrefs();
+        replaceCreateQueryParams();
       });
       btnMulti?.addEventListener('click', () => {
         btnMulti.classList.add('selected'); btnSolo.classList.remove('selected');
@@ -7189,6 +7218,7 @@
           if (name) squadInput.value = `${name}'s Squad`;
         }
         persistCreatePrefs();
+        replaceCreateQueryParams();
       });
       // Keep squad name default fresh when player name changes
       document.getElementById('create-name')?.addEventListener('input', () => {
@@ -7198,7 +7228,7 @@
           persistCreatePrefs();
         }
       });
-      if (squadInput) squadInput.addEventListener('input', () => { squadInput.dataset.edited = '1'; persistCreatePrefs(); });
+      if (squadInput) squadInput.addEventListener('input', () => { squadInput.dataset.edited = '1'; persistCreatePrefs(); replaceCreateQueryParams(); });
     }
 
     let _defuseLastParams = null;
