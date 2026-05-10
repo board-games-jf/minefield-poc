@@ -3807,7 +3807,8 @@
     let lastRematchPromptKey = "";
     let lastRematchDismissedKey = "";
     let lastExplosiveRound = null;
-    let lastExplosiveWins = [0, 0];
+    // null means "no prior explosive state seen" (prevents flashing on refresh/first paint)
+    let lastExplosiveWins = null;
     let ftFlash = { side: null, index: -1, until: 0 };
     let explosiveOverlayTimer = 0;
     let ftFlashTimer = 0;
@@ -5375,7 +5376,10 @@
       if (state.mode === "explosive" && state.explosiveSeries) {
         const w1 = state.explosiveSeries.wins?.[0] ?? 0;
         const w2 = state.explosiveSeries.wins?.[1] ?? 0;
-        if (w1 !== lastExplosiveWins[0] || w2 !== lastExplosiveWins[1]) {
+        if (lastExplosiveWins === null) {
+          // First explosive paint (refresh/reconnect): establish baseline without flashing.
+          lastExplosiveWins = [w1, w2];
+        } else if (w1 !== lastExplosiveWins[0] || w2 !== lastExplosiveWins[1]) {
           const p1Up = w1 > lastExplosiveWins[0];
           const p2Up = w2 > lastExplosiveWins[1];
           if (p1Up && p2Up) ftFlash = { side: "draw", index: Math.max(w1 - 1, w2 - 1), until: Date.now() + 3000 };
@@ -5397,7 +5401,7 @@
           }, delay);
         }
       } else {
-        lastExplosiveWins = [0, 0];
+        lastExplosiveWins = null;
         ftFlash = { side: null, index: -1, until: 0 };
         if (ftFlashTimer) { clearTimeout(ftFlashTimer); ftFlashTimer = 0; }
       }
