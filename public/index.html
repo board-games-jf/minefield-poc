@@ -2506,6 +2506,28 @@
       color: var(--text);
     }
 
+    .ranking-defuse-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 10px;
+    }
+
+    .ranking-share-btn {
+      min-height: 34px;
+      padding: 0 14px;
+      background: rgba(44, 168, 132, 0.12);
+      border: 0.5px solid rgba(44, 168, 132, 0.35);
+      color: var(--teal);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+
+    .ranking-share-btn:hover {
+      background: rgba(44, 168, 132, 0.18);
+      border-color: rgba(44, 168, 132, 0.45);
+    }
+
     .defuse-rank-row {
       display: grid;
       grid-template-columns: 36px 1fr auto;
@@ -3523,6 +3545,9 @@
             <span class="ranking-diff-sub">💣 36</span>
           </button>
         </div>
+        <div class="ranking-defuse-actions">
+          <button class="btn ranking-share-btn" id="btn-defuse-ranking-share" type="button" style="display:none;"></button>
+        </div>
         <div class="ranking-scroll" style="margin-top:10px;flex:1;min-height:0;">
           <div class="ranking-list" id="defuse-ranking-list"></div>
           <div class="ranking-divider" id="defuse-ranking-divider" style="display:none;"></div>
@@ -3684,6 +3709,10 @@
         const label = t.defuse_share_label || "Share";
         defuseShareBtn.setAttribute("aria-label", label);
         defuseShareBtn.setAttribute("title", label);
+      }
+      const defuseRankingShareBtn = document.getElementById("btn-defuse-ranking-share");
+      if (defuseRankingShareBtn) {
+        defuseRankingShareBtn.textContent = t.defuse_share_cta || "Share";
       }
       syncStickerUi();
       syncSoundToggleUi();
@@ -4415,7 +4444,13 @@
     window.addEventListener("pointerdown", ensureAudioUnlocked, { once: true, passive: true });
     window.addEventListener("keydown", ensureAudioUnlocked, { once: true });
     function getRoomIdFromUrl() { return location.hash.replace("#", "") || null; }
-    function setRoomIdInUrl(id) { location.hash = id; }
+    function setRoomIdInUrl(id) {
+      try {
+        history.replaceState(null, "", `${location.pathname}#${id}`);
+      } catch {
+        location.hash = id;
+      }
+    }
     function generateRoomId() { return Math.random().toString(36).slice(2, 8); }
     function _defuseOwnerKey(id) { return id ? `mf-defuse-owner:${id}` : null; }
     function _markDefuseOwner(id) {
@@ -4458,6 +4493,82 @@
       descEl.textContent = typeof t[descKey] === "string" ? t[descKey] : "";
     }
 
+    function parseCreateQueryParams() {
+      const params = new URLSearchParams(location.search);
+      const mode = params.get("mode");
+      const difficulty = params.get("difficulty");
+      const ft = params.get("ft");
+      const validMode = ["versus", "coop", "explosive", "defuse"].includes(mode) ? mode : null;
+      const validDifficulty = ["easy", "medium", "hard"].includes(difficulty) ? difficulty : null;
+      const parsedFt = Number.parseInt(ft || "", 10);
+      const validFt = [2, 3, 5, 10].includes(parsedFt) ? parsedFt : null;
+      return { mode: validMode, difficulty: validDifficulty, ft: validFt };
+    }
+
+    function replaceCreateQueryParams() {
+      if (getRoomIdFromUrl()) return;
+      const mode = getSelectedMode();
+      const difficulty = getSelectedDifficulty();
+      const params = new URLSearchParams();
+      params.set("mode", mode);
+      params.set("difficulty", difficulty);
+      if (mode === "explosive") {
+        const ft = Number.parseInt(document.getElementById("ft-select")?.value ?? "5", 10);
+        if ([2, 3, 5, 10].includes(ft)) params.set("ft", String(ft));
+      }
+      const query = params.toString();
+      const nextUrl = `${location.pathname}${query ? `?${query}` : ""}`;
+      try {
+        history.replaceState(null, "", nextUrl);
+      } catch {}
+    }
+
+    function applyCreateQueryParams() {
+      const { mode, difficulty, ft } = parseCreateQueryParams();
+      if (!mode && !difficulty && !ft) return;
+
+      const modeInput = document.getElementById("mode-select");
+      if (modeInput && mode) {
+        modeInput.value = mode;
+        document.querySelectorAll(".mode-card").forEach(c => {
+          c.classList.toggle("selected", c.dataset.mode === mode);
+        });
+        const defuseOpts = document.getElementById("defuse-options");
+        if (defuseOpts) defuseOpts.style.display = mode === "defuse" ? "flex" : "none";
+        const soloRow = document.getElementById("solo-row");
+        if (soloRow) soloRow.style.display = mode === "defuse" ? "none" : "";
+      }
+
+      if (difficulty) {
+        const radio = document.querySelector(`input[name='diff'][value='${difficulty}']`);
+        if (radio) {
+          radio.checked = true;
+          document.querySelectorAll(".diff-option").forEach(o => o.classList.remove("selected"));
+          const opt = radio.closest(".diff-option");
+          if (opt) opt.classList.add("selected");
+        }
+      }
+
+      const ftSelect = document.getElementById("ft-select");
+      if (ftSelect && ft) ftSelect.value = String(ft);
+    }
+
+    function getModeShareUrl(mode, difficulty, ft) {
+      const params = new URLSearchParams();
+      params.set("mode", mode);
+      params.set("difficulty", difficulty);
+      if (mode === "explosive" && [2, 3, 5, 10].includes(ft)) {
+        params.set("ft", String(ft));
+      }
+      return `${location.origin}${location.pathname}?${params.toString()}`;
+    }
+
+    function getLocalizedDifficultyName(diff) {
+      if (diff === "easy") return t.diff_easy_name || "Easy";
+      if (diff === "medium") return t.diff_medium_name || "Medium";
+      return t.diff_hard_name || "Hard";
+    }
+
     function syncScreenWithUrl() {
       const savedName = (localStorage.getItem(NAME_STORAGE_KEY) || "").trim();
       const rid = getRoomIdFromUrl();
@@ -4475,6 +4586,12 @@
       }
       showScreen("screen-create");
       setupCreateScreen();
+      applyCreateQueryParams();
+      updateModeDescription();
+      syncSoloCopyForMode();
+      updateFtOptions();
+      updatePointsPreview();
+      updateDiffDescs();
       if (savedName) document.getElementById("create-name").value = savedName;
     }
 
@@ -4824,6 +4941,7 @@
             updateDiffDescs();
             updatePointsPreview();
             persistCreatePrefs();
+            replaceCreateQueryParams();
             return;
           }
           // Non-defuse: hide defuse options
@@ -4841,6 +4959,7 @@
           syncSoloCopyForMode();
           persistCreatePrefs();
           updatePointsPreview();
+          replaceCreateQueryParams();
         });
         card.addEventListener("keydown", (e) => {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); card.click(); }
@@ -4893,6 +5012,7 @@
         persistCreatePrefs();
         updatePointsPreview();
         updateDiffDescs();
+        replaceCreateQueryParams();
       };
 
       const ftSelect = document.getElementById("ft-select");
@@ -6669,6 +6789,57 @@
       return `${m}:${s}`;
     }
 
+    function buildDefuseShareText(entry) {
+      const difficultyName = getLocalizedDifficultyName(entry.difficulty);
+      const time = fmtMs(entry.finalTime);
+      if (entry.position === 1 && typeof t.defuse_share_rank_top1 === "function") {
+        return t.defuse_share_rank_top1(entry.position, difficultyName, time);
+      }
+      if (entry.position <= 3 && typeof t.defuse_share_rank_top3 === "function") {
+        return t.defuse_share_rank_top3(entry.position, difficultyName, time);
+      }
+      if (typeof t.defuse_share_rank_default === "function") {
+        return t.defuse_share_rank_default(entry.position, difficultyName, time);
+      }
+      return `${difficultyName} ${time} #${entry.position}`;
+    }
+
+    function setupDefuseRankingShareButton(entry) {
+      const btn = document.getElementById("btn-defuse-ranking-share");
+      if (!btn) return;
+      _defuseRankingShareEntry = entry || null;
+      if (!entry) {
+        btn.style.display = "none";
+        btn.onclick = null;
+        return;
+      }
+      btn.style.display = "";
+      btn.textContent = t.defuse_share_cta || "Share";
+      btn.onclick = async () => {
+        const text = buildDefuseShareText(entry);
+        const url = getModeShareUrl("defuse", entry.difficulty);
+        try {
+          if (navigator.share) {
+            await navigator.share({ text, url });
+          } else if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            throw new Error("share_unavailable");
+          }
+          btn.textContent = t.defuse_share_copied || "Copied";
+          setTimeout(() => {
+            btn.textContent = t.defuse_share_cta || "Share";
+          }, 1800);
+        } catch (err) {
+          if (err?.name === "AbortError") return;
+          btn.textContent = t.defuse_share_failed || "Try again";
+          setTimeout(() => {
+            btn.textContent = t.defuse_share_cta || "Share";
+          }, 1800);
+        }
+      };
+    }
+
     function defuseRankingRowHtml(entry) {
       const activeName = getActivePlayerName();
       const isMeInSquad = entry.squadMembers?.some(m => isSamePlayerName(m, activeName)) ?? false;
@@ -6707,12 +6878,20 @@
       document.querySelectorAll('.ranking-diff-btn').forEach(b => b.classList.toggle('active', b.dataset.diff === difficulty));
       const listEl = document.getElementById('defuse-ranking-list');
       listEl.innerHTML = `<div class="ranking-empty">${t.ranking_empty || 'No ranking yet.'}</div>`;
+      setupDefuseRankingShareButton(null);
       try {
         const snap = await fetchDefuseRankingSnapshot(difficulty);
         const top = Array.isArray(snap.top) ? snap.top : [];
+        const activeName = getActivePlayerName();
+        const shareEntry = snap.player || top.find((entry) =>
+          isSamePlayerName(entry.name, activeName) ||
+          (entry.squadMembers?.some((member) => isSamePlayerName(member, activeName)) ?? false)
+        ) || null;
+        setupDefuseRankingShareButton(shareEntry);
         if (!top.length) return;
         listEl.innerHTML = top.map(defuseRankingRowHtml).join('');
       } catch {
+        setupDefuseRankingShareButton(null);
         listEl.innerHTML = `<div class="ranking-empty">${t.error_generic || 'Error'}</div>`;
       }
     }
@@ -6989,6 +7168,7 @@
     let _defuseSocket = null;
     let _defuseRoomId = null;
     let _defuseCurrentState = null;
+    let _defuseRankingShareEntry = null;
 
     function setupDefuseCreate() {
       const btnSolo = document.getElementById('defuse-btn-solo');
