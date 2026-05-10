@@ -4462,6 +4462,13 @@
       const savedName = (localStorage.getItem(NAME_STORAGE_KEY) || "").trim();
       const rid = getRoomIdFromUrl();
       if (rid) {
+        // If someone crafts a URL with both a room hash and query params (mode/difficulty/etc),
+        // the hash is the source of truth. Normalize the URL to keep it coherent.
+        if (location.search) {
+          try {
+            history.replaceState(null, "", `${location.pathname}${location.hash}`);
+          } catch {}
+        }
         showScreen("screen-join");
         setupJoinScreen(rid);
         return;
