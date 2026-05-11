@@ -286,7 +286,9 @@ export type ClientMessage =
   | { type: "defuse-sync" }
   | { type: "relay"; payload: unknown }
   | { type: "voice-join" }
-  | { type: "voice-leave" };
+  | { type: "voice-leave" }
+  | { type: "voice-mic"; on: boolean }
+  | { type: "voice-speaking"; speaking: boolean };
 
 // Server → Client
 export type ServerMessage =
@@ -297,7 +299,9 @@ export type ServerMessage =
   | { type: "defuse-state"; state: DefuseState }
   | { type: "defuse-penalty"; seconds: 20 | 30; row: number; col: number }
   | { type: "relay"; from: string; payload: unknown }
-  | { type: "voice-full" };
+  | { type: "voice-full" }
+  | { type: "voice-mic"; from: string; on: boolean }
+  | { type: "voice-speaking"; from: string; speaking: boolean };
 
 const RANKING_ROOM_ID = "__ranking__";
 const RANKING_STORAGE_KEY = "ranking";
@@ -1125,6 +1129,16 @@ export default class GameRoom implements Party.Server {
       await this.handleVoiceJoin(sender);
     if (msg.type === "voice-leave")
       await this.handleVoiceLeave(sender);
+    if (msg.type === "voice-mic")
+      this.room.broadcast(
+        JSON.stringify({ type: "voice-mic", from: sender.id, on: msg.on } satisfies ServerMessage),
+        [sender.id],
+      );
+    if (msg.type === "voice-speaking")
+      this.room.broadcast(
+        JSON.stringify({ type: "voice-speaking", from: sender.id, speaking: msg.speaking } satisfies ServerMessage),
+        [sender.id],
+      );
     if (msg.type === "sticker") await this.handleSticker(sender, msg.id);
   }
 

@@ -1234,25 +1234,29 @@
       box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
     }
 
-    /* Speaking indicator on player cards — P1 teal, P2 coral */
-    /* Uses only box-shadow to avoid overriding the active-player border/background */
+    /* Remote card — mic on but not speaking (subtle glow) */
+    #p1-card.voice-remote-active {
+      box-shadow: 0 0 0 1.5px rgba(93, 202, 165, 0.3);
+    }
+    #p2-card.voice-remote-active {
+      box-shadow: 0 0 0 1.5px rgba(240, 153, 123, 0.3);
+    }
+    .defuse-player-chip:not(.is-self).voice-remote-active {
+      box-shadow: 0 0 0 1.5px rgba(240, 153, 123, 0.35) !important;
+    }
+
+    /* Speaking overrides voice-remote-active (must come after in cascade) */
     #p1-card.speaking {
-      box-shadow: 0 0 0 2px rgba(93, 202, 165, 0.55), 0 0 14px rgba(93, 202, 165, 0.18);
+      box-shadow: 0 0 0 2.5px rgba(93, 202, 165, 0.85), 0 0 14px rgba(93, 202, 165, 0.2);
     }
-
     #p2-card.speaking {
-      box-shadow: 0 0 0 2px rgba(240, 153, 123, 0.55), 0 0 14px rgba(240, 153, 123, 0.18);
+      box-shadow: 0 0 0 2.5px rgba(240, 153, 123, 0.85), 0 0 14px rgba(240, 153, 123, 0.2);
     }
-
-    /* Defuse chips: self = teal, others = coral */
     .defuse-player-chip.is-self.speaking {
-      border-color: rgba(93, 202, 165, 0.85) !important;
-      box-shadow: 0 0 0 2px rgba(93, 202, 165, 0.4) !important;
+      box-shadow: 0 0 0 2px rgba(93, 202, 165, 0.85) !important;
     }
-
     .defuse-player-chip:not(.is-self).speaking {
-      border-color: rgba(240, 153, 123, 0.85) !important;
-      box-shadow: 0 0 0 2px rgba(240, 153, 123, 0.4) !important;
+      box-shadow: 0 0 0 2px rgba(240, 153, 123, 0.85) !important;
     }
 
     /* Animated equalizer bars (injected next to name when speaking) */
@@ -1285,6 +1289,16 @@
     @keyframes voiceBar {
       from { height: 2px; }
       to   { height: 10px; }
+    }
+
+    /* Mic icon shown on remote card when mic is on but not speaking */
+    .voice-mic-icon {
+      display: inline-flex;
+      align-items: center;
+      margin-left: 4px;
+      font-size: 12px;
+      flex-shrink: 0;
+      line-height: 1;
     }
 
     .icon-toggle-glyph {
@@ -4089,8 +4103,10 @@
     let _voiceMuted = false;    // mic muted (track disabled, PC stays open)
     let _voiceAudioCtx = null;  // AudioContext for local VAD
     let _voiceAnalyser = null;  // AnalyserNode for local VAD (my mic)
-    let _voiceRemoteAnalyser = null; // AnalyserNode for remote VAD (their audio)
+    let _voiceSpeakingRelayed = false; // last speaking state sent to peer
+    let _voiceLastSpeakBroadcast = 0;  // timestamp of last speaking broadcast
     let _voiceOfferCreated = false; // flag to avoid both sides creating offer
+    let _voiceRemoteMicOn = false;  // whether remote peer has mic on
 
     // ── Utility: Toast Notification ────────────────────────────────────────
     function _showToast(message, duration = 3000) {
@@ -5607,6 +5623,12 @@
         if (msg.type === 'voice-full') {
           _voiceHandleFull();
         }
+        if (msg.type === 'voice-mic') {
+          _voiceSetRemoteActive(msg.on);
+        }
+        if (msg.type === 'voice-speaking') {
+          _voiceShowSpeakingIndicator(msg.speaking, false);
+        }
       });
 
       // If the tab was backgrounded and comes back, ask server for the latest state.
@@ -5656,6 +5678,15 @@
           const state = msg.state;
           if (!joinAccepted) {
             joinAccepted = state.players[0]?.name === name || state.players[1]?.name === name;
+            if (joinAccepted) {
+              // Re-broadcast current voice status so peer gets our state on (re)join
+              setTimeout(() => {
+                if (_voiceActive) {
+                  _voiceSendStatus({ type: 'voice-mic', on: true });
+                  if (_voiceSpeakingRelayed) _voiceSendStatus({ type: 'voice-speaking', speaking: true });
+                }
+              }, 500);
+            }
           }
           if (joinAccepted) {
             document.getElementById("reconnecting-bar").classList.remove("visible");
@@ -5678,6 +5709,12 @@
         }
         if (msg.type === "relay") {
           _handleVoiceRelay(msg.payload, (m) => { if (socket) socket.send(m); });
+        }
+        if (msg.type === 'voice-mic') {
+          _voiceSetRemoteActive(msg.on);
+        }
+        if (msg.type === 'voice-speaking') {
+          _voiceShowSpeakingIndicator(msg.speaking, false);
         }
         if (msg.type === "error") handleServerError(msg.message);
       });
@@ -5941,11 +5978,11 @@
       updateExplosiveRoundUi(state);
       if (state.status === "playing") showModeBriefingToast(state);
 
-      // Show/hide mic button in coop games (only if both players are human)
+      // Show/hide mic button in coop/versus games (only if both players are human)
       const micBtnCoop = document.getElementById('btn-mic');
       if (micBtnCoop) {
         const hasAiPlayer = state.players.some((p) => p?.id === 'ai');
-        if (state.mode === 'coop' && !hasAiPlayer) {
+        if ((state.mode === 'coop' || state.mode === 'versus') && !hasAiPlayer) {
           micBtnCoop.style.display = '';
         } else {
           micBtnCoop.style.display = 'none';
@@ -7722,6 +7759,12 @@
           if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
           else showStickerToast(msg.from, msg.id);
         }
+        if (msg.type === 'relay') {
+          _handleVoiceRelay(msg.payload, (m) => { if (_defuseSocket) _defuseSocket.send(m); });
+        }
+        if (msg.type === 'voice-full') _voiceHandleFull();
+        if (msg.type === 'voice-mic') _voiceSetRemoteActive(msg.on);
+        if (msg.type === 'voice-speaking') _voiceShowSpeakingIndicator(msg.speaking, false);
       });
     }
 
@@ -8050,6 +8093,15 @@
 
     // ── Voice/WebRTC module ────────────────────────────────────────────────────
 
+    // Send voice status through the main game socket (not WebRTC relay)
+    function _voiceSendStatus(msg) {
+      try {
+        const data = JSON.stringify(msg);
+        if (socket) socket.send(data);
+        if (_defuseSocket) _defuseSocket.send(data);
+      } catch {}
+    }
+
     function _voiceGetSendFn() {
       return document.getElementById('screen-game')?.classList.contains('active') 
         ? (msg) => { if (socket) socket.send(msg); }
@@ -8143,12 +8195,8 @@
               });
             }
             
-            // Start VAD after remote audio is ready
-            // (local VAD already running since mic was captured)
-            // Start remote VAD to detect when OTHER person speaks
-            const remoteStream = evt.streams?.[0] || (evt.track ? new MediaStream([evt.track]) : null);
-            _voiceStopRemoteVAD();
-            _voiceStartRemoteVAD(remoteStream);
+            // Local VAD already running since mic was captured
+            // Remote speaking is now driven by relay signals (speaking-start/speaking-stop)
           } catch (err) {
             console.error('ontrack handler error:', err);
           }
@@ -8156,12 +8204,10 @@
 
         _voiceActive = true;
         _updateVoiceButton();
-        
-        // Signal readiness
-        sendFn(JSON.stringify({
-          type: 'relay',
-          payload: { voice: 'ready' },
-        }));
+
+        // Signal readiness via WebRTC relay + advertise mic via game socket
+        sendFn(JSON.stringify({ type: 'relay', payload: { voice: 'ready' } }));
+        _voiceSendStatus({ type: 'voice-mic', on: true });
       } catch (err) {
         console.error('Voice connect error:', err);
         let errMsg = (t && t.mic_permission_denied) || 'Microfone não disponível';
@@ -8195,13 +8241,18 @@
       const audioEl = document.getElementById('voice-audio');
       if (audioEl) { audioEl.srcObject = null; }
       _voiceStopVAD();
-      _voiceStopRemoteVAD();
+      _voiceSetRemoteActive(false);
+      _voiceShowSpeakingIndicator(false, false);
       console.log('Voice: peer left, waiting for reconnect...');
       // _voiceActive stays true — user remains in the voice channel
       _updateVoiceButton();
     }
 
     function _voiceDisconnect() {
+      // Tell peer we're turning off the mic via game socket
+      _voiceSendStatus({ type: 'voice-mic', on: false });
+      _voiceSendStatus({ type: 'voice-speaking', speaking: false });
+
       if (_voicePc) {
         // Null out handlers first to prevent _voicePeerLeft from firing when we intentionally close
         _voicePc.onconnectionstatechange = null;
@@ -8220,7 +8271,6 @@
       _voiceMuted = false;
       _voiceOfferCreated = false;
       _voiceStopVAD();
-      _voiceStopRemoteVAD();
       _voiceCloseAudioCtx();
       _updateVoiceButton();
     }
@@ -8258,25 +8308,33 @@
       if (!_voiceAnalyser) return;
       
       try {
-        const threshold = 5;    // lower = more sensitive
+        const threshold = 5;
         const silenceMs = 600;
         let lastSpeakTime = 0;
         
         const vadCheck = () => {
-          if (!_voiceAnalyser) return; // stopped
+          if (!_voiceAnalyser) return;
           const dataArray = new Uint8Array(_voiceAnalyser.frequencyBinCount);
           _voiceAnalyser.getByteFrequencyData(dataArray);
           
           let sum = 0;
           for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-          const rms = sum / dataArray.length; // use average, not sqrt
+          const rms = sum / dataArray.length;
           
           const now = Date.now();
-          if (rms > threshold) {
-            lastSpeakTime = now;
-            _voiceShowSpeakingIndicator(true, true);
-          } else if (now - lastSpeakTime > silenceMs) {
-            _voiceShowSpeakingIndicator(false, true);
+          if (rms > threshold) lastSpeakTime = now;
+          const isSpeaking = (now - lastSpeakTime) < silenceMs;
+
+          _voiceShowSpeakingIndicator(isSpeaking, true);
+
+          // Relay speaking state to peer via game socket only when it changes,
+          // OR every 2s while still speaking (for peers that joined mid-speech)
+          const now2 = Date.now();
+          if (isSpeaking !== _voiceSpeakingRelayed ||
+              (isSpeaking && now2 - _voiceLastSpeakBroadcast > 2000)) {
+            _voiceSpeakingRelayed = isSpeaking;
+            _voiceLastSpeakBroadcast = now2;
+            _voiceSendStatus({ type: 'voice-speaking', speaking: isSpeaking });
           }
           
           setTimeout(vadCheck, 80);
@@ -8290,50 +8348,10 @@
     }
 
     function _voiceStopVAD() {
-      // Just stop the VAD loop by nulling the analyser (the setTimeout loop checks this)
-      // The AudioContext stays alive for reuse on reconnect
       _voiceAnalyser = null;
+      _voiceSpeakingRelayed = false;
       _voiceShowSpeakingIndicator(false, true);
-    }
-
-    function _voiceStartRemoteVAD(remoteStream) {
-      if (!remoteStream || !_voiceAudioCtx) return;
-      try {
-        _voiceRemoteAnalyser = _voiceAudioCtx.createAnalyser();
-        _voiceRemoteAnalyser.fftSize = 256;
-        const src = _voiceAudioCtx.createMediaStreamSource(remoteStream);
-        src.connect(_voiceRemoteAnalyser);
-
-        const threshold = 5;
-        const silenceMs = 600;
-        let lastSpeakTime = 0;
-
-        const vadCheck = () => {
-          if (!_voiceRemoteAnalyser) return;
-          const data = new Uint8Array(_voiceRemoteAnalyser.frequencyBinCount);
-          _voiceRemoteAnalyser.getByteFrequencyData(data);
-          let sum = 0;
-          for (let i = 0; i < data.length; i++) sum += data[i];
-          const rms = sum / data.length;
-          const now = Date.now();
-          if (rms > threshold) {
-            lastSpeakTime = now;
-            _voiceShowSpeakingIndicator(true, false);
-          } else if (now - lastSpeakTime > silenceMs) {
-            _voiceShowSpeakingIndicator(false, false);
-          }
-          setTimeout(vadCheck, 80);
-        };
-        vadCheck();
-        console.log('Remote VAD started');
-      } catch (err) {
-        console.warn('Remote VAD error:', err);
-      }
-    }
-
-    function _voiceStopRemoteVAD() {
-      _voiceRemoteAnalyser = null;
-      _voiceShowSpeakingIndicator(false, false);
+      _voiceSendStatus({ type: 'voice-speaking', speaking: false });
     }
 
     function _voiceCloseAudioCtx() {
@@ -8342,7 +8360,6 @@
         _voiceAudioCtx = null;
       }
       _voiceAnalyser = null;
-      _voiceRemoteAnalyser = null;
     }
 
     function _voiceShowSpeakingIndicator(speaking, isLocal = true) {
@@ -8354,36 +8371,41 @@
       // Inject/remove animated bars and speaking class on the target card/chip
       const _setCardSpeaking = (card, isSpeaking) => {
         if (!card) return;
+        const nameParent = card.querySelector('.player-name-label') || card;
         if (isSpeaking) {
+          // Speaking: remove mic icon, show eq bars
+          nameParent.querySelector('.voice-mic-icon')?.remove();
           card.classList.add('speaking');
-          // For .player-card: inject into .player-name-label
-          // For .defuse-player-chip: inject directly into the chip
-          const barsParent = card.querySelector('.player-name-label') || card;
-          if (!barsParent.querySelector('.voice-bars')) {
+          if (!nameParent.querySelector('.voice-bars')) {
             const bars = document.createElement('span');
             bars.className = 'voice-bars';
             bars.innerHTML = '<span></span><span></span><span></span>';
-            barsParent.appendChild(bars);
+            nameParent.appendChild(bars);
           }
         } else {
           card.classList.remove('speaking');
-          card.querySelector('.voice-bars')?.remove();
+          nameParent.querySelector('.voice-bars')?.remove();
+          // Only restore mic icon on the REMOTE card (local feedback is in the button)
+          if (!isLocal && _voiceRemoteMicOn && !nameParent.querySelector('.voice-mic-icon')) {
+            const icon = document.createElement('span');
+            icon.className = 'voice-mic-icon';
+            icon.textContent = '🎤';
+            nameParent.appendChild(icon);
+          }
         }
       };
 
-      // Coop screen: use id-based lookup
+      // Coop/Versus screen: use myPlayerIndex (0=p1, 1=p2) — reliable, name comparison breaks due to HTML badges
       if (document.getElementById('screen-game')?.classList.contains('active')) {
-        const p1Name = document.getElementById('p1-name')?.textContent?.trim();
-        const isP1Me = p1Name === myName;
-        const myCard = document.getElementById(isP1Me ? 'p1-card' : 'p2-card');
-        const remoteCard = document.getElementById(isP1Me ? 'p2-card' : 'p1-card');
+        const myCard     = document.getElementById(myPlayerIndex === 0 ? 'p1-card' : 'p2-card');
+        const remoteCard = document.getElementById(myPlayerIndex === 0 ? 'p2-card' : 'p1-card');
         _setCardSpeaking(isLocal ? myCard : remoteCard, speaking);
       }
-      // Defuse screen: text-based chip lookup
+      // Defuse screen: use .is-self class (set at render time, reliable)
       else if (document.getElementById('screen-defuse-game')?.classList.contains('active')) {
         const chips = document.querySelectorAll('.defuse-player-chip');
         for (const chip of chips) {
-          const chipIsMe = chip.textContent.trim().includes(myName);
+          const chipIsMe = chip.classList.contains('is-self');
           if (isLocal ? chipIsMe : !chipIsMe) {
             _setCardSpeaking(chip, speaking);
           }
@@ -8398,7 +8420,15 @@
         switch (payload.voice) {
           case 'ready': {
             console.log('Voice ready received from peer');
-            if (!_voiceActive || !_voiceStream) break;
+            if (!_voiceActive || !_voiceStream) {
+              // Even if we're not in voice, tell the peer our current mic status
+              _voiceSendStatus({ type: 'voice-mic', on: false });
+              break;
+            }
+
+            // Re-broadcast our mic status so a refreshed peer gets the current state
+            _voiceSendStatus({ type: 'voice-mic', on: true });
+            if (_voiceSpeakingRelayed) _voiceSendStatus({ type: 'voice-speaking', speaking: true });
 
             // Always renegotiate when peer signals ready — handles reconnects
             // Reset and recreate PC to avoid stale state
@@ -8428,7 +8458,7 @@
               if (remoteStream) audioEl.srcObject = remoteStream;
               audioEl.play?.().catch(() => {});
               if (_voiceAnalyser) _voiceStartVAD();
-              _voiceStartRemoteVAD(remoteStream);
+              // Remote speaking is driven by relay signals
             };
 
             _voiceOfferCreated = true;
@@ -8487,6 +8517,22 @@
             }
             break;
           }
+          case 'mic-on': {
+            // handled via game socket (voice-mic)
+            break;
+          }
+          case 'mic-off': {
+            // handled via game socket (voice-mic)
+            break;
+          }
+          case 'speaking-start': {
+            // handled via game socket (voice-speaking)
+            break;
+          }
+          case 'speaking-stop': {
+            // handled via game socket (voice-speaking)
+            break;
+          }
         }
       } catch (err) {
         console.error('Voice relay error:', err);
@@ -8498,6 +8544,35 @@
       if (btnDefuse) {
         btnDefuse.classList.add('disabled');
         btnDefuse.setAttribute('title', (t && t.mic_full_label) || 'Voice full');
+      }
+    }
+
+    // Show/hide subtle glow on remote card when their mic is on
+    function _voiceSetRemoteActive(on) {
+      _voiceRemoteMicOn = on;
+      const _set = (el) => {
+        if (!el) return;
+        const nameParent = el.querySelector('.player-name-label') || el;
+        if (on) {
+          el.classList.add('voice-remote-active');
+          // Show mic icon only if not already speaking
+          if (!el.classList.contains('speaking') && !nameParent.querySelector('.voice-mic-icon')) {
+            const icon = document.createElement('span');
+            icon.className = 'voice-mic-icon';
+            icon.textContent = '🎤';
+            nameParent.appendChild(icon);
+          }
+        } else {
+          // Full reset when mic turns off
+          el.classList.remove('voice-remote-active', 'speaking');
+          nameParent.querySelector('.voice-bars')?.remove();
+          nameParent.querySelector('.voice-mic-icon')?.remove();
+        }
+      };
+      if (document.getElementById('screen-game')?.classList.contains('active')) {
+        _set(document.getElementById(myPlayerIndex === 0 ? 'p2-card' : 'p1-card'));
+      } else if (document.getElementById('screen-defuse-game')?.classList.contains('active')) {
+        document.querySelectorAll('.defuse-player-chip:not(.is-self)').forEach(_set);
       }
     }
 
