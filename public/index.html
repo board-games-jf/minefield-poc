@@ -2251,6 +2251,28 @@
       display: block;
     }
 
+    /* ── Update banner (shown first) ── */
+    .update-bar {
+      background: rgba(80, 200, 120, 0.15);
+      border: 0.5px solid rgba(80, 200, 120, 0.4);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #50C878;
+      cursor: pointer;
+      display: none;
+      width: 100%;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      opacity: 1;
+      transition: opacity 0.4s ease;
+    }
+    .update-bar.visible { display: flex; margin-bottom: 12px; }
+    .update-bar.hiding  { opacity: 0; pointer-events: none; }
+
+    /* ── Update dot (shown after 15s) ── */
     .update-dot {
       display: none;
       align-items: center;
@@ -2259,16 +2281,25 @@
       min-width: 30px;
       padding: 0 8px;
       border-radius: var(--radius-sm);
-      border: 0.5px solid rgba(80, 200, 120, 0.5);
-      background: rgba(80, 200, 120, 0.15);
+      border: 0.5px solid rgba(80, 200, 120, 0.35);
+      background: rgba(80, 200, 120, 0.1);
       color: #50C878;
       cursor: pointer;
       font-size: 12px;
       gap: 4px;
       order: -1;
     }
-
     .update-dot.visible { display: flex; }
+
+    .update-icon {
+      animation: updateIconSpin 3s linear infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes updateIconSpin {
+      from { transform: scaleY(-1) rotate(0deg); }
+      to   { transform: scaleY(-1) rotate(-360deg); }
+    }
 
     .ranking-summary,
     .ranking-modal-card {
@@ -3167,11 +3198,16 @@
 
 <body>
   <div class="container">
+    <div class="update-bar" id="update-bar" onclick="location.reload()">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="update-icon" style="width:14px;height:14px;fill:#fff;vertical-align:middle;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
+      <span data-i18n="update_available">Nova versão disponível — toque para atualizar</span>
+    </div>
+
     <!-- Locale selector -->
     <div class="locale-bar" id="locale-bar">
       <div class="locale-actions">
         <span class="update-dot" id="update-dot" onclick="location.reload()" title="Nova versão disponível — toque para atualizar">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:13px;height:13px;fill:#50C878;flex-shrink:0;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="update-icon" style="width:13px;height:13px;fill:#fff;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
         </span>
         <button class="ranking-btn" id="btn-ranking" type="button">🏆</button>
         <select class="locale-select" id="locale-select" aria-label="Language">
@@ -3632,8 +3668,39 @@
       let _lastUpdateCheckAt = 0;
 
       function showUpdateDot() {
+        const bar = document.getElementById("update-bar");
         const dot = document.getElementById("update-dot");
-        if (dot) dot.classList.add("visible");
+        if (dot && dot.classList.contains("visible")) return; // already resolved
+
+        function isOnCreateScreen() {
+          return document.getElementById("screen-create")?.classList.contains("active");
+        }
+
+        function activateDot() {
+          if (bar) { bar.classList.remove("visible", "hiding"); bar.style.display = "none"; }
+          if (dot && !dot.classList.contains("visible")) dot.classList.add("visible");
+        }
+
+        if (isOnCreateScreen() && bar && !bar.classList.contains("visible")) {
+          // Phase 1: show full banner on the main screen.
+          bar.classList.add("visible");
+
+          // Phase 2: after 15s, check if still on create screen.
+          setTimeout(function () {
+            if (!isOnCreateScreen()) {
+              // User moved to a game — quietly swap to dot right away.
+              activateDot();
+              return;
+            }
+            bar.classList.add("hiding");
+            setTimeout(function () {
+              activateDot();
+            }, 450);
+          }, 15000);
+        } else {
+          // On any game screen — skip the banner, show only the quiet dot.
+          activateDot();
+        }
       }
 
       // Exposed so any message handler can trigger the same check (throttled).
@@ -3960,6 +4027,16 @@
       document.getElementById(id).classList.add("active");
       if (id !== "screen-game") {
         document.getElementById("reconnecting-bar").classList.remove("visible");
+      }
+      // If leaving the create screen while the update banner is visible, swap it for the dot immediately.
+      if (id !== "screen-create") {
+        const bar = document.getElementById("update-bar");
+        const dot = document.getElementById("update-dot");
+        if (bar && bar.classList.contains("visible")) {
+          bar.classList.remove("visible", "hiding");
+          bar.style.display = "none";
+          if (dot && !dot.classList.contains("visible")) dot.classList.add("visible");
+        }
       }
     }
 
