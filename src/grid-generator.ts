@@ -104,7 +104,7 @@ export type WeightedPreset = Omit<EnergyPreset, "safeEnergy">;
 export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
   {
     easy: {
-      safeEnergy: 1,
+      safeEnergy: 2,
       dangerSources: 2,
       dangerEnergyMax: 3,
       reliefPockets: 1,
@@ -127,9 +127,9 @@ export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
       safeEnergy: 1,
       dangerSources: 4,
       dangerEnergyMax: 5,
-      reliefPockets: 4,
+      reliefPockets: 3,
       reliefEnergyMax: 3,
-      reliefWeightMultiplier: 0.28,
+      reliefWeightMultiplier: 0.31,
       dangerWeightMultiplier: 1.25,
     },
   };
@@ -146,8 +146,8 @@ export const DEFUSE_ENERGY_PRESETS: Record<
     safeEnergy: 2,
     dangerSources: 2,
     dangerEnergyMax: 3,
-    reliefPockets: 1,
-    reliefEnergyMax: 2,
+    reliefPockets: 2,
+    reliefEnergyMax: 3,
     reliefWeightMultiplier: 0.35,
     dangerWeightMultiplier: 1.0,
   },
@@ -156,16 +156,16 @@ export const DEFUSE_ENERGY_PRESETS: Record<
     safeEnergy: 2,
     dangerSources: 3,
     dangerEnergyMax: 5,
-    reliefPockets: 2,
+    reliefPockets: 3,
     reliefEnergyMax: 3,
     reliefWeightMultiplier: 0.32,
-    dangerWeightMultiplier: 1.2,
+    dangerWeightMultiplier: 1.3,
   },
 
   hard: {
-    safeEnergy: 1,
+    safeEnergy: 2,
     dangerSources: 4,
-    dangerEnergyMax: 5,
+    dangerEnergyMax: 6,
     reliefPockets: 4,
     reliefEnergyMax: 3,
     reliefWeightMultiplier: 0.28,
@@ -198,7 +198,7 @@ export const VERSUS_ENERGY_PRESETS: Record<
     dangerEnergyMax: 5,
     reliefPockets: 2,
     reliefEnergyMax: 2,
-    reliefWeightMultiplier: 0.75,
+    reliefWeightMultiplier: 0.55,
     dangerWeightMultiplier: 1.25,
   },
 };
