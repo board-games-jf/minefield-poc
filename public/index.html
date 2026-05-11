@@ -2251,27 +2251,24 @@
       display: block;
     }
 
-    .update-bar {
-      background: rgba(80, 200, 120, 0.15);
-      border: 0.5px solid rgba(80, 200, 120, 0.4);
-      border-radius: var(--radius-sm);
-      padding: 10px 14px;
-      font-size: 20px;
-      color: #50C878;
-      text-align: center;
-      cursor: pointer;
+    .update-dot {
       display: none;
-      width: 100%;
-      box-sizing: border-box;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      height: 30px;
+      min-width: 30px;
+      padding: 0 8px;
+      border-radius: var(--radius-sm);
+      border: 0.5px solid rgba(80, 200, 120, 0.5);
+      background: rgba(80, 200, 120, 0.15);
+      color: #50C878;
+      cursor: pointer;
+      font-size: 12px;
+      gap: 4px;
+      order: -1;
     }
 
-    .update-bar.visible {
-      display: flex;
-      margin-bottom: 12px;
-    }
+    .update-dot.visible { display: flex; }
 
     .ranking-summary,
     .ranking-modal-card {
@@ -3170,14 +3167,12 @@
 
 <body>
   <div class="container">
-    <div class="update-bar" id="update-bar" onclick="location.reload()">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:14px;height:14px;fill:#fff;vertical-align:middle;flex-shrink:0;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
-      <span data-i18n="update_available">Nova versão disponível — toque para atualizar</span>
-    </div>
-
     <!-- Locale selector -->
     <div class="locale-bar" id="locale-bar">
       <div class="locale-actions">
+        <span class="update-dot" id="update-dot" onclick="location.reload()" title="Nova versão disponível — toque para atualizar">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:13px;height:13px;fill:#50C878;flex-shrink:0;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
+        </span>
         <button class="ranking-btn" id="btn-ranking" type="button">🏆</button>
         <select class="locale-select" id="locale-select" aria-label="Language">
           <option value="pt-BR-x-CE"></option>
@@ -3634,20 +3629,25 @@
       const KEY = "minefield-version";
       const stored = localStorage.getItem(KEY) || "";
 
-      function showUpdateBar() {
-        const bar = document.getElementById("update-bar");
-        if (bar) bar.classList.add("visible");
+      let _lastUpdateCheckAt = 0;
+
+      function showUpdateDot() {
+        const dot = document.getElementById("update-dot");
+        if (dot) dot.classList.add("visible");
       }
 
-      // Exposed so socket reconnect handlers can trigger the same check.
+      // Exposed so any message handler can trigger the same check (throttled).
       window.__checkForUpdate = function () {
+        const now = Date.now();
+        if (now - _lastUpdateCheckAt < 30000) return;
+        _lastUpdateCheckAt = now;
         fetch("./version.json", { cache: "no-store" })
           .then(r => r.ok ? r.json() : null)
           .then(data => {
             const v = data && data.version ? String(data.version) : "";
             if (!v) return;
             const current = localStorage.getItem(KEY) || "";
-            if (v !== current) showUpdateBar();
+            if (v !== current) showUpdateDot();
           })
           .catch(() => {});
       };
@@ -3660,8 +3660,8 @@
           window.__MF_VERSION__ = v || stored || "dev";
           if (!v || v === stored) return;
           localStorage.setItem(KEY, v);
-          // Show banner — user decides when to reload (no auto-reload).
-          showUpdateBar();
+          // Show dot — user decides when to reload (no auto-reload).
+          showUpdateDot();
         })
         .catch(() => { window.__MF_VERSION__ = stored || "dev"; });
     })();
@@ -5432,6 +5432,7 @@
       });
 
       socket.addEventListener("message", (ev) => {
+        if (typeof window.__checkForUpdate === "function") window.__checkForUpdate();
         const msg = JSON.parse(ev.data);
         if (msg.type === "state") {
           const state = msg.state;
@@ -7445,6 +7446,7 @@
         }));
       });
       _defuseSocket.addEventListener('message', (ev) => {
+        if (typeof window.__checkForUpdate === 'function') window.__checkForUpdate();
         const msg = JSON.parse(ev.data);
         if (msg.type === 'defuse-state') _applyDefuseState(msg.state);
         if (msg.type === 'defuse-penalty') {
