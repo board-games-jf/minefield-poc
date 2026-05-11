@@ -193,6 +193,7 @@ export const TRANSLATIONS = {
 
     // Reconnect
     reconnecting: "Reconectando, aguenta aí...",
+    update_available: "Nova versão disponível — toque para atualizar",
 
     // Ranking
     ranking_btn_label: "Ranking",
@@ -375,6 +376,7 @@ export const TRANSLATIONS = {
     btn_new_room: "Nova partida",
 
     reconnecting: "A reconectar...",
+    update_available: "Nova versão disponível — toque para atualizar",
 
     // Ranking
     ranking_btn_label: "Ranking",
@@ -557,6 +559,7 @@ export const TRANSLATIONS = {
     btn_new_room: "New game",
 
     reconnecting: "Reconnecting...",
+    update_available: "New version available — tap to update",
 
     // Ranking
     ranking_btn_label: "Ranking",
