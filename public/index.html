@@ -1220,6 +1220,73 @@
       background: rgba(255, 255, 255, 0.02);
     }
 
+    #btn-mic:not(.off):not(.disabled),
+    #btn-mic-defuse:not(.off):not(.disabled) {
+      border-color: rgba(74, 222, 128, 0.6);
+      background: rgba(74, 222, 128, 0.08);
+      box-shadow: 0 0 0 2px rgba(74, 222, 128, 0.25), 0 0 10px rgba(74, 222, 128, 0.15);
+    }
+
+    #btn-mic.muted:not(.off),
+    #btn-mic-defuse.muted:not(.off) {
+      border-color: rgba(251, 191, 36, 0.6);
+      background: rgba(251, 191, 36, 0.08);
+      box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
+    }
+
+    /* Speaking indicator on player cards — P1 teal, P2 coral */
+    /* Uses only box-shadow to avoid overriding the active-player border/background */
+    #p1-card.speaking {
+      box-shadow: 0 0 0 2px rgba(93, 202, 165, 0.55), 0 0 14px rgba(93, 202, 165, 0.18);
+    }
+
+    #p2-card.speaking {
+      box-shadow: 0 0 0 2px rgba(240, 153, 123, 0.55), 0 0 14px rgba(240, 153, 123, 0.18);
+    }
+
+    /* Defuse chips: self = teal, others = coral */
+    .defuse-player-chip.is-self.speaking {
+      border-color: rgba(93, 202, 165, 0.85) !important;
+      box-shadow: 0 0 0 2px rgba(93, 202, 165, 0.4) !important;
+    }
+
+    .defuse-player-chip:not(.is-self).speaking {
+      border-color: rgba(240, 153, 123, 0.85) !important;
+      box-shadow: 0 0 0 2px rgba(240, 153, 123, 0.4) !important;
+    }
+
+    /* Animated equalizer bars (injected next to name when speaking) */
+    .voice-bars {
+      display: inline-flex;
+      align-items: flex-end;
+      gap: 2px;
+      height: 10px;
+      margin-left: 4px;
+      flex-shrink: 0;
+    }
+
+    .voice-bars span {
+      width: 2px;
+      border-radius: 1px;
+      background: var(--voice-bar-color, rgba(93, 202, 165, 0.95));
+      height: 2px;
+      animation: voiceBar 0.65s ease-in-out infinite alternate;
+    }
+
+    #p2-card .voice-bars span,
+    .defuse-player-chip:not(.is-self) .voice-bars span {
+      --voice-bar-color: rgba(240, 153, 123, 0.95);
+    }
+
+    .voice-bars span:nth-child(1) { animation-delay: 0s;    animation-duration: 0.55s; }
+    .voice-bars span:nth-child(2) { animation-delay: 0.18s; animation-duration: 0.65s; }
+    .voice-bars span:nth-child(3) { animation-delay: 0.32s; animation-duration: 0.5s;  }
+
+    @keyframes voiceBar {
+      from { height: 2px; }
+      to   { height: 10px; }
+    }
+
     .icon-toggle-glyph {
       font-size: 18px;
       line-height: 1;
@@ -4020,8 +4087,9 @@
     let _voiceStream = null;    // MediaStream | null (local mic)
     let _voiceActive = false;   // whether we're in voice
     let _voiceMuted = false;    // mic muted (track disabled, PC stays open)
-    let _voiceAudioCtx = null;  // AudioContext for VAD
-    let _voiceAnalyser = null;  // AnalyserNode for VAD
+    let _voiceAudioCtx = null;  // AudioContext for local VAD
+    let _voiceAnalyser = null;  // AnalyserNode for local VAD (my mic)
+    let _voiceRemoteAnalyser = null; // AnalyserNode for remote VAD (their audio)
     let _voiceOfferCreated = false; // flag to avoid both sides creating offer
 
     // ── Utility: Toast Notification ────────────────────────────────────────
@@ -8019,8 +8087,8 @@
           const state = _voicePc?.connectionState;
           console.log('WebRTC connection state:', state);
           if (state === 'failed' || state === 'disconnected' || state === 'closed') {
-            console.warn('Voice connection lost');
-            _voiceDisconnect();
+            console.warn('Voice peer disconnected, waiting for reconnect...');
+            _voicePeerLeft();
           }
         };
 
@@ -8031,6 +8099,7 @@
             if (Ctx) {
               _voiceAudioCtx = new Ctx();
               _voiceAnalyser = _voiceAudioCtx.createAnalyser();
+              _voiceAnalyser.fftSize = 256;
               const source = _voiceAudioCtx.createMediaStreamSource(_voiceStream);
               source.connect(_voiceAnalyser);
               console.log('AudioContext created for VAD');
@@ -8039,6 +8108,9 @@
             console.warn('Could not initialize AudioContext:', err);
           }
         }
+
+        // Start local VAD immediately — detects MY voice
+        _voiceStartVAD();
 
         // Handle remote stream
         _voicePc.ontrack = (evt) => {
@@ -8066,17 +8138,17 @@
             if (audioEl.play) {
               audioEl.play().then(() => {
                 console.log('Audio element playing');
-                _showToast('Conversando com sucesso! 🎤');
               }).catch((e) => {
                 console.warn('Audio play error:', e);
-                _showToast('Áudio recebido mas falha ao reproduzir');
               });
             }
             
             // Start VAD after remote audio is ready
-            if (_voiceAnalyser) {
-              _voiceStartVAD();
-            }
+            // (local VAD already running since mic was captured)
+            // Start remote VAD to detect when OTHER person speaks
+            const remoteStream = evt.streams?.[0] || (evt.track ? new MediaStream([evt.track]) : null);
+            _voiceStopRemoteVAD();
+            _voiceStartRemoteVAD(remoteStream);
           } catch (err) {
             console.error('ontrack handler error:', err);
           }
@@ -8084,7 +8156,6 @@
 
         _voiceActive = true;
         _updateVoiceButton();
-        _showToast('Pronto para conversa! 🎤');
         
         // Signal readiness
         sendFn(JSON.stringify({
@@ -8101,7 +8172,7 @@
         } else if (err.name === 'NotReadableError') {
           errMsg = 'Microfone em uso por outro aplicativo';
         }
-        _showToast(errMsg);
+        console.warn('Voice connect error:', errMsg);
         _voiceActive = false;
         _updateVoiceButton();
       } finally {
@@ -8110,8 +8181,32 @@
       }
     }
 
+    // Called when REMOTE peer's connection drops — keep local user in voice channel
+    // When the peer reconnects they'll send 'ready' and we'll renegotiate from there
+    function _voicePeerLeft() {
+      if (_voicePc) {
+        _voicePc.onconnectionstatechange = null;
+        _voicePc.onicecandidate = null;
+        _voicePc.ontrack = null;
+        _voicePc.close();
+        _voicePc = null;
+      }
+      _voiceOfferCreated = false;
+      const audioEl = document.getElementById('voice-audio');
+      if (audioEl) { audioEl.srcObject = null; }
+      _voiceStopVAD();
+      _voiceStopRemoteVAD();
+      console.log('Voice: peer left, waiting for reconnect...');
+      // _voiceActive stays true — user remains in the voice channel
+      _updateVoiceButton();
+    }
+
     function _voiceDisconnect() {
       if (_voicePc) {
+        // Null out handlers first to prevent _voicePeerLeft from firing when we intentionally close
+        _voicePc.onconnectionstatechange = null;
+        _voicePc.onicecandidate = null;
+        _voicePc.ontrack = null;
         _voicePc.close();
         _voicePc = null;
       }
@@ -8119,10 +8214,14 @@
         _voiceStream.getTracks().forEach((track) => track.stop());
         _voiceStream = null;
       }
+      const audioEl = document.getElementById('voice-audio');
+      if (audioEl) { audioEl.srcObject = null; }
       _voiceActive = false;
       _voiceMuted = false;
       _voiceOfferCreated = false;
       _voiceStopVAD();
+      _voiceStopRemoteVAD();
+      _voiceCloseAudioCtx();
       _updateVoiceButton();
     }
 
@@ -8156,36 +8255,34 @@
     }
 
     function _voiceStartVAD() {
-      if (!_voiceAnalyser) return; // AudioContext already created in _voiceConnect
+      if (!_voiceAnalyser) return;
       
       try {
-        const threshold = 10;
-        const silenceMs = 500;
+        const threshold = 5;    // lower = more sensitive
+        const silenceMs = 600;
         let lastSpeakTime = 0;
         
         const vadCheck = () => {
-          if (!_voiceAnalyser) return;
+          if (!_voiceAnalyser) return; // stopped
           const dataArray = new Uint8Array(_voiceAnalyser.frequencyBinCount);
           _voiceAnalyser.getByteFrequencyData(dataArray);
           
           let sum = 0;
           for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-          const rms = Math.sqrt(sum / dataArray.length);
+          const rms = sum / dataArray.length; // use average, not sqrt
           
-          const isSpeaking = rms > threshold;
           const now = Date.now();
-          
-          if (isSpeaking) {
+          if (rms > threshold) {
             lastSpeakTime = now;
-            _voiceShowSpeakingIndicator(true);
+            _voiceShowSpeakingIndicator(true, true);
           } else if (now - lastSpeakTime > silenceMs) {
-            _voiceShowSpeakingIndicator(false);
+            _voiceShowSpeakingIndicator(false, true);
           }
           
-          setTimeout(vadCheck, 100);
+          setTimeout(vadCheck, 80);
         };
         
-        console.log('Starting VAD');
+        console.log('Local VAD started');
         vadCheck();
       } catch (err) {
         console.error('VAD error:', err);
@@ -8193,32 +8290,102 @@
     }
 
     function _voiceStopVAD() {
+      // Just stop the VAD loop by nulling the analyser (the setTimeout loop checks this)
+      // The AudioContext stays alive for reuse on reconnect
+      _voiceAnalyser = null;
+      _voiceShowSpeakingIndicator(false, true);
+    }
+
+    function _voiceStartRemoteVAD(remoteStream) {
+      if (!remoteStream || !_voiceAudioCtx) return;
+      try {
+        _voiceRemoteAnalyser = _voiceAudioCtx.createAnalyser();
+        _voiceRemoteAnalyser.fftSize = 256;
+        const src = _voiceAudioCtx.createMediaStreamSource(remoteStream);
+        src.connect(_voiceRemoteAnalyser);
+
+        const threshold = 5;
+        const silenceMs = 600;
+        let lastSpeakTime = 0;
+
+        const vadCheck = () => {
+          if (!_voiceRemoteAnalyser) return;
+          const data = new Uint8Array(_voiceRemoteAnalyser.frequencyBinCount);
+          _voiceRemoteAnalyser.getByteFrequencyData(data);
+          let sum = 0;
+          for (let i = 0; i < data.length; i++) sum += data[i];
+          const rms = sum / data.length;
+          const now = Date.now();
+          if (rms > threshold) {
+            lastSpeakTime = now;
+            _voiceShowSpeakingIndicator(true, false);
+          } else if (now - lastSpeakTime > silenceMs) {
+            _voiceShowSpeakingIndicator(false, false);
+          }
+          setTimeout(vadCheck, 80);
+        };
+        vadCheck();
+        console.log('Remote VAD started');
+      } catch (err) {
+        console.warn('Remote VAD error:', err);
+      }
+    }
+
+    function _voiceStopRemoteVAD() {
+      _voiceRemoteAnalyser = null;
+      _voiceShowSpeakingIndicator(false, false);
+    }
+
+    function _voiceCloseAudioCtx() {
       if (_voiceAudioCtx) {
         _voiceAudioCtx.close();
         _voiceAudioCtx = null;
-        _voiceAnalyser = null;
       }
-      _voiceShowSpeakingIndicator(false);
+      _voiceAnalyser = null;
+      _voiceRemoteAnalyser = null;
     }
 
-    function _voiceShowSpeakingIndicator(speaking) {
-      // For coop: find remote player card
-      if (document.getElementById('screen-game')?.classList.contains('active')) {
-        const cards = document.querySelectorAll('.player-card');
-        for (const card of cards) {
-          if (!card.textContent.includes(myName)) {
-            if (speaking) card.classList.add('speaking');
-            else card.classList.remove('speaking');
-          }
-        }
+    function _voiceShowSpeakingIndicator(speaking, isLocal = true) {
+      // Pulse the mic button only for local speaking
+      if (isLocal) {
+        // (no button pulse — feedback is on the player cards)
       }
-      // For defuse: find remote player chip
+
+      // Inject/remove animated bars and speaking class on the target card/chip
+      const _setCardSpeaking = (card, isSpeaking) => {
+        if (!card) return;
+        if (isSpeaking) {
+          card.classList.add('speaking');
+          // For .player-card: inject into .player-name-label
+          // For .defuse-player-chip: inject directly into the chip
+          const barsParent = card.querySelector('.player-name-label') || card;
+          if (!barsParent.querySelector('.voice-bars')) {
+            const bars = document.createElement('span');
+            bars.className = 'voice-bars';
+            bars.innerHTML = '<span></span><span></span><span></span>';
+            barsParent.appendChild(bars);
+          }
+        } else {
+          card.classList.remove('speaking');
+          card.querySelector('.voice-bars')?.remove();
+        }
+      };
+
+      // Coop screen: use id-based lookup
+      if (document.getElementById('screen-game')?.classList.contains('active')) {
+        const p1Name = document.getElementById('p1-name')?.textContent?.trim();
+        const isP1Me = p1Name === myName;
+        const myCard = document.getElementById(isP1Me ? 'p1-card' : 'p2-card');
+        const remoteCard = document.getElementById(isP1Me ? 'p2-card' : 'p1-card');
+        _setCardSpeaking(isLocal ? myCard : remoteCard, speaking);
+      }
+      // Defuse screen: text-based chip lookup
       else if (document.getElementById('screen-defuse-game')?.classList.contains('active')) {
         const chips = document.querySelectorAll('.defuse-player-chip');
         for (const chip of chips) {
-          if (!chip.textContent.includes(myName)) {
-            if (speaking) chip.classList.add('speaking');
-            else chip.classList.remove('speaking');
+          const chipIsMe = chip.textContent.trim().includes(myName);
+          if (isLocal ? chipIsMe : !chipIsMe) {
+            _setCardSpeaking(chip, speaking);
           }
         }
       }
@@ -8230,20 +8397,55 @@
       try {
         switch (payload.voice) {
           case 'ready': {
-            console.log('Voice ready received from peer, _voiceOfferCreated=', _voiceOfferCreated);
-            // Only create offer if we're in voice AND haven't already created one
-            if (_voiceActive && _voicePc && !_voiceOfferCreated) {
-              console.log('Creating offer because we are in voice and offer not yet created');
-              _voiceOfferCreated = true;
-              const offer = await _voicePc.createOffer();
-              await _voicePc.setLocalDescription(offer);
-              sendFn(JSON.stringify({
-                type: 'relay',
-                payload: { voice: 'offer', sdp: offer.sdp },
-              }));
-              console.log('Offer sent');
-            } else {
-              console.log('Not creating offer: _voiceActive=', _voiceActive, '_voicePc=', !!_voicePc, '_voiceOfferCreated=', _voiceOfferCreated);
+            console.log('Voice ready received from peer');
+            if (!_voiceActive || !_voiceStream) break;
+
+            // Always renegotiate when peer signals ready — handles reconnects
+            // Reset and recreate PC to avoid stale state
+            if (_voicePc) {
+              _voicePc.onconnectionstatechange = null;
+              _voicePc.onicecandidate = null;
+              _voicePc.ontrack = null;
+              _voicePc.close();
+            }
+            _voiceOfferCreated = false;
+
+            _voicePc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
+            for (const track of _voiceStream.getTracks()) { _voicePc.addTrack(track, _voiceStream); }
+
+            _voicePc.onicecandidate = (evt) => {
+              if (evt.candidate) sendFn(JSON.stringify({ type: 'relay', payload: { voice: 'ice', candidate: evt.candidate } }));
+            };
+            _voicePc.onconnectionstatechange = () => {
+              const s = _voicePc?.connectionState;
+              console.log('WebRTC state:', s);
+              if (s === 'failed' || s === 'disconnected' || s === 'closed') _voicePeerLeft();
+            };
+            _voicePc.ontrack = (evt) => {
+              const audioEl = document.getElementById('voice-audio');
+              if (!audioEl) return;
+              const remoteStream = evt.streams?.[0] || (evt.track ? new MediaStream([evt.track]) : null);
+              if (remoteStream) audioEl.srcObject = remoteStream;
+              audioEl.play?.().catch(() => {});
+              if (_voiceAnalyser) _voiceStartVAD();
+              _voiceStartRemoteVAD(remoteStream);
+            };
+
+            _voiceOfferCreated = true;
+            const offer = await _voicePc.createOffer();
+            await _voicePc.setLocalDescription(offer);
+            sendFn(JSON.stringify({ type: 'relay', payload: { voice: 'offer', sdp: offer.sdp } }));
+            console.log('Offer sent (renegotiation)');
+
+            // Reconnect VAD analyser if AudioContext is alive (staying peer case)
+            if (_voiceAudioCtx && _voiceStream && !_voiceAnalyser) {
+              try {
+                _voiceAnalyser = _voiceAudioCtx.createAnalyser();
+                _voiceAnalyser.fftSize = 256;
+                const src = _voiceAudioCtx.createMediaStreamSource(_voiceStream);
+                src.connect(_voiceAnalyser);
+                _voiceStartVAD(); // restart local VAD
+              } catch (e) { console.warn('Could not reconnect VAD analyser:', e); }
             }
             break;
           }
@@ -8266,7 +8468,7 @@
           }
           case 'answer': {
             console.log('Answer received from peer');
-            if (_voicePc && _voicePc.remoteDescription === null) {
+            if (_voicePc) {
               await _voicePc.setRemoteDescription(new RTCSessionDescription({
                 type: 'answer',
                 sdp: payload.sdp,
@@ -8297,7 +8499,6 @@
         btnDefuse.classList.add('disabled');
         btnDefuse.setAttribute('title', (t && t.mic_full_label) || 'Voice full');
       }
-      _showToast((t && t.mic_full_label) || 'Voice full - 2 max');
     }
 
     function setupDefuseGame() {
