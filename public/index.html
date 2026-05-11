@@ -4387,6 +4387,9 @@
       soundEnabled = !!nextValue;
       localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? "1" : "0");
       syncSoundToggleUi();
+      // Mute/unmute remote voice audio along with game sounds
+      const voiceAudioEl = document.getElementById('voice-audio');
+      if (voiceAudioEl) voiceAudioEl.muted = !soundEnabled;
       if (!soundEnabled) {
         const audioList = [
           fireStickerAudio,
@@ -8186,6 +8189,9 @@
               audioEl.srcObject = remoteStream;
             }
             
+            // Respect current sound-enabled state
+            audioEl.muted = !soundEnabled;
+
             // Ensure audio plays
             if (audioEl.play) {
               audioEl.play().then(() => {
@@ -8456,6 +8462,7 @@
               if (!audioEl) return;
               const remoteStream = evt.streams?.[0] || (evt.track ? new MediaStream([evt.track]) : null);
               if (remoteStream) audioEl.srcObject = remoteStream;
+              audioEl.muted = !soundEnabled;
               audioEl.play?.().catch(() => {});
               if (_voiceAnalyser) _voiceStartVAD();
               // Remote speaking is driven by relay signals
