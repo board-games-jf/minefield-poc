@@ -94,6 +94,24 @@
       }
     }
 
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeOutDown {
+      to {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+    }
+
     .mode-briefing-icon {
       font-size: 22px;
       line-height: 1;
@@ -3197,6 +3215,7 @@
 </head>
 
 <body>
+  <audio id="voice-audio" autoplay playsinline style="display:none;"></audio>
   <div class="container">
     <div class="update-bar" id="update-bar" onclick="location.reload()">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="update-icon" style="width:14px;height:14px;fill:#fff;vertical-align:middle;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
@@ -3452,6 +3471,9 @@
             <button class="icon-toggle" id="sound-toggle" type="button">
               <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
             </button>
+            <button class="icon-toggle off" id="btn-mic" type="button" style="display:none" aria-label="Microfone desligado">
+              <span class="icon-toggle-glyph" id="btn-mic-glyph" aria-hidden="true">🎤</span>
+            </button>
             <button class="icon-toggle" id="btn-leave" type="button">
               <span class="icon-toggle-text" data-i18n="btn_leave"></span>
             </button>
@@ -3501,6 +3523,9 @@
               </div>
             </div>
           </div>
+          <button class="icon-toggle off" id="btn-mic-defuse" type="button" style="display:none" aria-label="Microfone desligado">
+            <span class="icon-toggle-glyph" id="btn-mic-defuse-glyph" aria-hidden="true">🎤</span>
+          </button>
           <button class="icon-toggle" id="btn-defuse-restart" type="button">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12,4C14.1,4 16.1,4.8 17.6,6.3C20.7,9.4 20.7,14.5 17.6,17.6C15.8,19.5 13.3,20.2 10.9,19.9L11.4,17.9C13.1,18.1 14.9,17.5 16.2,16.2C18.5,13.9 18.5,10.1 16.2,7.7C15.1,6.6 13.5,6 12,6V10.6L7,5.6L12,0.6V4M6.3,17.6C3.7,15 3.3,11 5.1,7.9L6.6,9.4C5.5,11.6 5.9,14.4 7.8,16.2C8.3,16.7 8.9,17.1 9.6,17.4L9,19.4C8,19 7.1,18.4 6.3,17.6Z" /></svg>
           </button>
@@ -3990,6 +4015,36 @@
     let soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== "0";
     const HIDDEN_CELL = -2;
 
+    // ── Voice/WebRTC state ──────────────────────────────────────────────────────
+    let _voicePc = null;        // RTCPeerConnection | null
+    let _voiceStream = null;    // MediaStream | null (local mic)
+    let _voiceActive = false;   // whether we're in voice
+    let _voiceMuted = false;    // mic muted (track disabled, PC stays open)
+    let _voiceAudioCtx = null;  // AudioContext for VAD
+    let _voiceAnalyser = null;  // AnalyserNode for VAD
+    let _voiceOfferCreated = false; // flag to avoid both sides creating offer
+
+    // ── Utility: Toast Notification ────────────────────────────────────────
+    function _showToast(message, duration = 3000) {
+      let toastContainer = document.getElementById('generic-toasts');
+      if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'generic-toasts';
+        toastContainer.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;pointer-events:none;display:flex;flex-direction:column;gap:8px;align-items:center;';
+        document.body.appendChild(toastContainer);
+      }
+
+      const toast = document.createElement('div');
+      toast.style.cssText = 'background:rgba(0,0,0,0.8);color:#fff;padding:12px 16px;border-radius:6px;font-size:14px;animation:fadeInUp 0.3s ease;pointer-events:auto;max-width:300px;';
+      toast.textContent = message;
+      toastContainer.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'fadeOutDown 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
     function getGridRows(state) {
       return state.grid.length;
     }
@@ -4045,14 +4100,26 @@
       if (audioUnlocked) return;
       const Ctx = window.AudioContext || window.webkitAudioContext;
       if (!Ctx) { audioUnlocked = true; return; }
-      if (!audioCtx) audioCtx = new Ctx();
-      if (audioCtx.state === "running") {
+      
+      // Only try to create/resume AudioContext if one already exists
+      // Creating a new one without a proper user gesture will fail
+      if (audioCtx) {
+        try {
+          if (audioCtx.state === "running") {
+            audioUnlocked = true;
+            return;
+          }
+          audioCtx.resume()
+            .then(() => { audioUnlocked = true; })
+            .catch(() => { audioUnlocked = true; }); // Mark as unlocked even if resume fails
+        } catch (err) {
+          audioUnlocked = true; // Mark as unlocked to avoid retry loops
+        }
+      } else {
+        // No existing context, mark as unlocked until one is created with proper gesture
         audioUnlocked = true;
-        return;
       }
-      audioCtx.resume()
-        .then(() => { audioUnlocked = true; })
-        .catch(() => { });
+      
       if (fireStickerAudio) {
         try { fireStickerAudio.load(); } catch { }
       }
@@ -5466,6 +5533,12 @@
           if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
           else showStickerToast(msg.from, msg.id);
         }
+        if (msg.type === 'relay') {
+          _handleVoiceRelay(msg.payload, (m) => { if (_defuseSocket) _defuseSocket.send(m); });
+        }
+        if (msg.type === 'voice-full') {
+          _voiceHandleFull();
+        }
       });
 
       // If the tab was backgrounded and comes back, ask server for the latest state.
@@ -5535,10 +5608,14 @@
             bw.addEventListener('animationend', () => bw.classList.remove('defuse-board-shake'), { once: true });
           }
         }
+        if (msg.type === "relay") {
+          _handleVoiceRelay(msg.payload, (m) => { if (socket) socket.send(m); });
+        }
         if (msg.type === "error") handleServerError(msg.message);
       });
 
       socket.addEventListener("close", () => {
+        _voiceDisconnect();
         const inGame = document.getElementById("screen-game").classList.contains("active");
         if (inGame && !intentionallyClosedSockets.has(thisSocket)) {
           document.getElementById("reconnecting-bar").classList.add("visible");
@@ -5795,6 +5872,17 @@
       }
       updateExplosiveRoundUi(state);
       if (state.status === "playing") showModeBriefingToast(state);
+
+      // Show/hide mic button in coop games (only if both players are human)
+      const micBtnCoop = document.getElementById('btn-mic');
+      if (micBtnCoop) {
+        const hasAiPlayer = state.players.some((p) => p?.id === 'ai');
+        if (state.mode === 'coop' && !hasAiPlayer) {
+          micBtnCoop.style.display = '';
+        } else {
+          micBtnCoop.style.display = 'none';
+        }
+      }
 
       if (state.lastClickedCell) {
         lastClickedCell = state.lastClickedCell;
@@ -6996,7 +7084,9 @@
       const fallbackValue = copyValue ?? url ?? text ?? "";
       try {
         if (navigator.share && url) {
-          await navigator.share({ text, url });
+          const shareData = { url };
+          if (text) shareData.text = text;
+          await navigator.share(shareData);
           onShared?.();
           return true;
         }
@@ -7166,7 +7256,7 @@
       btn.textContent = t.btn_copy;
       btn.onclick = async () => {
         const shared = await shareWithFallback({
-          text: buildGameShareText(getCurrentGameShareMeta()),
+          text: undefined,
           url,
           copyValue: url,
           onShared: () => { btn.textContent = t.btn_copied; },
@@ -7188,6 +7278,7 @@
 
     function leaveRoom() {
       // Keep create selections; they are persisted in localStorage.
+      _voiceDisconnect();
       if (socket) {
         intentionallyClosedSockets.add(socket);
         socket.close();
@@ -7214,6 +7305,7 @@
       _defuseCurrentCombo = 0;
       _defuseBombsResolved = 0;
       _defuseRoomId = null;
+      _voiceDisconnect();
       if (_defuseSocket) {
         try { _defuseSocket.close(); } catch {}
         _defuseSocket = null;
@@ -7316,6 +7408,29 @@
     }
 
     document.getElementById("btn-leave").addEventListener("click", leaveRoom);
+    document.getElementById("btn-mic")?.addEventListener("click", () => {
+      if (_voiceActive) {
+        const sendFn = _voiceGetSendFn();
+        sendFn(JSON.stringify({ type: 'voice-leave' }));
+        _voiceDisconnect();
+      } else {
+        const sendFn = _voiceGetSendFn();
+        _voiceConnect(sendFn);
+        sendFn(JSON.stringify({ type: 'voice-join' }));
+      }
+    });
+    document.getElementById("btn-mic-defuse")?.addEventListener("click", function(e) {
+      if (this.classList.contains('disabled')) return;
+      if (_voiceActive) {
+        const sendFn = _voiceGetSendFn();
+        sendFn(JSON.stringify({ type: 'voice-leave' }));
+        _voiceDisconnect();
+      } else {
+        const sendFn = _voiceGetSendFn();
+        _voiceConnect(sendFn);
+        sendFn(JSON.stringify({ type: 'voice-join' }));
+      }
+    });
     document.getElementById("btn-ranking").addEventListener("click", () => openRankingModalOnTab('main'));
     document.getElementById("btn-ranking-close").addEventListener("click", closeRankingModal);
     document.getElementById("ranking-modal").addEventListener("click", (e) => {
@@ -7334,6 +7449,10 @@
     });
     document.getElementById("btn-defuse-result-ranking")?.addEventListener("click", () => {
       openRankingModalOnTab('defuse');
+    });
+
+    document.getElementById("btn-defuse-result-close")?.addEventListener("click", () => {
+      leaveDefuseRoom();
     });
 
     document.getElementById("rematch-modal").addEventListener("click", (e) => {
@@ -7664,6 +7783,24 @@
       if (shareBtn) shareBtn.style.display = '';
       const restartBtn = document.getElementById('btn-defuse-restart');
       if (restartBtn) restartBtn.style.display = isMulti ? 'none' : '';
+      const micBtn = document.getElementById('btn-mic-defuse');
+      if (micBtn) {
+        if (isMulti) {
+          micBtn.style.display = '';
+          // Check if both voice slots are occupied
+          const bothSlotsFull = state.voiceSlots && state.voiceSlots[0] !== null && state.voiceSlots[1] !== null;
+          if (bothSlotsFull) {
+            micBtn.classList.add('disabled');
+            micBtn.setAttribute('title', t.mic_full_label || 'Voice full');
+          } else {
+            micBtn.classList.remove('disabled');
+            micBtn.removeAttribute('title');
+          }
+        } else {
+          micBtn.style.display = 'none';
+          micBtn.classList.remove('disabled');
+        }
+      }
       const playersStrip = document.getElementById('defuse-players-strip');
       if (playersStrip) {
         if (isMulti) {
@@ -7843,6 +7980,326 @@
       el.addEventListener('click', dismiss);
     }
 
+    // ── Voice/WebRTC module ────────────────────────────────────────────────────
+
+    function _voiceGetSendFn() {
+      return document.getElementById('screen-game')?.classList.contains('active') 
+        ? (msg) => { if (socket) socket.send(msg); }
+        : (msg) => { if (_defuseSocket) _defuseSocket.send(msg); };
+    }
+
+    async function _voiceConnect(sendFn) {
+      try {
+        // Update button state to "connecting"
+        const btn = document.getElementById('btn-mic') || document.getElementById('btn-mic-defuse');
+        if (btn) btn.disabled = true;
+        
+        _voiceStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        _voicePc = new RTCPeerConnection({
+          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+        });
+        
+        // Add audio track
+        for (const track of _voiceStream.getTracks()) {
+          _voicePc.addTrack(track, _voiceStream);
+        }
+
+        // Handle ICE candidates
+        _voicePc.onicecandidate = (evt) => {
+          if (evt.candidate) {
+            sendFn(JSON.stringify({
+              type: 'relay',
+              payload: { voice: 'ice', candidate: evt.candidate },
+            }));
+          }
+        };
+
+        // Handle connection state changes
+        _voicePc.onconnectionstatechange = () => {
+          const state = _voicePc?.connectionState;
+          console.log('WebRTC connection state:', state);
+          if (state === 'failed' || state === 'disconnected' || state === 'closed') {
+            console.warn('Voice connection lost');
+            _voiceDisconnect();
+          }
+        };
+
+        // Initialize AudioContext for VAD (safe now after user gesture)
+        if (!_voiceAudioCtx) {
+          try {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (Ctx) {
+              _voiceAudioCtx = new Ctx();
+              _voiceAnalyser = _voiceAudioCtx.createAnalyser();
+              const source = _voiceAudioCtx.createMediaStreamSource(_voiceStream);
+              source.connect(_voiceAnalyser);
+              console.log('AudioContext created for VAD');
+            }
+          } catch (err) {
+            console.warn('Could not initialize AudioContext:', err);
+          }
+        }
+
+        // Handle remote stream
+        _voicePc.ontrack = (evt) => {
+          const audioEl = document.getElementById('voice-audio');
+          if (!audioEl) {
+            console.error('voice-audio element not found');
+            return;
+          }
+          
+          console.log('ontrack event received, track:', evt.track);
+          
+          try {
+            // Create or reuse media stream for remote audio
+            if (evt.streams && evt.streams[0]) {
+              console.log('Using stream from evt.streams[0]');
+              audioEl.srcObject = evt.streams[0];
+            } else if (evt.track) {
+              // Fallback: create MediaStream with the track
+              console.log('Creating MediaStream from track');
+              const remoteStream = new MediaStream([evt.track]);
+              audioEl.srcObject = remoteStream;
+            }
+            
+            // Ensure audio plays
+            if (audioEl.play) {
+              audioEl.play().then(() => {
+                console.log('Audio element playing');
+                _showToast('Conversando com sucesso! 🎤');
+              }).catch((e) => {
+                console.warn('Audio play error:', e);
+                _showToast('Áudio recebido mas falha ao reproduzir');
+              });
+            }
+            
+            // Start VAD after remote audio is ready
+            if (_voiceAnalyser) {
+              _voiceStartVAD();
+            }
+          } catch (err) {
+            console.error('ontrack handler error:', err);
+          }
+        };
+
+        _voiceActive = true;
+        _updateVoiceButton();
+        _showToast('Pronto para conversa! 🎤');
+        
+        // Signal readiness
+        sendFn(JSON.stringify({
+          type: 'relay',
+          payload: { voice: 'ready' },
+        }));
+      } catch (err) {
+        console.error('Voice connect error:', err);
+        let errMsg = (t && t.mic_permission_denied) || 'Microfone não disponível';
+        if (err.name === 'NotAllowedError') {
+          errMsg = (t && t.mic_permission_denied) || 'Sem acesso ao microfone';
+        } else if (err.name === 'NotFoundError') {
+          errMsg = 'Nenhum microfone disponível';
+        } else if (err.name === 'NotReadableError') {
+          errMsg = 'Microfone em uso por outro aplicativo';
+        }
+        _showToast(errMsg);
+        _voiceActive = false;
+        _updateVoiceButton();
+      } finally {
+        const btn = document.getElementById('btn-mic') || document.getElementById('btn-mic-defuse');
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    function _voiceDisconnect() {
+      if (_voicePc) {
+        _voicePc.close();
+        _voicePc = null;
+      }
+      if (_voiceStream) {
+        _voiceStream.getTracks().forEach((track) => track.stop());
+        _voiceStream = null;
+      }
+      _voiceActive = false;
+      _voiceMuted = false;
+      _voiceOfferCreated = false;
+      _voiceStopVAD();
+      _updateVoiceButton();
+    }
+
+    function _voiceToggleMute() {
+      if (!_voiceStream) return;
+      _voiceMuted = !_voiceMuted;
+      _voiceStream.getAudioTracks().forEach((track) => { track.enabled = !_voiceMuted; });
+      _updateVoiceButton();
+    }
+
+    function _updateVoiceButton() {
+      const btnCoop = document.getElementById('btn-mic');
+      const btnDefuse = document.getElementById('btn-mic-defuse');
+      const btn = btnCoop?.offsetParent ? btnCoop : btnDefuse;
+      if (!btn) return;
+      
+      if (_voiceActive) {
+        btn.classList.remove('off');
+        if (_voiceMuted) {
+          btn.classList.add('muted');
+          btn.setAttribute('aria-label', t.mic_off_label || 'Mic off');
+        } else {
+          btn.classList.remove('muted');
+          btn.setAttribute('aria-label', t.mic_on_label || 'Mic on');
+        }
+      } else {
+        btn.classList.add('off');
+        btn.classList.remove('muted');
+        btn.setAttribute('aria-label', t.mic_off_label || 'Mic off');
+      }
+    }
+
+    function _voiceStartVAD() {
+      if (!_voiceAnalyser) return; // AudioContext already created in _voiceConnect
+      
+      try {
+        const threshold = 10;
+        const silenceMs = 500;
+        let lastSpeakTime = 0;
+        
+        const vadCheck = () => {
+          if (!_voiceAnalyser) return;
+          const dataArray = new Uint8Array(_voiceAnalyser.frequencyBinCount);
+          _voiceAnalyser.getByteFrequencyData(dataArray);
+          
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          const rms = Math.sqrt(sum / dataArray.length);
+          
+          const isSpeaking = rms > threshold;
+          const now = Date.now();
+          
+          if (isSpeaking) {
+            lastSpeakTime = now;
+            _voiceShowSpeakingIndicator(true);
+          } else if (now - lastSpeakTime > silenceMs) {
+            _voiceShowSpeakingIndicator(false);
+          }
+          
+          setTimeout(vadCheck, 100);
+        };
+        
+        console.log('Starting VAD');
+        vadCheck();
+      } catch (err) {
+        console.error('VAD error:', err);
+      }
+    }
+
+    function _voiceStopVAD() {
+      if (_voiceAudioCtx) {
+        _voiceAudioCtx.close();
+        _voiceAudioCtx = null;
+        _voiceAnalyser = null;
+      }
+      _voiceShowSpeakingIndicator(false);
+    }
+
+    function _voiceShowSpeakingIndicator(speaking) {
+      // For coop: find remote player card
+      if (document.getElementById('screen-game')?.classList.contains('active')) {
+        const cards = document.querySelectorAll('.player-card');
+        for (const card of cards) {
+          if (!card.textContent.includes(myName)) {
+            if (speaking) card.classList.add('speaking');
+            else card.classList.remove('speaking');
+          }
+        }
+      }
+      // For defuse: find remote player chip
+      else if (document.getElementById('screen-defuse-game')?.classList.contains('active')) {
+        const chips = document.querySelectorAll('.defuse-player-chip');
+        for (const chip of chips) {
+          if (!chip.textContent.includes(myName)) {
+            if (speaking) chip.classList.add('speaking');
+            else chip.classList.remove('speaking');
+          }
+        }
+      }
+    }
+
+    async function _handleVoiceRelay(payload, sendFn) {
+      if (!payload.voice) return;
+      
+      try {
+        switch (payload.voice) {
+          case 'ready': {
+            console.log('Voice ready received from peer, _voiceOfferCreated=', _voiceOfferCreated);
+            // Only create offer if we're in voice AND haven't already created one
+            if (_voiceActive && _voicePc && !_voiceOfferCreated) {
+              console.log('Creating offer because we are in voice and offer not yet created');
+              _voiceOfferCreated = true;
+              const offer = await _voicePc.createOffer();
+              await _voicePc.setLocalDescription(offer);
+              sendFn(JSON.stringify({
+                type: 'relay',
+                payload: { voice: 'offer', sdp: offer.sdp },
+              }));
+              console.log('Offer sent');
+            } else {
+              console.log('Not creating offer: _voiceActive=', _voiceActive, '_voicePc=', !!_voicePc, '_voiceOfferCreated=', _voiceOfferCreated);
+            }
+            break;
+          }
+          case 'offer': {
+            console.log('Offer received from peer');
+            if (_voicePc) {
+              await _voicePc.setRemoteDescription(new RTCSessionDescription({
+                type: 'offer',
+                sdp: payload.sdp,
+              }));
+              const answer = await _voicePc.createAnswer();
+              await _voicePc.setLocalDescription(answer);
+              sendFn(JSON.stringify({
+                type: 'relay',
+                payload: { voice: 'answer', sdp: answer.sdp },
+              }));
+              console.log('Answer sent');
+            }
+            break;
+          }
+          case 'answer': {
+            console.log('Answer received from peer');
+            if (_voicePc && _voicePc.remoteDescription === null) {
+              await _voicePc.setRemoteDescription(new RTCSessionDescription({
+                type: 'answer',
+                sdp: payload.sdp,
+              }));
+              console.log('Remote description set from answer');
+            }
+            break;
+          }
+          case 'ice': {
+            if (_voicePc && payload.candidate) {
+              try {
+                await _voicePc.addIceCandidate(new RTCIceCandidate(payload.candidate));
+              } catch (err) {
+                console.warn('ICE candidate error:', err);
+              }
+            }
+            break;
+          }
+        }
+      } catch (err) {
+        console.error('Voice relay error:', err);
+      }
+    }
+
+    function _voiceHandleFull() {
+      const btnDefuse = document.getElementById('btn-mic-defuse');
+      if (btnDefuse) {
+        btnDefuse.classList.add('disabled');
+        btnDefuse.setAttribute('title', (t && t.mic_full_label) || 'Voice full');
+      }
+      _showToast((t && t.mic_full_label) || 'Voice full - 2 max');
+    }
+
     function setupDefuseGame() {
       document.getElementById('defuse-btn-inspect')?.addEventListener('click', () => {
         _defuseCurrentAction = 'inspect';
@@ -7855,6 +8312,18 @@
         document.getElementById('defuse-btn-inspect').classList.remove('active');
       });
       document.getElementById('btn-defuse-leave')?.addEventListener('click', leaveDefuseRoom);
+      document.getElementById('btn-mic-defuse')?.addEventListener('click', function(e) {
+        if (this.classList.contains('disabled')) return;
+        if (_voiceActive) {
+          const sendFn = _voiceGetSendFn();
+          sendFn(JSON.stringify({ type: 'voice-leave' }));
+          _voiceDisconnect();
+        } else {
+          const sendFn = _voiceGetSendFn();
+          _voiceConnect(sendFn);
+          sendFn(JSON.stringify({ type: 'voice-join' }));
+        }
+      });
       document.getElementById('btn-defuse-restart')?.addEventListener('click', () => {
         if (_defuseSocket) {
           _defuseSocket.send(JSON.stringify({ type: 'defuse-restart' }));
@@ -7884,10 +8353,11 @@
       document.getElementById('btn-defuse-share')?.addEventListener('click', async () => {
         const btn = document.getElementById('btn-defuse-share');
         const originalHTML = btn?.innerHTML;
+        const shareUrl = _defuseRoomId ? `${location.origin}${location.pathname}#${_defuseRoomId}` : location.href;
         await shareWithFallback({
-          text: buildGameShareText(getCurrentGameShareMeta()),
-          url: location.href,
-          copyValue: location.href,
+          text: undefined,
+          url: shareUrl,
+          copyValue: shareUrl,
           onShared: () => {
             if (btn) { btn.innerHTML = '✅'; setTimeout(() => { btn.innerHTML = originalHTML; }, 1800); }
           },

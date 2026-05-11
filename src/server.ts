@@ -221,6 +221,7 @@ export interface DefuseState {
   wrongDefuses: number;
   triggeredBombs: number;
   finalTime: number | null; // ms = realTime + totalPenalties
+  voiceSlots?: [string | null, string | null]; // conn.id of active voice participants
 }
 
 export interface DefuseRankingEntry {
@@ -282,7 +283,10 @@ export type ClientMessage =
   | { type: "defuse-defuse"; row: number; col: number }
   | { type: "defuse-restart" }
   | { type: "defuse-play-again" }
-  | { type: "defuse-sync" };
+  | { type: "defuse-sync" }
+  | { type: "relay"; payload: unknown }
+  | { type: "voice-join" }
+  | { type: "voice-leave" };
 
 // Server → Client
 export type ServerMessage =
@@ -291,7 +295,9 @@ export type ServerMessage =
   | { type: "sticker"; id: string; from: 0 | 1; at: number }
   | { type: "bomb-found"; playerIndex: 0 | 1 }
   | { type: "defuse-state"; state: DefuseState }
-  | { type: "defuse-penalty"; seconds: 20 | 30; row: number; col: number };
+  | { type: "defuse-penalty"; seconds: 20 | 30; row: number; col: number }
+  | { type: "relay"; from: string; payload: unknown }
+  | { type: "voice-full" };
 
 const RANKING_ROOM_ID = "__ranking__";
 const RANKING_STORAGE_KEY = "ranking";
@@ -443,6 +449,7 @@ export function createDefuseState(
     wrongDefuses: 0,
     triggeredBombs: 0,
     finalTime: null,
+    voiceSlots: [null, null],
   };
 }
 
@@ -1112,12 +1119,26 @@ export default class GameRoom implements Party.Server {
       await this.handleReveal(sender, msg.row, msg.col);
     if (msg.type === "flag") await this.handleFlag(sender, msg.row, msg.col);
     if (msg.type === "rematch") await this.handleRematch(sender);
+    if (msg.type === "relay")
+      this.handleRelay(sender, msg.payload);
+    if (msg.type === "voice-join")
+      await this.handleVoiceJoin(sender);
+    if (msg.type === "voice-leave")
+      await this.handleVoiceLeave(sender);
     if (msg.type === "sticker") await this.handleSticker(sender, msg.id);
   }
 
   async onClose(conn: Party.Connection) {
     this.defuseConnectionToName.delete(conn.id);
     this.connectionToPlayer.delete(conn.id);
+    // Clean up voice slots if this connection was in voice
+    if (this.defuseState?.voiceSlots) {
+      const idx = this.defuseState.voiceSlots.indexOf(conn.id);
+      if (idx !== -1) {
+        this.defuseState.voiceSlots[idx] = null;
+        this.broadcastDefuse();
+      }
+    }
     await this.room.storage.put("connectionToPlayer", this.connectionToPlayer);
   }
 
@@ -1530,6 +1551,54 @@ export default class GameRoom implements Party.Server {
         at: now,
       } satisfies ServerMessage),
     );
+  }
+
+  private handleRelay(conn: Party.Connection, payload: unknown) {
+    // Broadcast relay payload to all connections except sender
+    this.room.broadcast(
+      JSON.stringify({
+        type: "relay",
+        from: conn.id,
+        payload,
+      } satisfies ServerMessage),
+      [conn.id],
+    );
+  }
+
+  private async handleVoiceJoin(conn: Party.Connection) {
+    if (!this.defuseState) return;
+    if (!this.defuseConnectionToName.has(conn.id)) return;
+
+    // Only for multiplayer defuse
+    if (!this.defuseState.isMulti) return;
+
+    if (!this.defuseState.voiceSlots) {
+      this.defuseState.voiceSlots = [null, null];
+    }
+
+    // Find first available slot
+    const emptySlot = this.defuseState.voiceSlots.findIndex((s) => s === null);
+    if (emptySlot === -1) {
+      // Both slots full
+      this.send(conn, { type: "voice-full" });
+      return;
+    }
+
+    // Assign connection to slot
+    this.defuseState.voiceSlots[emptySlot] = conn.id;
+    await this.persistDefuse();
+    this.broadcastDefuse();
+  }
+
+  private async handleVoiceLeave(conn: Party.Connection) {
+    if (!this.defuseState?.voiceSlots) return;
+
+    const idx = this.defuseState.voiceSlots.indexOf(conn.id);
+    if (idx !== -1) {
+      this.defuseState.voiceSlots[idx] = null;
+      await this.persistDefuse();
+      this.broadcastDefuse();
+    }
   }
 
   private async finishExplosiveCooldown() {
