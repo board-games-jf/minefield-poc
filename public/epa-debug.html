@@ -371,8 +371,8 @@
           <p class="hint" id="mode-summary"></p>
         </section>
 
-        <section class="card custom-fields" id="custom-fields" hidden>
-          <div class="section-title">Config Custom</div>
+        <section class="card custom-fields" id="custom-fields">
+          <div class="section-title" id="custom-fields-title">Ajustes do gerador</div>
           <div class="grid-two">
             <label>Algoritmo
               <select id="generator-select">
@@ -497,6 +497,7 @@
     const modeSelect = document.getElementById("mode-select");
     const difficultySelect = document.getElementById("difficulty-select");
     const modeSummary = document.getElementById("mode-summary");
+    const customFieldsTitle = document.getElementById("custom-fields-title");
     const generatorSelect = document.getElementById("generator-select");
     const rowsInput = document.getElementById("rows-input");
     const colsInput = document.getElementById("cols-input");
@@ -535,7 +536,12 @@
       sourceModeBtn.classList.toggle("active", next === "mode");
       sourceCustomBtn.classList.toggle("active", next === "custom");
       modeFields.hidden = next !== "mode";
-      customFields.hidden = next !== "custom";
+      customFields.hidden = false;
+      if (customFieldsTitle) {
+        customFieldsTitle.textContent = next === "mode"
+          ? "Ajustes do modo selecionado"
+          : "Ajustes do gerador";
+      }
       syncControlsFromMode();
     }
 

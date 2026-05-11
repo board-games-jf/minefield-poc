@@ -2,6 +2,7 @@ import type * as Party from "partykit/server";
 import {
   generateGrid as generateCoopGrid,
   ENERGY_PRESETS,
+  DEFUSE_ENERGY_PRESETS,
   generateVersusGrid,
   VERSUS_ENERGY_PRESETS,
 } from "./grid-generator";
@@ -72,7 +73,7 @@ function getModeDebugPreset(mode: "coop" | "versus" | "explosive" | "defuse") {
                 cols: DEFUSE_CONFIGS.easy.cols,
                 bombs: DEFUSE_CONFIGS.easy.bombs,
                 algorithm: "epa",
-                params: ENERGY_PRESETS.easy,
+                params: DEFUSE_ENERGY_PRESETS.easy,
               },
     medium:
       mode === "coop"
@@ -104,7 +105,7 @@ function getModeDebugPreset(mode: "coop" | "versus" | "explosive" | "defuse") {
                 cols: DEFUSE_CONFIGS.medium.cols,
                 bombs: DEFUSE_CONFIGS.medium.bombs,
                 algorithm: "epa",
-                params: ENERGY_PRESETS.medium,
+                params: DEFUSE_ENERGY_PRESETS.medium,
               },
     hard:
       mode === "coop"
@@ -136,7 +137,7 @@ function getModeDebugPreset(mode: "coop" | "versus" | "explosive" | "defuse") {
                 cols: DEFUSE_CONFIGS.hard.cols,
                 bombs: DEFUSE_CONFIGS.hard.bombs,
                 algorithm: "epa",
-                params: ENERGY_PRESETS.hard,
+                params: DEFUSE_ENERGY_PRESETS.hard,
               },
   };
 
@@ -2219,7 +2220,7 @@ export default class GameRoom implements Party.Server {
       return;
     }
 
-    const preset = ENERGY_PRESETS[this.defuseState.difficulty];
+    const preset = DEFUSE_ENERGY_PRESETS[this.defuseState.difficulty];
     const result = generateCoopGrid({
       rows,
       cols,

@@ -134,6 +134,45 @@ export const ENERGY_PRESETS: Record<"easy" | "medium" | "hard", EnergyPreset> =
     },
   };
 
+/**
+ * Preset parameters keyed by defuse difficulty.
+ * Defuse is a solo/coop timed mode — tune separately from coop.
+ */
+export const DEFUSE_ENERGY_PRESETS: Record<
+  "easy" | "medium" | "hard",
+  EnergyPreset
+> = {
+  easy: {
+    safeEnergy: 2,
+    dangerSources: 2,
+    dangerEnergyMax: 3,
+    reliefPockets: 1,
+    reliefEnergyMax: 2,
+    reliefWeightMultiplier: 0.35,
+    dangerWeightMultiplier: 1.0,
+  },
+
+  medium: {
+    safeEnergy: 2,
+    dangerSources: 3,
+    dangerEnergyMax: 5,
+    reliefPockets: 2,
+    reliefEnergyMax: 3,
+    reliefWeightMultiplier: 0.32,
+    dangerWeightMultiplier: 1.2,
+  },
+
+  hard: {
+    safeEnergy: 1,
+    dangerSources: 4,
+    dangerEnergyMax: 5,
+    reliefPockets: 4,
+    reliefEnergyMax: 3,
+    reliefWeightMultiplier: 0.28,
+    dangerWeightMultiplier: 1.25,
+  },
+};
+
 export const VERSUS_ENERGY_PRESETS: Record<
   "easy" | "medium" | "hard",
   WeightedPreset
