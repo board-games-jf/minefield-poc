@@ -2809,38 +2809,55 @@
       gap: 5px;
     }
 
-    .chip-crown {
-      font-size: 10px;
-    }
+	    .chip-crown {
+	      font-size: 10px;
+	      display: inline-flex;
+	      align-items: center;
+	      justify-content: center;
+	      line-height: 1;
+	      vertical-align: middle;
+	      position: relative;
+	      top: -1px;
+	    }
 
     .chip-label {
       font-size: 10px;
     }
 
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      height: 28px;
-      box-sizing: border-box;
-      padding: 0 10px;
-      line-height: 1;
-      border-radius: 6px;
-      vertical-align: middle;
-    }
+	    .badge {
+	      display: inline-flex;
+	      align-items: center;
+	      justify-content: center;
+	      gap: 4px;
+	      height: 28px;
+	      box-sizing: border-box;
+	      padding: 0 10px;
+	      line-height: 1;
+	      border-radius: 6px;
+	      vertical-align: middle;
+	    }
 
-    .badge img,
+	    .badge img,
     .badge svg,
     .badge .icon {
       display: block;
       flex-shrink: 0;
     }
 
-    .badge span {
-      display: flex;
-      align-items: center;
-    }
+	    .badge span {
+	      display: flex;
+	      align-items: center;
+	    }
+	    .badge .chip-crown {
+	      width: 14px;
+	      height: 14px;
+	      font-size: 14px;
+	      line-height: 14px;
+	      display: inline-flex;
+	      align-items: center;
+	      justify-content: center;
+	      transform: translateY(-1px);
+	    }
 
     .defuse-rank-penalty-pill {
       font-size: 10px;
@@ -3180,23 +3197,38 @@
       padding: 4px 0;
     }
 
-    .defuse-player-chip {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+	    .defuse-player-chip {
+	      display: flex;
+	      align-items: center;
+	      gap: 6px;
       background: var(--bg-card);
       border: 0.5px solid var(--border);
       border-radius: 14px;
       padding: 5px 12px;
       font-size: 12px;
       font-weight: 600;
-      color: var(--text);
-      line-height: 1;
-    }
+	      color: var(--text);
+	      line-height: 1;
+	    }
+	    .defuse-player-chip > span {
+	      display: flex;
+	      align-items: center;
+	      line-height: 1;
+	    }
+	    .defuse-player-chip .chip-crown {
+	      width: 14px;
+	      height: 14px;
+	      font-size: 11px;
+	      line-height: 14px;
+	      display: inline-flex;
+	      align-items: center;
+	      justify-content: center;
+	      transform: translateY(-1px);
+	    }
 
-    .defuse-player-chip .chip-dot {
-      width: 7px;
-      height: 7px;
+	    .defuse-player-chip .chip-dot {
+	      width: 7px;
+	      height: 7px;
       border-radius: 50%;
       background: var(--teal);
       flex-shrink: 0;
@@ -7871,14 +7903,14 @@
           strip.className = 'defuse-players-strip';
           const chip = document.createElement('div');
           chip.className = 'defuse-player-chip';
-          const dot = document.createElement('span');
-          dot.className = 'chip-dot';
-          const crown = document.createElement('span');
-          crown.textContent = '👑';
-          crown.style.cssText = 'font-size:11px;line-height:1;';
-          const name = document.createElement('span');
-          name.textContent = myName || '?';
-          chip.append(dot, crown, name);
+	          const dot = document.createElement('span');
+	          dot.className = 'chip-dot';
+	          const crown = document.createElement('span');
+	          crown.className = 'chip-crown';
+	          crown.textContent = '👑';
+	          const name = document.createElement('span');
+	          name.textContent = myName || '?';
+	          chip.append(dot, crown, name);
           strip.appendChild(chip);
           playersStrip.innerHTML = '';
           playersStrip.appendChild(strip);
@@ -8216,14 +8248,14 @@
         dot.className = 'chip-dot';
         const name = document.createElement('span');
         name.textContent = p.name || '?';
-        if (i === 0) {
-          const crown = document.createElement('span');
-          crown.textContent = '👑';
-          crown.style.cssText = 'font-size:11px;line-height:1;';
-          chip.append(dot, crown, name);
-        } else {
-          chip.append(dot, name);
-        }
+	        if (i === 0) {
+	          const crown = document.createElement('span');
+	          crown.className = 'chip-crown';
+	          crown.textContent = '👑';
+	          chip.append(dot, crown, name);
+	        } else {
+	          chip.append(dot, name);
+	        }
         strip.appendChild(chip);
       });
       playersStrip.innerHTML = '';
