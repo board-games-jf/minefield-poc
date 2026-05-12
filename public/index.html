@@ -1213,6 +1213,37 @@
       transition: transform 0.12s, border-color 0.16s, background 0.16s, box-shadow 0.16s;
     }
 
+    /* Mic remote ON — same blink pattern as last-clicked cell, white glow, 3 cycles then stops */
+    @keyframes micRemoteBlinkOn {
+      0%,
+      100% {
+        border-color: rgba(255, 255, 255, 0.75);
+        box-shadow: 0 0 14px rgba(255, 255, 255, 0.55), inset 0 0 8px rgba(255, 255, 255, 0.18);
+      }
+      50% {
+        border-color: rgba(255, 255, 255, 0.30);
+        box-shadow: 0 0 6px rgba(255, 255, 255, 0.20), inset 0 0 3px rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    @keyframes micRemoteFadeOut {
+      0%   { border-color: rgba(255,255,255,0.75); box-shadow: 0 0 14px rgba(255,255,255,0.55), inset 0 0 8px rgba(255,255,255,0.18); }
+      100% { border-color: rgba(255,255,255,0.12); box-shadow: none; }
+    }
+
+    @keyframes micRemotePulseOff {
+      0%   { box-shadow: 0 0 8px rgba(255,255,255,0.20); border-color: rgba(255,255,255,0.40); transform: scale(1); }
+      30%  { box-shadow: none; border-color: rgba(255,255,255,0.20); transform: scale(0.93); }
+      100% { box-shadow: none; border-color: rgba(255,255,255,0.12); transform: scale(1); }
+    }
+
+    .mic-remote-blink-on  {
+      border: 2.5px solid rgba(255,255,255,0.75);
+      animation: micRemoteBlinkOn 0.8s ease-in-out 3;
+    }
+    .mic-remote-fade-out  { animation: micRemoteFadeOut  0.6s ease forwards; }
+    .mic-remote-pulse-off { animation: micRemotePulseOff 0.40s ease forwards; }
+
     .icon-toggle:hover {
       transform: translateY(-1px);
       border-color: rgba(255, 255, 255, 0.18);
@@ -4242,13 +4273,17 @@
     let _voicePc = null;        // RTCPeerConnection | null
     let _voiceStream = null;    // MediaStream | null (local mic)
     let _voiceActive = false;   // whether we're in voice
+    let _voiceMicDebounceTimer = null;  // debounce for mic toast+sound
     let _voiceMuted = false;    // mic muted (track disabled, PC stays open)
     let _voiceAudioCtx = null;  // AudioContext for local VAD
     let _voiceAnalyser = null;  // AnalyserNode for local VAD (my mic)
     let _voiceSpeakingRelayed = false; // last speaking state sent to peer
     let _voiceLastSpeakBroadcast = 0;  // timestamp of last speaking broadcast
     let _voiceOfferCreated = false; // flag to avoid both sides creating offer
-    let _voiceRemoteMicOn = false;  // whether remote peer has mic on
+    let _voiceRemoteMicOn = false;       // whether remote peer has mic on
+    let _voiceRemoteMicConfirmed = false;  // true only after debounce fires (UI is ready)
+    let _voiceRemoteMicOffPending = false; // while true, keep remote chip in speaking state until off debounce commits
+    let _voiceRemoteSpeaking = false; // persisted so rerenders don't neutralize the remote chip
 
     // ── Utility: Toast Notification ────────────────────────────────────────
     function _showToast(message, duration = 3000) {
@@ -8196,6 +8231,7 @@
           playersStrip.style.display = '';
           const members = Array.isArray(squadMembers) && squadMembers.length ? squadMembers : [playerName || '?'];
           _updateDefusePlayers(members.map((name) => ({ name, waiting: status === 'waiting', isSelf: !!myName && isSamePlayerName(name, myName) })));
+          _voiceReapplyRemoteVisualState();
         } else {
           playersStrip.style.display = 'none';
           playersStrip.innerHTML = '';
@@ -8491,6 +8527,11 @@
         };
 
         _voiceActive = true;
+        // Cancel any pending remote-mic debounce — our own mic now has priority
+        if (_voiceMicDebounceTimer !== null) {
+          clearTimeout(_voiceMicDebounceTimer);
+          _voiceMicDebounceTimer = null;
+        }
         _updateVoiceButton();
 
         // Signal readiness via WebRTC relay + advertise mic via game socket
@@ -8530,7 +8571,7 @@
       const audioEl = document.getElementById('voice-audio');
       if (audioEl) { audioEl.srcObject = null; }
       _voiceStopVAD();
-      _voiceSetRemoteActive(false);
+      _voiceSetRemoteActive(false, { silent: true });
       _voiceShowSpeakingIndicator(false, false);
       console.log('Voice: peer left, waiting for reconnect...');
       // _voiceActive stays true — user remains in the voice channel
@@ -8654,6 +8695,13 @@
     }
 
     function _voiceShowSpeakingIndicator(speaking, isLocal = true) {
+      // Ignore remote speaking events until the debounce has confirmed their mic is on
+      if (!isLocal && !_voiceRemoteMicConfirmed) return;
+      // If a remote mic-off is already pending, don't let speaking=false neutralize the
+      // chip early; the OFF commit path will clear the visuals in sync with the sound.
+      if (!isLocal && !speaking && _voiceRemoteMicOffPending) return;
+      if (!isLocal) _voiceRemoteSpeaking = speaking;
+
       // Pulse the mic button only for local speaking
       if (isLocal) {
         // (no button pulse — feedback is on the player cards)
@@ -8702,6 +8750,12 @@
           }
         }
       }
+    }
+
+    function _voiceReapplyRemoteVisualState() {
+      if (!_voiceRemoteMicConfirmed) return;
+      if (_voiceRemoteSpeaking) _voiceShowSpeakingIndicator(true, false);
+      else _voiceSetRemoteActive(true, { silent: true });
     }
 
     async function _handleVoiceRelay(payload, sendFn) {
@@ -8848,14 +8902,83 @@
     }
 
     // Show/hide subtle glow on remote card when their mic is on
-    function _voiceSetRemoteActive(on) {
-      _voiceRemoteMicOn = on;
-      const _set = (el) => {
+    function _playMicOnSound() {
+      try {
+        if (!soundEnabled) return;
+        if (!audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) audioCtx = new Ctx();
+        }
+        if (!audioCtx) return;
+        const play = () => {
+          if (audioCtx.state !== 'running') return;
+          const t0 = audioCtx.currentTime + 0.01;
+          [0, 0.12].forEach((delay, i) => {
+            const g = audioCtx.createGain();
+            g.gain.setValueAtTime(0.0001, t0 + delay);
+            g.gain.exponentialRampToValueAtTime(0.08, t0 + delay + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.0001, t0 + delay + 0.09);
+            g.connect(getAudioDest());
+            const o = audioCtx.createOscillator();
+            o.type = 'sine';
+            o.frequency.setValueAtTime(660 + i * 220, t0 + delay);
+            o.connect(g);
+            o.start(t0 + delay);
+            o.stop(t0 + delay + 0.10);
+          });
+        };
+        if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {});
+        else play();
+      } catch { }
+    }
+
+    function _playMicOffSound() {
+      try {
+        if (!soundEnabled) return;
+        if (!audioCtx) {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          if (Ctx) audioCtx = new Ctx();
+        }
+        if (!audioCtx) return;
+        const play = () => {
+          if (audioCtx.state !== 'running') return;
+          const t0 = audioCtx.currentTime + 0.01;
+          const g = audioCtx.createGain();
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(0.07, t0 + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.14);
+          g.connect(getAudioDest());
+          const o = audioCtx.createOscillator();
+          o.type = 'sine';
+          o.frequency.setValueAtTime(660, t0);
+          o.frequency.linearRampToValueAtTime(380, t0 + 0.14);
+          o.connect(g);
+          o.start(t0);
+          o.stop(t0 + 0.16);
+        };
+        if (audioCtx.state === 'suspended') audioCtx.resume().then(play).catch(() => {});
+        else play();
+      } catch { }
+    }
+
+    function _voiceSetRemoteActive(on, { silent = false } = {}) {
+      // _voiceRemoteMicOn is committed inside the debounce (both ON and OFF).
+      // Important: don't clear it immediately on OFF, otherwise a near-simultaneous
+      // 'voice-speaking: false' can remove the mic icon before the debounced sound/UI
+      // feedback, creating the "mic off before the off-sound" glitch.
+
+      // Cancel any pending debounce
+      if (_voiceMicDebounceTimer !== null) {
+        clearTimeout(_voiceMicDebounceTimer);
+        _voiceMicDebounceTimer = null;
+      }
+
+      // Helper: update player card
+      const _applyToCard = (el) => {
         if (!el) return;
         const nameParent = el.querySelector('.player-name-label') || el;
         if (on) {
           el.classList.add('voice-remote-active');
-          // Show mic icon only if not already speaking
           if (!el.classList.contains('speaking') && !nameParent.querySelector('.voice-mic-icon')) {
             const icon = document.createElement('span');
             icon.className = 'voice-mic-icon';
@@ -8863,17 +8986,80 @@
             nameParent.appendChild(icon);
           }
         } else {
-          // Full reset when mic turns off
           el.classList.remove('voice-remote-active', 'speaking');
           nameParent.querySelector('.voice-bars')?.remove();
           nameParent.querySelector('.voice-mic-icon')?.remove();
         }
       };
-      if (document.getElementById('screen-game')?.classList.contains('active')) {
-        _set(document.getElementById(myPlayerIndex === 0 ? 'p2-card' : 'p1-card'));
-      } else if (document.getElementById('screen-defuse-game')?.classList.contains('active')) {
-        document.querySelectorAll('.defuse-player-chip:not(.is-self)').forEach(_set);
+      const _updateCards = () => {
+        if (document.getElementById('screen-game')?.classList.contains('active')) {
+          _applyToCard(document.getElementById(myPlayerIndex === 0 ? 'p2-card' : 'p1-card'));
+        } else if (document.getElementById('screen-defuse-game')?.classList.contains('active')) {
+          document.querySelectorAll('.defuse-player-chip:not(.is-self)').forEach(_applyToCard);
+        }
+      };
+
+      if (silent) {
+        // Peer disconnected: reset immediately, no debounce, no animation, no sound
+        _voiceRemoteSpeaking = false;
+        _voiceRemoteMicOffPending = false;
+        _voiceRemoteMicConfirmed = false;
+        for (const id of ['btn-mic', 'btn-mic-defuse']) {
+          const btn = document.getElementById(id);
+          if (btn) btn.classList.remove('mic-remote-blink-on', 'mic-remote-fade-out', 'mic-remote-pulse-off');
+        }
+        _updateCards();
+        return;
       }
+
+      // For mic OFF: block speaking indicator immediately (don't wait for debounce)
+      if (!on) {
+        _voiceRemoteSpeaking = false;
+        _voiceRemoteMicOffPending = true;
+        _voiceRemoteMicConfirmed = false;
+      } else {
+        _voiceRemoteMicOffPending = false;
+      }
+
+      // Debounce everything — card, button animation and sound — to avoid inconsistent feedback
+      _voiceMicDebounceTimer = setTimeout(() => {
+        _voiceMicDebounceTimer = null;
+
+        // Commit the state and unblock speaking indicator
+        _voiceRemoteMicOn = on;
+        _voiceRemoteMicConfirmed = on;
+        _voiceRemoteMicOffPending = false;
+
+        // Play sound + update visuals.
+        // For OFF, ensure the visual "neutral" state happens after the off-chirp starts,
+        // otherwise it feels like the mic turned off before the feedback sound.
+        if (on) {
+          _updateCards();
+          _playMicOnSound();
+        } else {
+          _playMicOffSound();
+          setTimeout(() => _updateCards(), 170);
+        }
+
+        // Animate mic button only for ON state and only when local mic is inactive
+        if (on && !_voiceActive) {
+          for (const id of ['btn-mic', 'btn-mic-defuse']) {
+            const btn = document.getElementById(id);
+            if (!btn || btn.style.display === 'none') continue;
+            btn.classList.remove('mic-remote-blink-on', 'mic-remote-fade-out', 'mic-remote-pulse-off');
+            void btn.offsetWidth;
+            btn.classList.add('mic-remote-blink-on');
+            btn.addEventListener('animationend', () => {
+              btn.classList.remove('mic-remote-blink-on');
+              void btn.offsetWidth;
+              btn.classList.add('mic-remote-fade-out');
+              btn.addEventListener('animationend', () => {
+                btn.classList.remove('mic-remote-fade-out');
+              }, { once: true });
+            }, { once: true });
+          }
+        }
+      }, 1500);
     }
 
     function setupDefuseGame() {
