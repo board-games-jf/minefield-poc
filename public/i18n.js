@@ -201,7 +201,7 @@ export const TRANSLATIONS = {
     update_available: "Nova versão disponível — toque para atualizar",
 
     // Ranking
-    ranking_btn_label: "Ranking",
+    ranking_btn_label: "Os Bichãozão",
     ranking_top10_title: "🏆 Top 10",
     ranking_top3_title: "🏆 Top 3",
     ranking_you: "você",
@@ -209,7 +209,7 @@ export const TRANSLATIONS = {
     ranking_points_label: "pontos",
     ranking_wins_label: (n) => `${n === 1 ? "vitória" : "vitórias"}`,
     ranking_close_label: "Fechar",
-    ranking_empty: "Ainda não tem ranking.",
+    ranking_empty: "Cadê os bichãozão?",
 
     // Mode briefing preview captions
     briefing_versus_caption: "Quem encontrar mais minas vence",
