@@ -7659,20 +7659,8 @@
         sendFn(JSON.stringify({ type: 'voice-join' }));
       }
     });
-    document.getElementById("btn-mic-defuse")?.addEventListener("click", function(e) {
-      if (this.classList.contains('disabled')) return;
-      if (_voiceActive) {
-        const sendFn = _voiceGetSendFn();
-        sendFn(JSON.stringify({ type: 'voice-leave' }));
-        _voiceDisconnect();
-      } else {
-        const sendFn = _voiceGetSendFn();
-        _voiceConnect(sendFn);
-        sendFn(JSON.stringify({ type: 'voice-join' }));
-      }
-    });
-    document.getElementById("btn-ranking").addEventListener("click", () => openRankingModalOnTab('main'));
     document.getElementById("btn-ranking-close").addEventListener("click", closeRankingModal);
+    document.getElementById("btn-ranking").addEventListener("click", () => openRankingModalOnTab('main'));
     document.getElementById("ranking-modal").addEventListener("click", (e) => {
       if (e.target.id === "ranking-modal") closeRankingModal();
     });
@@ -7736,10 +7724,20 @@
     }
     document.getElementById("sound-toggle").addEventListener("click", (e) => {
       e.stopPropagation();
+      if (!soundEnabled) {
+        if (masterVolume === 0) setVolume(0.5);
+        setSoundEnabled(true);
+        return;
+      }
       _openVolPopup("vol-popup", e.currentTarget);
     });
     document.getElementById("sound-toggle-defuse")?.addEventListener("click", (e) => {
       e.stopPropagation();
+      if (!soundEnabled) {
+        if (masterVolume === 0) setVolume(0.5);
+        setSoundEnabled(true);
+        return;
+      }
       _openVolPopup("vol-popup-defuse", e.currentTarget);
     });
     function _volSliderInput(e) {
@@ -8408,6 +8406,7 @@
           errMsg = 'Microfone em uso por outro aplicativo';
         }
         console.warn('Voice connect error:', errMsg);
+        _showToast(errMsg, 3500);
         _voiceActive = false;
         _updateVoiceButton();
       } finally {
