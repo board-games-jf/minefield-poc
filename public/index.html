@@ -7371,6 +7371,28 @@
     let _rankingActiveTab = 'main';
     let _defuseRankingDiff = 'medium';
 
+    function getPreferredRankingContext() {
+      if (_defuseCurrentState || _defuseLastParams) {
+        const state = _defuseCurrentState || _defuseLastParams;
+        return {
+          tab: 'defuse',
+          difficulty: state?.difficulty || 'medium',
+        };
+      }
+      if (currentState) {
+        return {
+          tab: currentState.mode === 'defuse' ? 'defuse' : 'main',
+          difficulty: currentState.difficulty || 'medium',
+        };
+      }
+      const selectedMode = getSelectedMode?.() || 'versus';
+      const selectedDifficulty = getSelectedDifficulty?.() || 'medium';
+      return {
+        tab: selectedMode === 'defuse' ? 'defuse' : 'main',
+        difficulty: selectedDifficulty,
+      };
+    }
+
     async function openRankingModalOnTab(tab) {
       _rankingActiveTab = tab || 'main';
       setRankingModalOpen(true);
@@ -7797,7 +7819,11 @@
       }
     });
     document.getElementById("btn-ranking-close").addEventListener("click", closeRankingModal);
-    document.getElementById("btn-ranking").addEventListener("click", () => openRankingModalOnTab('main'));
+    document.getElementById("btn-ranking").addEventListener("click", () => {
+      const context = getPreferredRankingContext();
+      _defuseRankingDiff = context.difficulty;
+      openRankingModalOnTab(context.tab);
+    });
     document.getElementById("ranking-modal").addEventListener("click", (e) => {
       if (e.target.id === "ranking-modal") closeRankingModal();
     });
@@ -7813,6 +7839,8 @@
       }
     });
     document.getElementById("btn-defuse-result-ranking")?.addEventListener("click", () => {
+      const context = getPreferredRankingContext();
+      _defuseRankingDiff = context.difficulty;
       openRankingModalOnTab('defuse');
     });
 
