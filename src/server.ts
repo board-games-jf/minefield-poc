@@ -294,7 +294,7 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "state"; state: GameState }
   | { type: "error"; message: string }
-  | { type: "sticker"; id: string; from: 0 | 1; at: number }
+  | { type: "sticker"; id: string; from: 0 | 1 | string; at: number }
   | { type: "bomb-found"; playerIndex: 0 | 1 }
   | { type: "defuse-state"; state: DefuseState }
   | { type: "defuse-penalty"; seconds: 20 | 30; row: number; col: number }
@@ -1150,6 +1150,7 @@ export default class GameRoom implements Party.Server {
       const idx = this.defuseState.voiceSlots.indexOf(conn.id);
       if (idx !== -1) {
         this.defuseState.voiceSlots[idx] = null;
+        await this.persistDefuse();
         this.broadcastDefuse();
       }
     }
@@ -1535,11 +1536,12 @@ export default class GameRoom implements Party.Server {
       if (now - last < 900) return;
       this.lastStickerAt.set(conn.id, now);
 
+      const senderName = this.defuseConnectionToName.get(conn.id) ?? conn.id;
       this.room.broadcast(
         JSON.stringify({
           type: "sticker",
           id,
-          from: 0,
+          from: senderName,
           at: now,
         } satisfies ServerMessage),
       );
@@ -1590,6 +1592,21 @@ export default class GameRoom implements Party.Server {
 
     if (!this.defuseState.voiceSlots) {
       this.defuseState.voiceSlots = [null, null];
+    }
+
+    // Clean up stale slots (connections that are no longer active)
+    for (let i = 0; i < this.defuseState.voiceSlots.length; i++) {
+      const slotId = this.defuseState.voiceSlots[i];
+      if (slotId !== null && !this.defuseConnectionToName.has(slotId)) {
+        this.defuseState.voiceSlots[i] = null;
+      }
+    }
+
+    // Already in a slot — idempotent
+    if (this.defuseState.voiceSlots.includes(conn.id)) {
+      await this.persistDefuse();
+      this.broadcastDefuse();
+      return;
     }
 
     // Find first available slot

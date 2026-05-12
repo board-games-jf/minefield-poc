@@ -5744,7 +5744,7 @@
           const isSelf = myName && isSamePlayerName(String(msg.from ?? ''), myName);
           if (!isSelf) {
             if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
-            else showStickerToast(1, msg.id);
+            else showStickerToast(msg.from, msg.id);
           }
         }
         if (msg.type === 'relay') {
@@ -6183,7 +6183,7 @@
       stickerLockedUntil = Math.max(stickerLockedUntil, now + STICKER_DISPLAY_MS);
       _defuseSocket.send(JSON.stringify({ type: "sticker", id }));
       // Show local toast immediately; server will echo to others
-      showStickerToast(0, id);
+      showStickerToast(myName || myPlayerIndex || 0, id);
       const palette = document.getElementById('defuse-sticker-palette');
       const launcher = document.getElementById('defuse-sticker-launcher');
       palette?.classList.remove('open');
@@ -6345,8 +6345,8 @@
       toasts.innerHTML = "";
       const el = document.createElement("div");
       // from can be numeric index (0/1) or player name string
-      const side = (from === 0 || from === myPlayerIndex) ? "p1"
-                 : (from === 1 || (typeof from === "string" && !!from)) ? "p2" : "p1";
+      const isMe = from === myPlayerIndex || (typeof from === "string" && from === myName);
+      const side = isMe ? "p1" : "p2";
       el.className = "sticker-toast " + side;
       el.dataset.sticker = id;
       el.innerHTML = `<div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>`;
@@ -7933,7 +7933,7 @@
           const isSelf = myName && isSamePlayerName(String(msg.from ?? ''), myName);
           if (!isSelf) {
             if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
-            else showStickerToast(1, msg.id);
+            else showStickerToast(msg.from, msg.id);
           }
         }
         if (msg.type === 'relay') {
