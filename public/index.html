@@ -4284,6 +4284,7 @@
     let _voiceRemoteMicConfirmed = false;  // true only after debounce fires (UI is ready)
     let _voiceRemoteMicOffPending = false; // while true, keep remote chip in speaking state until off debounce commits
     let _voiceRemoteSpeaking = false; // persisted so rerenders don't neutralize the remote chip
+    let _voiceToggleLockedUntil = 0; // guards against rapid local mic toggles
 
     // ── Utility: Toast Notification ────────────────────────────────────────
     function _showToast(message, duration = 3000) {
@@ -7784,6 +7785,7 @@
 
     document.getElementById("btn-leave").addEventListener("click", leaveRoom);
     document.getElementById("btn-mic")?.addEventListener("click", async () => {
+      if (!_voiceBeginToggleLock()) return;
       if (_voiceActive) {
         const sendFn = _voiceGetSendFn();
         sendFn(JSON.stringify({ type: 'voice-leave' }));
@@ -8612,6 +8614,13 @@
       _updateVoiceButton();
     }
 
+    function _voiceBeginToggleLock(durationMs = 1000) {
+      const now = Date.now();
+      if (now < _voiceToggleLockedUntil) return false;
+      _voiceToggleLockedUntil = now + durationMs;
+      return true;
+    }
+
     function _updateVoiceButton() {
       for (const btn of [
         document.getElementById('btn-mic'),
@@ -9076,6 +9085,7 @@
       document.getElementById('btn-defuse-leave')?.addEventListener('click', leaveDefuseRoom);
       document.getElementById('btn-mic-defuse')?.addEventListener('click', async function(e) {
         if (this.classList.contains('disabled')) return;
+        if (!_voiceBeginToggleLock()) return;
         if (_voiceActive) {
           _defuseSocket?.send(JSON.stringify({ type: 'voice-leave' }));
           _voiceDisconnect();
