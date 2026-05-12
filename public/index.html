@@ -3115,13 +3115,25 @@
       border-color: rgba(255,255,255,0.3);
       transform: scale(1.07);
     }
-    .defuse-cell.revealed {
-      background: transparent;
-      border-color: transparent;
-      cursor: default;
-      transform: none;
-      font-weight: 600;
-    }
+	    .defuse-cell.revealed {
+	      background: transparent;
+	      border-color: transparent;
+	      border: 0;
+	      cursor: default;
+	      transform: none;
+	      font-weight: 600;
+	    }
+		    .defuse-cell.revealed.bomb {
+		      background: #616161;
+		      border: 0.5px solid rgba(255, 255, 255, 0.12);
+		      border-radius: 4px;
+		      color: #eceff1;
+		    }
+	    .defuse-cell.revealed.finished-reveal {
+	      background: var(--bg-secondary);
+	      border: 0.5px solid rgba(255, 255, 255, 0.06);
+	      border-radius: 4px;
+	    }
     .defuse-cell.revealed.num-1 { color: #378ADD; }
     .defuse-cell.revealed.num-2 { color: #639922; }
     .defuse-cell.revealed.num-3 { color: #D85A30; }
@@ -8053,12 +8065,11 @@
       playerLabelEl.textContent = squadName || playerName || '';
     }
 
-    function _applyDefuseState(state) {
-      _defuseCurrentState = state;
-      const { rows, cols, grid, revealed, defused, exploded, startedAt, totalPenalties, serverNow, elapsedMs,
-              bombsResolved, totalBombs, combo, highestCombo, status, finalTime, isMulti, squadName, playerName, squadMembers } = state;
-      const revealRemainingBombsOnWin =
-        status === 'finished' && finalTime !== null && finalTime < 1_200_000;
+		    function _applyDefuseState(state) {
+		      _defuseCurrentState = state;
+		      const { rows, cols, grid, revealed, defused, exploded, startedAt, totalPenalties, serverNow, elapsedMs,
+		              bombsResolved, totalBombs, combo, highestCombo, status, finalTime, isMulti, squadName, playerName, squadMembers } = state;
+		      const revealRemainingBombsOnFinish = status === 'finished';
 
       // Rebuild grid if dimensions changed
       const board = document.getElementById('defuse-board');
@@ -8073,22 +8084,23 @@
           const cell = cellEls[r * cols + c];
           if (!cell) continue;
           const val = grid[r][c];
-          cell.style.pointerEvents = '';
-          cell.classList.remove('revealed', 'defused', 'exploded');
-          for (let n = 1; n <= 8; n++) cell.classList.remove(`num-${n}`);
-          cell.textContent = '';
-          if (defused[r][c]) {
-            cell.classList.add('defused'); cell.textContent = '💣';
-          } else if (exploded[r][c]) {
-            cell.classList.add('exploded'); cell.textContent = '💣';
-          } else if (revealRemainingBombsOnWin && val === -1) {
-            cell.classList.add('defused'); cell.textContent = '💣';
-          } else if (revealed[r][c]) {
-            cell.classList.add('revealed');
-            if (val > 0) { cell.textContent = String(val); cell.classList.add(`num-${val}`); }
-          }
-        }
-      }
+	          cell.style.pointerEvents = '';
+		          cell.classList.remove('revealed', 'defused', 'exploded', 'bomb', 'finished-reveal');
+	          for (let n = 1; n <= 8; n++) cell.classList.remove(`num-${n}`);
+	          cell.textContent = '';
+	          if (defused[r][c]) {
+	            cell.classList.add('defused'); cell.textContent = '💣';
+	          } else if (exploded[r][c]) {
+	            cell.classList.add('exploded'); cell.textContent = '💣';
+	          } else if (revealRemainingBombsOnFinish && val === -1) {
+	            cell.classList.add('revealed', 'bomb'); cell.textContent = '💣';
+		          } else if (revealed[r][c]) {
+		            cell.classList.add('revealed');
+		            if (status === 'finished' && val > 0) cell.classList.add('finished-reveal');
+		            if (val > 0) { cell.textContent = String(val); cell.classList.add(`num-${val}`); }
+		          }
+	        }
+	      }
 
       // Sync counters
       _defuseTotalBombs = totalBombs;
