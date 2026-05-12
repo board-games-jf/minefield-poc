@@ -1252,6 +1252,10 @@
       opacity: 1;
       pointer-events: auto;
     }
+    .vol-popup.open-down {
+      bottom: auto;
+      top: calc(100% + 8px);
+    }
     .vol-popup-label {
       font-size: 10px;
       color: var(--text-muted);
@@ -1262,8 +1266,6 @@
     #vol-slider {
       writing-mode: vertical-lr;
       direction: rtl;
-      -webkit-appearance: slider-vertical;
-      appearance: auto;
       width: 20px;
       height: 80px;
       cursor: pointer;
@@ -3601,7 +3603,7 @@
               </div>
             </div>
             <div class="vol-wrap">
-              <div class="vol-popup" id="vol-popup">                <input type="range" id="vol-slider" min="0" max="100" value="50" aria-label="Volume">
+              <div class="vol-popup" id="vol-popup">                <input type="range" id="vol-slider" min="0" max="100" value="50" style="writing-mode:vertical-lr;direction:rtl" aria-label="Volume">
                 <span class="vol-popup-label" id="vol-label">50%</span>
               </div>
               <button class="icon-toggle" id="sound-toggle" type="button">
@@ -3659,6 +3661,15 @@
                 <button class="sticker-btn" data-sticker="trophy"><span class="sticker-btn-emoji">🏆</span></button>
               </div>
             </div>
+          </div>
+          <div class="vol-wrap">
+            <div class="vol-popup" id="vol-popup-defuse">
+              <input type="range" id="vol-slider-defuse" min="0" max="100" value="50" style="writing-mode:vertical-lr;direction:rtl" aria-label="Volume">
+              <span class="vol-popup-label" id="vol-label-defuse">50%</span>
+            </div>
+            <button class="icon-toggle" id="sound-toggle-defuse" type="button">
+              <span class="icon-toggle-glyph" id="sound-toggle-defuse-glyph" aria-hidden="true">🔊</span>
+            </button>
           </div>
           <button class="icon-toggle off" id="btn-mic-defuse" type="button" style="display:none" aria-label="Microfone desligado">
             <span class="icon-toggle-glyph" id="btn-mic-defuse-glyph" aria-hidden="true">🎤</span>
@@ -4442,22 +4453,25 @@
     }
 
     function syncSoundToggleUi() {
-      const btn = document.getElementById("sound-toggle");
-      const glyph = document.getElementById("sound-toggle-glyph");
-      if (!btn || !glyph) return;
-      btn.classList.toggle("off", !soundEnabled);
       const icon = !soundEnabled ? "🔇" : masterVolume === 0 ? "🔈" : masterVolume < 0.5 ? "🔉" : "🔊";
-      glyph.textContent = icon;
-      const label = soundEnabled
-        ? (t.sound_on_label || "Sound on")
-        : (t.sound_off_label || "Sound off");
-      btn.setAttribute("aria-label", label);
-      btn.setAttribute("title", label);
-      // sync slider UI
-      const slider = document.getElementById("vol-slider");
-      const volLabel = document.getElementById("vol-label");
-      if (slider) slider.value = Math.round(masterVolume * 100);
-      if (volLabel) volLabel.textContent = Math.round(masterVolume * 100) + "%";
+      const pct = Math.round(masterVolume * 100);
+      for (const [btnId, glyphId, sliderId, labelId, popupId] of [
+        ["sound-toggle", "sound-toggle-glyph", "vol-slider", "vol-label", null],
+        ["sound-toggle-defuse", "sound-toggle-defuse-glyph", "vol-slider-defuse", "vol-label-defuse", null],
+      ]) {
+        const btn = document.getElementById(btnId);
+        const glyph = document.getElementById(glyphId);
+        if (!btn || !glyph) continue;
+        btn.classList.toggle("off", !soundEnabled);
+        glyph.textContent = icon;
+        const label = soundEnabled ? (t.sound_on_label || "Sound on") : (t.sound_off_label || "Sound off");
+        btn.setAttribute("aria-label", label);
+        btn.setAttribute("title", label);
+        const slider = document.getElementById(sliderId);
+        const volLabel = document.getElementById(labelId);
+        if (slider) slider.value = pct;
+        if (volLabel) volLabel.textContent = pct + "%";
+      }
     }
 
     function applyVolumeToAll() {
@@ -4860,7 +4874,7 @@
     function hideError(id) { document.getElementById(id).style.display = "none"; }
     function normalizeNameForCompare(name) {
       // Safari/iOS compatibility: avoid Unicode property escapes like `\p{Diacritic}`.
-      return name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      return String(name).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
     const RESERVED_NAMES = new Set(["EireneBot", "HeraBot", "ÉrisBot", "NêmesisBot", "AtenaBot"].map(normalizeNameForCompare));
     function isReservedName(name) { return RESERVED_NAMES.has(normalizeNameForCompare(name)); }
@@ -5727,8 +5741,11 @@
           _showDefuseTimePenalty(cellEl, msg.seconds);
         }
         if (msg.type === 'sticker') {
-          if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
-          else showStickerToast(msg.from, msg.id);
+          const isSelf = myName && isSamePlayerName(String(msg.from ?? ''), myName);
+          if (!isSelf) {
+            if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
+            else showStickerToast(1, msg.id);
+          }
         }
         if (msg.type === 'relay') {
           _handleVoiceRelay(msg.payload, (m) => { if (_defuseSocket) _defuseSocket.send(m); });
@@ -6157,7 +6174,7 @@
     }
 
     function sendDefuseSticker(id) {
-      if (!_defuseSocket) return;
+      if (!_defuseSocket || _defuseSocket.readyState !== WebSocket.OPEN) return;
       ensureAudioUnlocked();
       const now = Date.now();
       if (now < stickerLockedUntil) return;
@@ -6165,6 +6182,8 @@
       lastStickerSentAt = now;
       stickerLockedUntil = Math.max(stickerLockedUntil, now + STICKER_DISPLAY_MS);
       _defuseSocket.send(JSON.stringify({ type: "sticker", id }));
+      // Show local toast immediately; server will echo to others
+      showStickerToast(0, id);
       const palette = document.getElementById('defuse-sticker-palette');
       const launcher = document.getElementById('defuse-sticker-launcher');
       palette?.classList.remove('open');
@@ -6325,7 +6344,10 @@
       // Only one at a time: replace any existing toast.
       toasts.innerHTML = "";
       const el = document.createElement("div");
-      el.className = "sticker-toast " + (from === 0 ? "p1" : "p2");
+      // from can be numeric index (0/1) or player name string
+      const side = (from === 0 || from === myPlayerIndex) ? "p1"
+                 : (from === 1 || (typeof from === "string" && !!from)) ? "p2" : "p1";
+      el.className = "sticker-toast " + side;
       el.dataset.sticker = id;
       el.innerHTML = `<div class="sticker-emoji" aria-hidden="true">${def.emoji}</div>`;
       toasts.appendChild(el);
@@ -7685,20 +7707,53 @@
       const modal = document.getElementById("ranking-modal");
       if (modal.classList.contains("open")) closeRankingModal();
     });
+    const _volPopupCloseTimers = {};
+    function _closeVolPopup(id) {
+      const popup = document.getElementById(id);
+      if (!popup) return;
+      clearTimeout(_volPopupCloseTimers[id]);
+      if (popup.classList.contains("open")) {
+        popup.classList.remove("open");
+        _volPopupCloseTimers[id] = setTimeout(() => popup.classList.remove("open-down"), 160);
+      }
+    }
+    function _openVolPopup(popupId, btnEl) {
+      const popup = document.getElementById(popupId);
+      if (!popup) return;
+      const isOpen = popup.classList.contains("open");
+      // close both first
+      _closeVolPopup("vol-popup");
+      _closeVolPopup("vol-popup-defuse");
+      if (isOpen) return;
+      // cancel any pending open-down removal so it doesn't fire while open
+      clearTimeout(_volPopupCloseTimers[popupId]);
+      // decide direction before making visible so there's no visual jump
+      const rect = btnEl.getBoundingClientRect();
+      const popupHeight = 140;
+      const openDown = rect.top < popupHeight + 16;
+      popup.classList.toggle("open-down", openDown);
+      popup.classList.add("open");
+    }
     document.getElementById("sound-toggle").addEventListener("click", (e) => {
       e.stopPropagation();
-      const popup = document.getElementById("vol-popup");
-      if (popup) popup.classList.toggle("open");
+      _openVolPopup("vol-popup", e.currentTarget);
     });
-    document.getElementById("vol-slider")?.addEventListener("input", (e) => {
+    document.getElementById("sound-toggle-defuse")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      _openVolPopup("vol-popup-defuse", e.currentTarget);
+    });
+    function _volSliderInput(e) {
       e.stopPropagation();
       setVolume(parseInt(e.target.value, 10) / 100);
       if (!soundEnabled && masterVolume > 0) setSoundEnabled(true);
       if (masterVolume === 0) setSoundEnabled(false);
-    });
+    }
+    document.getElementById("vol-slider")?.addEventListener("input", _volSliderInput);
+    document.getElementById("vol-slider-defuse")?.addEventListener("input", _volSliderInput);
     document.addEventListener("click", (e) => {
       if (!e.target.closest(".vol-wrap")) {
-        document.getElementById("vol-popup")?.classList.remove("open");
+        _closeVolPopup("vol-popup");
+        _closeVolPopup("vol-popup-defuse");
       }
     }, { capture: true });
     document.getElementById("btn-new-room").addEventListener("click", () => {
@@ -7882,8 +7937,12 @@
           _showDefuseTimePenalty(cellEl, msg.seconds);
         }
         if (msg.type === 'sticker') {
-          if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
-          else showStickerToast(msg.from, msg.id);
+          // Skip self-echo — local toast already shown in sendDefuseSticker
+          const isSelf = myName && isSamePlayerName(String(msg.from ?? ''), myName);
+          if (!isSelf) {
+            if (document.hidden || !document.getElementById('screen-defuse-game')?.classList.contains('active')) enqueueSticker(msg.from, msg.id);
+            else showStickerToast(1, msg.id);
+          }
         }
         if (msg.type === 'relay') {
           _handleVoiceRelay(msg.payload, (m) => { if (_defuseSocket) _defuseSocket.send(m); });
@@ -8413,24 +8472,25 @@
     }
 
     function _updateVoiceButton() {
-      const btnCoop = document.getElementById('btn-mic');
-      const btnDefuse = document.getElementById('btn-mic-defuse');
-      const btn = btnCoop?.offsetParent ? btnCoop : btnDefuse;
-      if (!btn) return;
-      
-      if (_voiceActive) {
-        btn.classList.remove('off');
-        if (_voiceMuted) {
-          btn.classList.add('muted');
-          btn.setAttribute('aria-label', t.mic_off_label || 'Mic off');
+      for (const btn of [
+        document.getElementById('btn-mic'),
+        document.getElementById('btn-mic-defuse'),
+      ]) {
+        if (!btn) continue;
+        if (_voiceActive) {
+          btn.classList.remove('off');
+          if (_voiceMuted) {
+            btn.classList.add('muted');
+            btn.setAttribute('aria-label', t.mic_off_label || 'Mic off');
+          } else {
+            btn.classList.remove('muted');
+            btn.setAttribute('aria-label', t.mic_on_label || 'Mic on');
+          }
         } else {
+          btn.classList.add('off');
           btn.classList.remove('muted');
-          btn.setAttribute('aria-label', t.mic_on_label || 'Mic on');
+          btn.setAttribute('aria-label', t.mic_off_label || 'Mic off');
         }
-      } else {
-        btn.classList.add('off');
-        btn.classList.remove('muted');
-        btn.setAttribute('aria-label', t.mic_off_label || 'Mic off');
       }
     }
 

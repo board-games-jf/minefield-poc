@@ -1519,7 +1519,9 @@ export default class GameRoom implements Party.Server {
 
   private async handleSticker(conn: Party.Connection, id: string) {
     if (this.defuseState) {
-      if (
+      if (this.defuseState.status === "waiting") {
+        // allow stickers in lobby/waiting so players can interact before first click
+      } else if (
         this.defuseState.status !== "playing" &&
         this.defuseState.status !== "finished"
       ) {
