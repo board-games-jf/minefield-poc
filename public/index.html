@@ -3400,7 +3400,7 @@
 <body>
   <audio id="voice-audio" autoplay playsinline style="display:none;"></audio>
   <div class="container">
-    <div class="update-bar" id="update-bar" onclick="location.reload()">
+    <div class="update-bar" id="update-bar" onclick="window.__forceReload()">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="update-icon" style="width:14px;height:14px;fill:#fff;vertical-align:middle;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
       <span data-i18n="update_available">Nova versão disponível — toque para atualizar</span>
     </div>
@@ -3408,7 +3408,7 @@
     <!-- Locale selector -->
     <div class="locale-bar" id="locale-bar">
       <div class="locale-actions">
-        <span class="update-dot" id="update-dot" onclick="location.reload()" title="Nova versão disponível — toque para atualizar">
+        <span class="update-dot" id="update-dot" onclick="window.__forceReload()" title="Nova versão disponível — toque para atualizar">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="update-icon" style="width:13px;height:13px;fill:#fff;"><path d="M12,18A6,6 0 0,1 6,12C6,11 6.25,10.03 6.7,9.2L5.24,7.74C4.46,8.97 4,10.43 4,12A8,8 0 0,0 12,20V23L16,19L12,15M12,4V1L8,5L12,9V6A6,6 0 0,1 18,12C18,13 17.75,13.97 17.3,14.8L18.76,16.26C19.54,15.03 20,13.57 20,12A8,8 0 0,0 12,4Z"/></svg>
         </span>
         <button class="ranking-btn" id="btn-ranking" type="button">🏆</button>
@@ -3887,6 +3887,15 @@
     (function () {
       const KEY = "minefield-version";
       const stored = localStorage.getItem(KEY) || "";
+
+      // Strip any ?_nocache param left over from a forced reload.
+      if (location.search.includes("_nocache")) {
+        history.replaceState(null, "", location.pathname + location.hash);
+      }
+
+      window.__forceReload = function () {
+        window.location.href = location.pathname + "?_nocache=" + Date.now() + location.hash;
+      };
 
       let _lastUpdateCheckAt = 0;
 

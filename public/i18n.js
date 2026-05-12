@@ -84,7 +84,7 @@ export const TRANSLATIONS = {
     defuse_result_accuracy: "Precisão",
     defuse_result_combo: "Combo máx",
     defuse_result_play_again: "Bora de novo",
-    defuse_result_ranking_btn: "Ver ranking",
+    defuse_result_ranking_btn: "Ver os bichãozão",
     defuse_restart_label: "Novo mapa",
     defuse_share_label: "Compartilhar",
     defuse_share_cta: "Compartilhar resultado",
