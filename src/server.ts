@@ -1930,7 +1930,35 @@ export default class GameRoom implements Party.Server {
       }),
     );
 
-    return { ...state, grid: maskedGrid };
+    const maskedState = { ...state, grid: maskedGrid };
+    return typeof structuredClone === "function"
+      ? structuredClone(maskedState)
+      : {
+          ...maskedState,
+          players: maskedState.players.map((player) =>
+            player ? { ...player } : null,
+          ) as GameState["players"],
+          grid: maskedState.grid.map((row) => row.slice()),
+          revealed: maskedState.revealed.map((row) => row.slice()),
+          foundBy: maskedState.foundBy.map((row) => row.slice()),
+          flags: maskedState.flags?.map((row) => row.slice()),
+          safeRevealedBy: maskedState.safeRevealedBy?.slice(),
+          lastClickedCell: maskedState.lastClickedCell
+            ? { ...maskedState.lastClickedCell }
+            : undefined,
+          lastPlayerClicks: maskedState.lastPlayerClicks.map((click) => ({
+            ...click,
+          })),
+          rematchReady: maskedState.rematchReady
+            ? [...maskedState.rematchReady]
+            : null,
+          explosiveSeries: maskedState.explosiveSeries
+            ? {
+                ...maskedState.explosiveSeries,
+                wins: [...maskedState.explosiveSeries.wins] as [number, number],
+              }
+            : undefined,
+        };
   }
 
   private broadcast() {
