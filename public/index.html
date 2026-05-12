@@ -5839,6 +5839,37 @@
       });
     }
 
+    // ── State patch application ──────────────────────────────────────────────
+    function applyStatePatch(state, patch) {
+      if (!state) return null;
+      const next = { ...state };
+
+      if (patch.cells && patch.cells.length > 0) {
+        next.grid    = state.grid.map(r => r.slice());
+        next.revealed = state.revealed.map(r => r.slice());
+        next.foundBy  = state.foundBy.map(r => r.slice());
+        for (const [r, c, g, rev, fb] of patch.cells) {
+          next.grid[r][c]    = g;
+          next.revealed[r][c] = rev;
+          next.foundBy[r][c]  = fb;
+        }
+      }
+
+      if (patch.flagCells && patch.flagCells.length > 0) {
+        next.flags = state.flags ? state.flags.map(r => r.slice()) : [];
+        for (const [r, c, v] of patch.flagCells) {
+          if (!next.flags[r]) next.flags[r] = [];
+          next.flags[r][c] = v;
+        }
+      }
+
+      if (patch.fields) {
+        Object.assign(next, patch.fields);
+      }
+
+      return next;
+    }
+
     // ── WebSocket ──────────────────────────────────────────────────────────────
     function connectToRoom(id, name, difficulty, aiLevel, mode, ft) {
       roomId = id;
@@ -5881,6 +5912,15 @@
           if (joinAccepted) {
             document.getElementById("reconnecting-bar").classList.remove("visible");
             handleState(state);
+          }
+        }
+        if (msg.type === "patch") {
+          if (joinAccepted && currentState) {
+            const patched = applyStatePatch(currentState, msg);
+            if (patched) {
+              document.getElementById("reconnecting-bar").classList.remove("visible");
+              handleState(patched);
+            }
           }
         }
         if (msg.type === "sticker") {

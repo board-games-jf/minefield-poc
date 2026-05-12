@@ -293,6 +293,15 @@ export type ClientMessage =
 // Server → Client
 export type ServerMessage =
   | { type: "state"; state: GameState }
+  | { type: "patch";
+      cells?: [number, number, number, boolean, 0 | 1 | null][];
+      flagCells?: [number, number, boolean][];
+      fields?: Partial<Pick<GameState,
+        | "currentPlayer" | "totalBombs" | "lastClickedCell"
+        | "lastPlayerClicks" | "coopResult" | "rematchReady"
+        | "explosiveSeries" | "explosiveCooldownUntil" | "safeRevealedBy"
+      >>;
+    }
   | { type: "error"; message: string }
   | { type: "sticker"; id: string; from: 0 | 1 | string; at: number }
   | { type: "bomb-found"; playerIndex: 0 | 1 }
@@ -911,6 +920,7 @@ export default class GameRoom implements Party.Server {
   private aiFlags: boolean[][] | null = null;
   private lastStickerAt: Map<string, number> = new Map();
   private rankingRecorded = false;
+  private lastBroadcastMasked: GameState | null = null;
 
   constructor(readonly room: Party.Room) {}
 
@@ -1735,6 +1745,8 @@ export default class GameRoom implements Party.Server {
     next.currentPlayer = Math.random() < 0.5 ? 0 : 1;
     next.rematchReady = [false, false];
     this.state = next;
+    // Force a full-state broadcast after the reset so no stale diff baseline is used.
+    this.lastBroadcastMasked = null;
   }
 
   private async handleRematch(conn: Party.Connection) {
@@ -1924,9 +1936,93 @@ export default class GameRoom implements Party.Server {
   private broadcast() {
     if (!this.state) return;
     const masked = this.maskStateForClient(this.state);
+
+    if (this.lastBroadcastMasked && !this.shouldSendFullState(this.lastBroadcastMasked, masked)) {
+      const patch = this.computePatch(this.lastBroadcastMasked, masked);
+      if (patch.cells?.length || patch.flagCells?.length || patch.fields) {
+        this.room.broadcast(JSON.stringify({ type: "patch", ...patch } satisfies ServerMessage));
+        this.lastBroadcastMasked = masked;
+        return;
+      }
+    }
+
+    // Full state broadcast (initial, status change, structural reset, or empty diff)
     this.room.broadcast(
       JSON.stringify({ type: "state", state: masked } satisfies ServerMessage),
     );
+    this.lastBroadcastMasked = masked;
+  }
+
+  private shouldSendFullState(prev: GameState, curr: GameState): boolean {
+    // Status change (especially playing→finished which reveals the full board)
+    if (prev.status !== curr.status) return true;
+    // Player join/leave
+    if (JSON.stringify(prev.players) !== JSON.stringify(curr.players)) return true;
+    // Deferred grid init: entire grid replaced
+    if (!!prev.coopGridReady !== !!curr.coopGridReady) return true;
+    if (!!prev.explosiveGridReady !== !!curr.explosiveGridReady) return true;
+    // Explosive new board: grid fully replaced
+    if (prev.explosiveBoardId !== curr.explosiveBoardId) return true;
+    return false;
+  }
+
+  private computePatch(
+    prev: GameState,
+    curr: GameState,
+  ): {
+    cells?: [number, number, number, boolean, 0 | 1 | null][];
+    flagCells?: [number, number, boolean][];
+    fields?: Partial<Pick<GameState,
+      | "currentPlayer" | "totalBombs" | "lastClickedCell"
+      | "lastPlayerClicks" | "coopResult" | "rematchReady"
+      | "explosiveSeries" | "explosiveCooldownUntil" | "safeRevealedBy"
+    >>;
+  } {
+    // Cell-level diff: grid, revealed, foundBy
+    const cells: [number, number, number, boolean, 0 | 1 | null][] = [];
+    for (let r = 0; r < curr.grid.length; r++) {
+      for (let c = 0; c < curr.grid[r].length; c++) {
+        const pg = prev.grid[r]?.[c] ?? -2;
+        const pr = prev.revealed[r]?.[c] ?? false;
+        const pf = prev.foundBy[r]?.[c] ?? null;
+        if (pg !== curr.grid[r][c] || pr !== curr.revealed[r][c] || pf !== curr.foundBy[r][c]) {
+          cells.push([r, c, curr.grid[r][c], curr.revealed[r][c], curr.foundBy[r][c]]);
+        }
+      }
+    }
+
+    // Flag diff (coop)
+    const flagCells: [number, number, boolean][] = [];
+    if (curr.flags) {
+      for (let r = 0; r < curr.flags.length; r++) {
+        for (let c = 0; c < (curr.flags[r]?.length ?? 0); c++) {
+          const pv = prev.flags?.[r]?.[c] ?? false;
+          const cv = curr.flags[r][c] ?? false;
+          if (pv !== cv) flagCells.push([r, c, cv]);
+        }
+      }
+    }
+
+    // Scalar diff
+    const SCALAR_KEYS = [
+      "currentPlayer", "totalBombs", "lastClickedCell",
+      "lastPlayerClicks", "coopResult", "rematchReady",
+      "explosiveSeries", "explosiveCooldownUntil", "safeRevealedBy",
+    ] as const;
+    const fields: Partial<Pick<GameState, typeof SCALAR_KEYS[number]>> = {};
+    let hasFields = false;
+    for (const key of SCALAR_KEYS) {
+      if (JSON.stringify(prev[key]) !== JSON.stringify(curr[key])) {
+        (fields as Record<string, unknown>)[key] = curr[key];
+        hasFields = true;
+      }
+    }
+
+    return {
+      cells: cells.length ? cells : undefined,
+      flagCells: flagCells.length ? flagCells : undefined,
+      fields: hasFields ? fields : undefined,
+    };
   }
 
   private send(conn: Party.Connection, msg: ServerMessage) {
