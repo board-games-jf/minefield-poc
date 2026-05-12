@@ -1220,6 +1220,61 @@
       background: rgba(255, 255, 255, 0.02);
     }
 
+    /* ── Volume slider popup ─────────────────────────────────────────────── */
+    .vol-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+    .vol-popup {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      right: 0;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.15s;
+      z-index: 200;
+      white-space: nowrap;
+    }
+    .vol-popup.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .vol-popup-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      letter-spacing: 0.02em;
+      min-width: 28px;
+      text-align: right;
+    }
+    #vol-mute-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      padding: 0 2px;
+      opacity: 0.75;
+      transition: opacity 0.1s;
+    }
+    #vol-mute-btn:hover { opacity: 1; }
+    #vol-slider {
+      -webkit-appearance: auto;
+      appearance: auto;
+      width: 90px;
+      height: 4px;
+      cursor: pointer;
+      accent-color: #4ade80;
+      margin: 0;
+    }
+
     #btn-mic:not(.off):not(.disabled),
     #btn-mic-defuse:not(.off):not(.disabled) {
       border-color: rgba(74, 222, 128, 0.6);
@@ -3549,9 +3604,16 @@
                 </div>
               </div>
             </div>
-            <button class="icon-toggle" id="sound-toggle" type="button">
-              <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
-            </button>
+            <div class="vol-wrap">
+              <div class="vol-popup" id="vol-popup">
+                <button id="vol-mute-btn" type="button" aria-label="Mute">�</button>
+                <input type="range" id="vol-slider" min="0" max="100" value="50" aria-label="Volume">
+                <span class="vol-popup-label" id="vol-label">50%</span>
+              </div>
+              <button class="icon-toggle" id="sound-toggle" type="button">
+                <span class="icon-toggle-glyph" id="sound-toggle-glyph" aria-hidden="true">🔊</span>
+              </button>
+            </div>
             <button class="icon-toggle off" id="btn-mic" type="button" style="display:none" aria-label="Microfone desligado">
               <span class="icon-toggle-glyph" id="btn-mic-glyph" aria-hidden="true">🎤</span>
             </button>
@@ -3857,6 +3919,7 @@
 
     const NAME_STORAGE_KEY = "minefield-name";
     const SOUND_STORAGE_KEY = "minefield-sound-enabled";
+    const VOLUME_STORAGE_KEY = "minefield-volume";
     const CREATE_PREFS_STORAGE_KEY = "minefield-create-prefs";
     function detectDefaultLocale() {
       const prefs = (navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]).filter(Boolean);
@@ -3941,7 +4004,7 @@
       }
       syncStickerUi();
       syncSoundToggleUi();
-      // Update dynamic labels that are not driven by data-i18n attributes.
+      applyVolumeToAll(); // apply saved volume/mute state to voice-audio on load
       try { updateModeSelectLabels(); } catch { }
       try { updateModeDescription(); } catch { }
       try { updateFtOptions(); } catch { }
@@ -4054,7 +4117,18 @@
     let pendingStickers = [];
     let pendingStickerCount = 0;
     let audioCtx = null;
+    let masterGain = null;  // master GainNode for all synthesised sounds
     let audioUnlocked = false;
+
+    function getAudioDest() {
+      if (!audioCtx) return null;
+      if (!masterGain) {
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = soundEnabled ? masterVolume : 0;
+        masterGain.connect(audioCtx.destination);
+      }
+      return masterGain;
+    }
     let lastNotifiedTurnKey = "";
     let lastTurnPlayerIndex = null;
     let lastFinishedKey = "";
@@ -4094,6 +4168,9 @@
     const THINKING_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
     const OOPS_STICKER_CLIP = { start: 0, end: STICKER_DISPLAY_SEC };
     let soundEnabled = localStorage.getItem(SOUND_STORAGE_KEY) !== "0";
+    let masterVolume = parseFloat(localStorage.getItem(VOLUME_STORAGE_KEY) ?? "0.5");
+    if (isNaN(masterVolume) || masterVolume < 0) masterVolume = 0;
+    if (masterVolume > 1) masterVolume = 1;
     const HIDDEN_CELL = -2;
 
     // ── Voice/WebRTC state ──────────────────────────────────────────────────────
@@ -4270,7 +4347,7 @@
             const g = audioCtx.createGain();
             g.gain.setValueAtTime(0.15, start);
             g.gain.exponentialRampToValueAtTime(0.001, start + dur);
-            g.connect(audioCtx.destination);
+            g.connect(getAudioDest());
             const o = audioCtx.createOscillator();
             o.type = "sine";
             o.frequency.setValueAtTime(freq, start);
@@ -4338,7 +4415,7 @@
         g.gain.setValueAtTime(0.0001, t0);
         g.gain.exponentialRampToValueAtTime(0.14, t0 + 0.02);
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
-        g.connect(audioCtx.destination);
+        g.connect(getAudioDest());
         const o = audioCtx.createOscillator();
         o.type = "triangle";
         o.frequency.setValueAtTime(220, t0);
@@ -4373,23 +4450,54 @@
     function syncSoundToggleUi() {
       const btn = document.getElementById("sound-toggle");
       const glyph = document.getElementById("sound-toggle-glyph");
+      const muteBtn = document.getElementById("vol-mute-btn");
       if (!btn || !glyph) return;
       btn.classList.toggle("off", !soundEnabled);
-      glyph.textContent = soundEnabled ? "🔊" : "🔇";
+      const icon = !soundEnabled ? "🔇" : masterVolume === 0 ? "🔈" : masterVolume < 0.5 ? "🔉" : "🔊";
+      glyph.textContent = icon;
+      if (muteBtn) muteBtn.textContent = icon;
       const label = soundEnabled
         ? (t.sound_on_label || "Sound on")
         : (t.sound_off_label || "Sound off");
       btn.setAttribute("aria-label", label);
       btn.setAttribute("title", label);
+      // sync slider UI
+      const slider = document.getElementById("vol-slider");
+      const volLabel = document.getElementById("vol-label");
+      if (slider) slider.value = Math.round(masterVolume * 100);
+      if (volLabel) volLabel.textContent = Math.round(masterVolume * 100) + "%";
+    }
+
+    function applyVolumeToAll() {
+      const gain = soundEnabled ? masterVolume : 0;
+      if (masterGain) masterGain.gain.value = gain;
+      const voiceAudioEl = document.getElementById('voice-audio');
+      if (voiceAudioEl) {
+        voiceAudioEl.muted = !soundEnabled;
+        voiceAudioEl.volume = masterVolume;
+      }
+      // Update sticker Audio elements that couldn't be routed through AudioContext
+      for (const audio of [
+        fireStickerAudio, cryStickerAudio, tauntStickerAudio, clapStickerAudio,
+        trophyStickerAudio, boomStickerAudio, thinkingStickerAudio, oopsStickerAudio
+      ]) {
+        if (!audio || audio._mfRouted) continue;
+        try { audio.volume = gain; } catch { }
+      }
+    }
+
+    function setVolume(v) {
+      masterVolume = Math.max(0, Math.min(1, v));
+      localStorage.setItem(VOLUME_STORAGE_KEY, masterVolume.toFixed(3));
+      applyVolumeToAll();
+      syncSoundToggleUi();
     }
 
     function setSoundEnabled(nextValue) {
       soundEnabled = !!nextValue;
       localStorage.setItem(SOUND_STORAGE_KEY, soundEnabled ? "1" : "0");
       syncSoundToggleUi();
-      // Mute/unmute remote voice audio along with game sounds
-      const voiceAudioEl = document.getElementById('voice-audio');
-      if (voiceAudioEl) voiceAudioEl.muted = !soundEnabled;
+      applyVolumeToAll();
       if (!soundEnabled) {
         const audioList = [
           fireStickerAudio,
@@ -4432,12 +4540,22 @@
           audio = new Audio(src + `?v=${encodeURIComponent(ASSET_VERSION)}`);
           audio.preload = "auto";
           audio.crossOrigin = "anonymous";
+          // Route through AudioContext → masterGain so volume/mute are controlled centrally
+          try {
+            const dest = getAudioDest();
+            if (dest) {
+              const srcNode = audioCtx.createMediaElementSource(audio);
+              srcNode.connect(dest);
+              audio._mfRouted = true;
+            }
+          } catch { }
         }
         clearTimeout(stopTimer);
         try {
           audio.pause();
           audio.currentTime = clip.start;
-          audio.volume = 0.9;
+          // Only set .volume directly if NOT routed through AudioContext
+          if (!audio._mfRouted) audio.volume = soundEnabled ? masterVolume : 0;
           const maybePromise = audio.play();
           if (maybePromise && typeof maybePromise.catch === "function") {
             maybePromise.catch(() => { });
@@ -4523,7 +4641,7 @@
         g.gain.setValueAtTime(0.0001, start);
         g.gain.linearRampToValueAtTime(gain, start + attack);
         g.gain.exponentialRampToValueAtTime(0.0001, start + dur);
-        g.connect(destination || audioCtx.destination);
+        g.connect(destination || getAudioDest());
 
         const o = audioCtx.createOscillator();
         o.type = type;
@@ -4571,7 +4689,7 @@
           node = bp;
         }
         node.connect(g);
-        g.connect(audioCtx.destination);
+        g.connect(getAudioDest());
         src.start(start);
         src.stop(start + dur + 0.01);
       }
@@ -4618,7 +4736,7 @@
           band.type = "bandpass";
           band.frequency.setValueAtTime(p.band, tt);
           band.Q.setValueAtTime(1.3, tt);
-          band.connect(audioCtx.destination);
+          band.connect(getAudioDest());
           tone({ type: "sawtooth", f1: p.f1, f2: p.f2, dur: 0.08, gain: 0.12, attack: 0.005, start: tt, destination: band });
           tone({ type: "square", f1: p.f1 * 0.5, f2: p.f2 * 0.5, dur: 0.075, gain: 0.045, attack: 0.004, start: tt + 0.002, destination: band });
         }
@@ -4710,7 +4828,7 @@
         const g = audioCtx.createGain();
         g.gain.setValueAtTime(0.15, t0);
         g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.25);
-        g.connect(audioCtx.destination);
+        g.connect(getAudioDest());
 
         const o = audioCtx.createOscillator();
         o.type = "sawtooth";
@@ -7575,9 +7693,26 @@
       const modal = document.getElementById("ranking-modal");
       if (modal.classList.contains("open")) closeRankingModal();
     });
-    document.getElementById("sound-toggle").addEventListener("click", () => {
+    document.getElementById("sound-toggle").addEventListener("click", (e) => {
+      e.stopPropagation();
+      const popup = document.getElementById("vol-popup");
+      if (popup) popup.classList.toggle("open");
+    });
+    document.getElementById("vol-mute-btn")?.addEventListener("click", (e) => {
+      e.stopPropagation();
       setSoundEnabled(!soundEnabled);
     });
+    document.getElementById("vol-slider")?.addEventListener("input", (e) => {
+      e.stopPropagation();
+      setVolume(parseInt(e.target.value, 10) / 100);
+      if (!soundEnabled && masterVolume > 0) setSoundEnabled(true);
+      if (masterVolume === 0) setSoundEnabled(false);
+    });
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".vol-wrap")) {
+        document.getElementById("vol-popup")?.classList.remove("open");
+      }
+    }, { capture: true });
     document.getElementById("btn-new-room").addEventListener("click", () => {
       location.hash = "";
       showScreen("screen-create");
@@ -8191,6 +8326,7 @@
             
             // Respect current sound-enabled state
             audioEl.muted = !soundEnabled;
+            audioEl.volume = masterVolume;
 
             // Ensure audio plays
             if (audioEl.play) {
@@ -8463,6 +8599,7 @@
               const remoteStream = evt.streams?.[0] || (evt.track ? new MediaStream([evt.track]) : null);
               if (remoteStream) audioEl.srcObject = remoteStream;
               audioEl.muted = !soundEnabled;
+              audioEl.volume = masterVolume;
               audioEl.play?.().catch(() => {});
               if (_voiceAnalyser) _voiceStartVAD();
               // Remote speaking is driven by relay signals
