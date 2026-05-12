@@ -1,12 +1,13 @@
 // i18n — Minefield
-// Supported locales: pt-BR-x-CE (default), pt-PT, en
+// Supported locales: pt-BR-x-CE (default), pt-PT, en, fr
 
-export const LOCALES = ["pt-BR-x-CE", "pt-PT", "en"];
+export const LOCALES = ["pt-BR-x-CE", "pt-PT", "en", "fr"];
 
 export const LOCALE_LABELS = {
   "pt-BR-x-CE": "Português (Ceará)",
   "pt-PT": "Português (Portugal)",
   "en": "English",
+  "fr": "Français",
 };
 
 // Flag to show in the locale selector (emoji keeps it zero-dependency).
@@ -14,6 +15,7 @@ export const LOCALE_FLAGS = {
   "pt-BR-x-CE": "🇧🇷",
   "pt-PT": "🇵🇹",
   "en": "🇺🇸",
+  "fr": "🇫🇷",
 };
 
 // HTML lang attribute to use per locale
@@ -21,6 +23,7 @@ export const LOCALE_LANG = {
   "pt-BR-x-CE": "pt-BR",
   "pt-PT": "pt-PT",
   "en": "en",
+  "fr": "fr",
 };
 
 export const TRANSLATIONS = {
@@ -596,5 +599,205 @@ export const TRANSLATIONS = {
     flag_help_caption: "Flagged cells are blocked",
     briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
     briefing_how_it_works: "How does it work?",
+  },
+
+  "fr": {
+    app_name: "Minefield",
+    language_label: "Langue",
+
+    // Create screen
+    create_title: "Allons jouer !",
+    name_label: "Comment tu t'appelles, toi ?",
+    name_placeholder: "P. ex.: Jean-Michel",
+    difficulty_label: "Niveau de raclée",
+    diff_easy_name: "Facile",
+    diff_easy_desc: "6 × 6 · 10 mines",
+    diff_easy_desc_coop: "6 × 6 · 6 mines",
+    diff_medium_name: "Oh là là !",
+    diff_medium_desc: "8 × 8 · 20 mines",
+    diff_medium_desc_coop: "8 × 8 · 12 mines",
+    diff_hard_name: "Un vrai dur",
+    diff_hard_desc: "10 × 10 · 30 mines",
+    diff_hard_desc_coop: "10 × 10 · 20 mines",
+    btn_create: "On va jouer !",
+    solo_label: "Jouer contre l'IA",
+    solo_hint: "Ça commence tout de suite, sans avoir besoin d'un partenaire",
+    solo_label_coop: "Jouer avec l'IA",
+    solo_hint_coop: "Coop avec l'IA, mec",
+    ai_level_label: "Niveau de l'IA",
+    ai_easy: "Tranquille",
+    ai_medium: "Moyen",
+    ai_hard: "Abusée",
+
+    // Mode selector
+    mode_label: "Mode de jeu",
+    mode_category_arcade: "Arcade",
+    mode_category_survival: "Survie",
+    mode_coming_soon: "Tout à l'heure",
+    mode_defuse: "Désamorcer",
+
+    // Defuse screens
+    defuse_create_title: "Allons désamorcer!",
+    defuse_mode_label: "Mode",
+    defuse_solo: "En solo",
+    defuse_multi: "Les gars",
+    defuse_squad_label: "Nom de l'équipe",
+    defuse_squad_placeholder: "P. ex. : Les gars",
+    defuse_squad_required: "Le nom de l'équipe est obligatoire en multijoueur",
+    defuse_hall_of_fame_hint: "🏆 Le plus rapide entre dans la liste des boss!",
+    defuse_pregame_hint: "Clique sur une case pour commencer la raclée",
+    defuse_action_inspect: "Fouiner",
+    defuse_action_defuse: "Désamorcer",
+    defuse_won_title: "Mission accomplie ! 🏆",
+    defuse_timeout_title: "Temps écoulé ! ⏰",
+    defuse_timeout_desc: "Tu n'as pas réussi à tout désamorcer en 20 minutes.",
+    defuse_result_bombs_left: (n) => `Il reste ${n} mine${n !== 1 ? 's' : ''}`,
+    defuse_result_final_time: "Temps final",
+    defuse_result_real_time: "Temps réel",
+    defuse_result_penalties: "Pénalités",
+    defuse_result_accuracy: "Précision",
+    defuse_result_combo: "Combo max",
+    defuse_result_play_again: "On recommence !",
+    defuse_result_ranking_btn: "Voir le classement",
+    defuse_restart_label: "Nouvelle carte",
+    defuse_share_label: "Partager",
+    defuse_share_cta: "Partager le résultat",
+    defuse_share_copied: "Texte copié",
+    defuse_share_failed: "Réessaie",
+    share_failed: "Réessaie",
+    game_share_invite: (modeName, difficultyName, variantName, ft) => {
+      const variant = variantName ? ` ${variantName}` : "";
+      const ftLabel = ft ? ` (FT${ft})` : "";
+      return `On joue en ${modeName}${variant} à la difficulté "${difficultyName}"${ftLabel} ?`;
+    },
+    defuse_share_rank_top1: (position, difficulty, time) => `Mon temps est de ${time} et je suis #${position}. Je te défie de faire mieux !`,
+    defuse_share_rank_top3: (position, difficulty, time) => `Je suis déjà #${position} avec un temps de ${time}. T'as peur ou quoi ?`,
+    defuse_share_rank_default: (position, difficulty, time) => `Jusqu'à maintenant, mon temps est de ${time} et je suis #${position}. Tu peux faire mieux ?`,
+    btn_back: "Retour",
+
+    mode_versus: "Grande gueule",
+    mode_coop: "Coop",
+    mode_explosive: "Duel",
+    mode_versus_desc: "Une bagarre pour voir qui trouve le plus de mines !",
+    mode_coop_desc: "Deux gars débrouillards pour ouvrir les cases sans marcher sur les mines.",
+    mode_explosive_desc: "Celui qui marche sur une mine en premier perd la manche. Le premier à gagner la FT remporte le défi !",
+    mode_defuse_desc: "Fouine les cases jusqu'à savoir où sont les mines. Quand t'es sûr, désamorce. Le plus vite possible !",
+    briefing_defuse_caption: "Fouiner une mauvaise mine : +30 s · Désamorçage raté : +20 s",
+
+    // Points preview
+    points_preview: (n) => `🏆 Si tu gagnes : ${n} pts`,
+    points_preview_explosive: (ft, n) => `🏆 Si tu gagnes la FT${ft} : ${n} pts`,
+
+    // Explosive
+    ft_label: "Le premier à atteindre",
+    ft_option: (n) => `${n} ${n === 1 ? "victoire" : "victoires"}`,
+    explosive_round_current: (n) => `Manche ${n}`,
+    explosive_wins_count: (n) => `${n} ${n === 1 ? "victoire" : "victoires"}`,
+    explosive_won_series: "T'as gagné le défi, mec !",
+    result_won_series: (name) => `${name} a gagné le défi, mec !`,
+
+    // Coop
+    coop_won: "C'est ça, mec ! Un gars débrouillard.",
+    coop_lost: "Oh là là ! Tout a explosé.",
+    coop_ai_no_points: "Jouer en coop avec l'IA ne donne pas de points, hein !",
+    coop_safe_cells_progress: (found, total) => `Cases sans mines : ${found}/${total}`,
+
+    // AI badge
+    ai_badge: "IA",
+
+    // Waiting screen
+    waiting_title: "En attendant que le gars arrive…",
+    invite_label: "Envoie ce lien à ton partenaire",
+    btn_copy: "Copie le lien !",
+    btn_copied: "Copié !",
+    btn_not_now: "Pas maintenant",
+
+    // Join screen
+    join_title: "Rejoindre la fête",
+    invited_by: "Invité par",
+    join_name_label: "Comment tu t'appelles, mec ?",
+    join_name_ph: "P. ex.: Dorothée",
+    btn_join: "Rejoindre la fête",
+
+    // Game screen
+    turn_suffix: "est en train de jouer",
+    bombs_remaining: (n) => `Il reste encore ${n} ${n === 1 ? "mine" : "mines"}`,
+    bomb_count: (n) => `${n} ${n === 1 ? "mine" : "mines"}`,
+    btn_leave: "Quitter",
+    sound_on_label: "Son activé",
+    sound_off_label: "Son désactivé",
+    mic_on_label: "Micro activé",
+    mic_off_label: "Micro désactivé",
+    mic_join_label: "Rejoindre la voix",
+    mic_full_label: "Voix pleine — 2 max",
+    mic_permission_denied: "Accès au micro refusé",
+    sticker_launcher_label: "Ouvrir les stickers",
+    sticker_gg: "GG",
+    sticker_nice: "Bien joué",
+    sticker_thinking: "Hmm",
+    sticker_oops: "J'ai merdé",
+    sticker_sweat: "Oh là là",
+    sticker_boom: "Boom",
+    sticker_taunt: "Rire",
+    sticker_cry: "Nooon",
+    sticker_clap: "Applaudissements",
+    sticker_trophy: "GG EZ",
+
+    // Explosive round intro
+    explosive_ready: "Ressaisis-toi, mec !",
+    explosive_go: "Vas-y !",
+
+    // Result
+    result_won: (name) => `${name} a gagné !`,
+    result_won_suffix: "a gagné",
+    result_draw: "Égalité, mec !",
+    result_score: (w, wb, l, lb) => `${w}: ${wb} ${wb === 1 ? "mine" : "mines"} · ${l}: ${lb} ${lb === 1 ? "mine" : "mines"}`,
+    result_draw_score: (n) => `Les deux ont trouvé ${n} ${n === 1 ? "mine" : "mines"}`,
+    btn_rematch: "Je te défie d'y retourner",
+    btn_accept_rematch: "Accepter la revanche",
+    btn_play_again: "On recommence !",
+    rematch_waiting: (ready, total) => `Prêt ${ready}/${total}`,
+    rematch_waiting_you_ready: "En attente de l'autre gars…",
+    rematch_prompt_title: "Je te défie d'y retourner, hein !",
+    rematch_prompt_desc: () => "L'autre gars t'appelle pour le défi. On y va ?",
+    btn_new_game: "Encore une !",
+
+    // Errors
+    error_name_required: "Mets ton nom, mec !",
+    error_room_full: "Cette fête est déjà pleine !",
+    error_room_finished: "Cette partie est déjà terminée, mec.",
+    error_room_not_found: "Cette salle n'existe pas, mec.",
+    error_name_reserved: "Ce nom est réservé à l'ordinateur, mec ! Choisis-en un autre.",
+    error_generic: "Ça a planté, mec.",
+    error_title_full: "C'est plein !",
+    error_title_finished: "C'est terminé !",
+    error_title_generic: "Oh là là !",
+    btn_new_room: "Encore une partie !",
+
+    // Reconnect
+    reconnecting: "Reconnexion en cours, attends un peu…",
+    update_available: "Nouvelle version disponible — touche pour mettre à jour",
+    update_now: "Mettre à jour maintenant",
+
+    // Ranking
+    ranking_btn_label: "Classement",
+    ranking_top10_title: "🏆 Top 10",
+    ranking_top3_title: "🏆 Top 3",
+    ranking_you: "vous",
+    ranking_your_position: "Votre position",
+    ranking_points_label: "points",
+    ranking_wins_label: (n) => `${n === 1 ? "victoire" : "victoires"}`,
+    ranking_close_label: "Fermer",
+    ranking_empty: "Il n'y a pas encore de classement.",
+
+    // Mode briefing preview captions
+    briefing_versus_caption: "Celui qui trouve le plus de mines gagne",
+    briefing_coop_caption: "Révélez tout ensemble sans marcher sur les mines",
+    briefing_explosive_caption: "Première mine = manche perdue",
+    flag_help_title: "Drapeaux",
+    flag_help_desc: "Marque une case suspecte pour éviter de marcher dessus par erreur. Maintiens le doigt appuyé (ou fais un clic droit) sur une case pour mettre ou retirer un drapeau. Une case marquée reste bloquée jusqu'à ce qu'elle soit démarquée.",
+    flag_help_caption: "Une case marquée reste bloquée",
+    briefing_versus_score: (p1, p2) => `${p1} 💣×1   ${p2} 💣×1`,
+    briefing_how_it_works: "Explique ça, mec !",
   },
 };
