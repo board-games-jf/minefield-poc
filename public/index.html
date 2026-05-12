@@ -561,21 +561,25 @@
 
     .diff-options {
       display: flex;
-      flex-direction: column;
+      flex-direction: row;
       gap: 8px;
     }
 
     .diff-option {
+      flex: 1;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 10px;
-      padding: 10px 14px;
+      justify-content: center;
+      gap: 4px;
+      padding: 10px 8px;
       background: var(--bg-secondary);
       border: 1.5px solid var(--border);
       border-radius: var(--radius-sm);
       cursor: pointer;
       transition: border-color 0.15s;
       user-select: none;
+      text-align: center;
     }
 
     .diff-option:hover {
@@ -591,8 +595,8 @@
     }
 
     .diff-dot {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       border: 1.5px solid var(--border-strong);
       flex-shrink: 0;
@@ -607,17 +611,18 @@
     .diff-info {
       display: flex;
       flex-direction: column;
-      gap: 1px;
+      gap: 2px;
+      align-items: center;
     }
 
     .diff-name {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       color: var(--text);
     }
 
     .diff-desc {
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
     }
 
